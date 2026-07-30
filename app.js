@@ -65,18 +65,9 @@ function resetSession(start){
  save(); updateUI();
 }
 
-function buildGrid(grid){
- const holder=$('#reelGrid');holder.innerHTML='';
- for(let c=0;c<5;c++){
-  const reel=document.createElement('div');reel.className='reel';reel.dataset.reel=c;
-  for(let r=0;r<3;r++){
-   const sym=grid[c]?.[r]||['oil','comb','balm'][r];
-   const el=document.createElement('div');el.className='symbol'+(sym==='coin'?' coin':'');el.dataset.c=c;el.dataset.r=r;el.dataset.sym=sym;
-   if(sym==='coin') el.dataset.value=money(coinValue()*state.bet);
-   const img=document.createElement('img');img.src=SYMBOLS[sym].asset;img.alt=SYMBOLS[sym].name;el.appendChild(img);reel.appendChild(el);
-  }
-  holder.appendChild(reel);
- }
+async function buildGrid(grid){
+ await window.BeardReels.init(grid);
+ window.BeardReels.setGrid(grid);
 }
 function generateGrid(){
  return REELS.map(strip=>{
@@ -112,26 +103,15 @@ async function spin(){
  state.wallet-=state.bet;state.spins++;state.wagered+=state.bet;$('#messageBar').textContent='REELS IN MOTION';
  updateUI();
  const grid=generateGrid();
- const reels=$$('.reel');reels.forEach(r=>r.classList.add('spinning'));
- const base=state.speed==='quick'?150:420;
- await new Promise(res=>setTimeout(res,base));
- for(let c=0;c<5;c++){
-  const reel=reels[c]; const cells=[...reel.children];
-  cells.forEach((cell,r)=>{
-    const sym=grid[c][r];cell.dataset.sym=sym;cell.className='symbol'+(sym==='coin'?' coin':'');
-    cell.innerHTML=`<img src="${SYMBOLS[sym].asset}" alt="${SYMBOLS[sym].name}">`;
-    if(sym==='coin')cell.dataset.value=money(coinValue()*state.bet);
-  });
-  await new Promise(res=>setTimeout(res,state.speed==='quick'?35:115));
-  reel.classList.remove('spinning');
- }
+
+ await window.BeardReels.spinTo(grid,state.speed==='quick');
+
  state.grid=grid;
  const result=evaluate(grid);
  if(result.total>0){
   state.wallet+=result.total;state.returned+=result.total;state.biggest=Math.max(state.biggest,result.total);
   $('#lastWin').textContent=money(result.total);
   $('#messageBar').textContent=result.total>=state.bet*20?'MASSIVE VAULT WIN':result.total>=state.bet*5?'BEAUTIFUL WIN':'WIN PAID';
-  result.winners.forEach(w=>w.line.slice(0,w.count).forEach((row,c)=>document.querySelector(`[data-c="${c}"][data-r="${row}"]`)?.classList.add('winner')));
   $('#paylineFlash').classList.add('show');setTimeout(()=>$('#paylineFlash').classList.remove('show'),1000);
  }else{
   $('#lastWin').textContent=money(0);$('#messageBar').textContent='NO WIN — NEXT SPIN IS INDEPENDENT';
@@ -142,7 +122,7 @@ async function spin(){
  }
  $('#spinBtn').disabled=false;
 }
-function clearWinners(){ $$('.symbol').forEach(x=>x.classList.remove('winner')); }
+function clearWinners(){ $('#paylineFlash').classList.remove('show'); }
 
 function startBonus(baseGrid){
  const locked=Array(15).fill(null);

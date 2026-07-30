@@ -97,7 +97,7 @@
             <div id="messageBar" class="message-bar">WELCOME TO BEARD BANK</div>
 
             <div class="reel-window" id="reelWindow">
-              <div class="reel-grid" id="reelGrid" aria-label="Five reel, three row slot display"></div>
+              <canvas id="slot-canvas" aria-label="Five reel, three row animated slot display"></canvas>
               <div class="payline-flash" id="paylineFlash"></div>
               <div class="glass-shine"></div>
             </div>
@@ -186,6 +186,8 @@
     Beard Laws Casino is a free entertainment simulator. All balances, wagers, winnings, bank funds and credits are fictional and have no monetary value. Nothing can be purchased, redeemed, transferred or withdrawn.
   </footer>
 
-  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
+  <script src="pixi-reels.js?v=0.9.0"></script>
+  <script src="app.js?v=0.9.0"></script>
 </body>
 </html>

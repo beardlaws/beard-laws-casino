@@ -1,40 +1,39 @@
-# Beard Laws Casino — Project Gold Beard v0.7
+# Beard Laws Casino — Project Gold Beard v0.9 True Reels
 
-This release is the first focused **Beard Bank Gold Master Alpha**.
+This release fixes the v0.8 canvas reel movement defect.
 
-## What is included
+## Fixed
 
-- Premium responsive slot cabinet presentation
-- Five reels by three rows
-- 20 fixed paylines
-- Fixed weighted virtual reel strips
-- Independent browser-crypto random reel stops
-- Wild, scatter and Beard Coin symbols
-- Six-or-more-coin Vault Hold & Spin feature
-- Three respins, resetting when a new coin lands
-- Real fictional wallet deductions and payouts
-- Session RTP, wagered, returned, feature count and biggest-win tracking
-- Fictional Beard Laws Bank and cash-out flow
-- Local browser save
-- Transparent game-information and paytable screens
-- Original SVG symbol artwork
-- Desktop and mobile layouts
+The v0.8 controller repositioned individual symbol containers in a way that could appear as vibration or shaking rather than full reel travel.
 
-## Important alpha note
+v0.9 replaces that animation with a true row-position reel loop:
 
-The displayed 94.20% RTP is the target design profile, not a certification claim. The reel strips and feature values require automated multi-million-spin simulation and tuning before the math model can be called final.
+- Visible symbols travel through complete vertical rows
+- Symbols wrap from below the window to above the window
+- New passing symbols are assigned only when a symbol wraps
+- Reels accelerate into full speed
+- Reels cruise long enough for obvious vertical movement
+- Reels stop one at a time
+- Every reel continues through a real deceleration phase
+- Final weighted outcomes are applied only at lock
+- Each reel recoils and settles after stopping
+- Resize rebuilding is disabled while a spin is running
 
-## GitHub Pages upload
+## Cache note
 
-Upload the contents of this folder to the root of the GitHub Pages repository:
+The game scripts now include a `v=0.9.0` query string. This helps prevent GitHub Pages and the browser from continuing to use the older v0.8 reel controller.
 
-- index.html
-- styles.css
-- app.js
-- assets/
+After uploading, still perform a hard refresh:
 
-Then refresh the published site with a hard reload.
+- Windows: Ctrl + F5
+- Mac: Command + Shift + R
 
-## Permanent product boundary
+## Files to replace
 
-This is a fictional entertainment simulator. No funds, credits, wagers or winnings have monetary value. Nothing can be purchased, transferred, redeemed, withdrawn or exchanged.
+Upload the entire extracted package, or at minimum replace:
+
+- `index.html`
+- `pixi-reels.js`
+- `README.md`
+
+The existing fictional wallet, weighted outcome engine, payline logic, session statistics and Hold & Spin controller remain unchanged.
