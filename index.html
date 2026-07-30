@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#120d16">
   <title>Beard Bank: Gold Master Alpha</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1.2.0">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -70,7 +70,7 @@
 
       <section class="cabinet-stage">
         <div class="cabinet" id="cabinet">
-          <div class="cabinet-glow"></div>
+          <div class="cabinet-glow"></div><div id="cabinetDimmer" class="cabinet-dimmer" aria-hidden="true"></div>
           <div class="topper">
             <div class="progressive">
               <span>LEGENDARY</span>
@@ -79,7 +79,7 @@
             <div class="logo-block">
               <small>VAULTMASTER VERNON PRESENTS</small>
               <h2>BEARD BANK</h2>
-              <p>FORTUNE FAVORS THE FULLY BEARDED</p>
+              <p>FORTUNE FAVORS THE FULLY BEARDED</p><span class="build-badge">GOLD MASTER ART PASS • v1.2</span>
             </div>
             <div class="progressive">
               <span>MAJOR</span>
@@ -89,7 +89,8 @@
 
           <button id="ledgerBookBtn" class="ledger-book-button" aria-label="Open Vaultmaster's Ledger">
             <span class="book-spine">BL</span>
-            <span class="book-title">LEDGER</span>
+            <span class="book-title">VAULTMASTER'S LEDGER</span>
+            <span class="book-tab">OPEN</span>
           </button>
 
           <div class="screen-bezel">
@@ -114,8 +115,9 @@
 
             <div class="reel-window" id="reelWindow">
               <canvas id="slot-canvas" aria-label="Five reel, three row animated slot display"></canvas>
+              <div id="reelThreePulse" class="reel-three-pulse" aria-hidden="true"></div>
               <div class="payline-flash" id="paylineFlash"></div>
-              <div class="glass-shine"></div>
+              <div class="glass-shine cinematic-glass"></div>
             </div>
 
             <div class="screen-footer">
@@ -259,7 +261,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
-  <script src="pixi-reels.js?v=1.1.0"></script>
-  <script src="app.js?v=1.1.0"></script>
+  <script src="pixi-reels.js?v=1.2.0"></script>
+  <script src="app.js?v=1.2.0"></script>
 </body>
 </html>

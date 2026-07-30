@@ -36,6 +36,83 @@ const LINES = [
  [0,2,0,2,0],[2,0,2,0,2],[0,2,2,2,0],[2,0,0,0,2],[1,1,0,1,1]
 ];
 
+
+const PresentationAudio = {
+ ctx:null,
+ enabled:true,
+ ensure(){
+  if(!this.enabled)return null;
+  if(!this.ctx){
+   const AudioCtx=window.AudioContext||window.webkitAudioContext;
+   if(!AudioCtx)return null;
+   this.ctx=new AudioCtx();
+  }
+  if(this.ctx.state==='suspended')this.ctx.resume();
+  return this.ctx;
+ },
+ tone(freq,duration=.12,type='sine',gain=.035,delay=0){
+  const ctx=this.ensure();if(!ctx)return;
+  const osc=ctx.createOscillator(),amp=ctx.createGain();
+  osc.type=type;osc.frequency.value=freq;
+  amp.gain.setValueAtTime(0,ctx.currentTime+delay);
+  amp.gain.linearRampToValueAtTime(gain,ctx.currentTime+delay+.012);
+  amp.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+delay+duration);
+  osc.connect(amp).connect(ctx.destination);
+  osc.start(ctx.currentTime+delay);osc.stop(ctx.currentTime+delay+duration+.03);
+ },
+ clang(count=1){
+  const ctx=this.ensure();if(!ctx)return;
+  for(let i=0;i<Math.min(count,6);i++){
+   this.tone(170+i*19,.22,'square',.027,i*.055);
+   this.tone(470+i*24,.17,'triangle',.018,i*.055+.015);
+  }
+ },
+ anticipation(level=1){
+  const base=300+level*65;
+  this.tone(base,.34,'sine',.03);
+  this.tone(base*1.5,.32,'triangle',.022,.08);
+ },
+ vernon(){
+  [196,247,294,392].forEach((f,i)=>this.tone(f,.42,'triangle',.032,i*.075));
+ }
+};
+
+function runScatterAnticipationHooks(grid){
+ const firstThree=grid.slice(0,3);
+ let running=0;
+ firstThree.forEach((reel,index)=>{
+  const hasPotential=reel.some(symbol=>symbol==='vault'||symbol==='coin');
+  if(hasPotential){
+   running++;
+   setTimeout(()=>{
+    $('#cabinet').classList.add('scatter-anticipation');
+    PresentationAudio.anticipation(running);
+    setTimeout(()=>$('#cabinet').classList.remove('scatter-anticipation'),620);
+   },440+index*175);
+  }
+ });
+}
+
+function playCoinChargePresentation(count){
+ if(!count)return;
+ const header=$('.living-vault-header');
+ header.classList.remove('coin-clang');
+ void header.offsetWidth;
+ header.classList.add('coin-clang');
+ PresentationAudio.clang(count);
+ setTimeout(()=>header.classList.remove('coin-clang'),650);
+}
+
+function playVernonPresentation(){
+ $('#cabinet').classList.add('vernon-event');
+ $('#reelWindow').classList.add('vernon-active');
+ PresentationAudio.vernon();
+ setTimeout(()=>{
+  $('#cabinet').classList.remove('vernon-event');
+  $('#reelWindow').classList.remove('vernon-active');
+ },2200);
+}
+
 const state = {
  bank:2000,wallet:0,startWallet:0,bet:1,spins:0,wagered:0,returned:0,biggest:0,features:0,
  started:null,sound:true,speed:'normal',grid:[],bonus:null,vaultCharges:0,visitCoins:0,visitVaults:0,visitVernon:0,lifetime:{goldenKey:false,megaVault:false,vernonWild:false,fullCoinScreen:false},pendingBurstPrize:0
@@ -161,10 +238,14 @@ async function spin(){
 
  const grid=generateGrid();
  const coinValues=createCoinValues(grid);
+ runScatterAnticipationHooks(grid);
  await window.BeardReels.spinTo(grid,state.speed==='quick');
 
  state.grid=grid;
  const result=runFeaturePipeline(grid,coinValues);
+
+ playCoinChargePresentation(result.livingVault.coins);
+ if(result.vernon.triggered)playVernonPresentation();
 
  if(result.total>0){
   state.wallet+=result.total;state.returned+=result.total;state.biggest=Math.max(state.biggest,result.total);
@@ -319,7 +400,7 @@ $('#betDown').onclick=()=>{const bets=[.5,1,2,3,5,10];state.bet=bets[Math.max(0,
 $('#infoBtn').onclick=()=>showModal('info');$('#statsBtn').onclick=()=>showModal('stats');$('#paytableBtn').onclick=()=>showModal('pay');
 $('#modalClose').onclick=()=>$('#modal').close();$('#cashoutBtn').onclick=cashout;
 $('#speedBtn').onclick=()=>{state.speed=state.speed==='normal'?'quick':'normal';$('#speedBtn').textContent=state.speed.toUpperCase()};
-$('#soundBtn').onclick=()=>{state.sound=!state.sound;$('#soundBtn').textContent='SOUND '+(state.sound?'ON':'OFF')};
+$('#soundBtn').onclick=()=>{state.sound=!state.sound;PresentationAudio.enabled=state.sound;$('#soundBtn').textContent='SOUND '+(state.sound?'ON':'OFF')};
 $('#ledgerBookBtn').onclick=()=>toggleLedger(true);
 $('#ledgerCloseBtn').onclick=()=>toggleLedger(false);
 $$('.ledger-tab').forEach(tab=>tab.onclick=()=>{
@@ -333,5 +414,25 @@ $('#vaultBurstCollectBtn').onclick=collectVaultBurst;
 
 setInterval(()=>{if(state.started){const s=Math.floor((Date.now()-state.started)/1000);$('#visitTime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}},1000);
 setInterval(()=>{const g=12845.27+(Date.now()%100000)/100000;$('#grandMeter').textContent=money(g);$('#majorMeter').textContent=money(1284.50+(Date.now()%25000)/100000)},1200);
+enforceGoldMasterElements();
+
+function enforceGoldMasterElements(){
+ const oldStatus=document.querySelector('.feature-meter');
+ if(oldStatus && !document.querySelector('#vaultChargeText')){
+  oldStatus.className='living-vault-header';
+  oldStatus.innerHTML=`<div class="vault-door-mini"><div class="vault-wheel"></div></div>
+  <div class="vault-meter-copy"><span>THE LIVING VAULT</span><strong id="vaultChargeText">0 / 30 CHARGES</strong>
+  <div class="vault-charge-track"><div id="vaultChargeFill" class="vault-charge-fill"></div></div></div>`;
+ }
+ if(!document.querySelector('#ledgerBookBtn')){
+  const cabinet=document.querySelector('#cabinet');
+  const button=document.createElement('button');
+  button.id='ledgerBookBtn';button.className='ledger-book-button';
+  button.innerHTML='<span class="book-spine">BL</span><span class="book-title">VAULTMASTER\\'S LEDGER</span><span class="book-tab">OPEN</span>';
+  cabinet?.appendChild(button);
+  button.onclick=()=>toggleLedger(true);
+ }
+}
+
 updateUI();
 if(state.wallet>0){$('#enterBtn').textContent='RESUME CURRENT VISIT';}

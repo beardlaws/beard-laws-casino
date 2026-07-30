@@ -38,7 +38,7 @@
       const canvas = document.getElementById('slot-canvas');
       const host = canvas.parentElement;
       this.width = Math.max(700, Math.floor(host.clientWidth));
-      this.height = Math.max(390, Math.floor(this.width * 0.43));
+      this.height = Math.max(455, Math.floor(this.width * 0.485));
 
       this.app = new PIXI.Application({
         view: canvas,
@@ -169,6 +169,16 @@
       icon.height = size;
       icon.x = this.reelWidth/2;
       icon.y = this.rowHeight/2;
+      icon.texture.baseTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+      const artShadow = new PIXI.filters.DropShadowFilter({
+        color:0x000000,
+        alpha:.52,
+        blur:4,
+        distance:7,
+        rotation:90,
+        quality:2
+      });
+      icon.filters=[artShadow];
       group.addChild(icon);
       group._icon = icon;
 
@@ -327,7 +337,7 @@
       if (!this.ready || this.running) return;
       const host=document.getElementById('slot-canvas').parentElement;
       const nextWidth=Math.max(300,Math.floor(host.clientWidth));
-      const nextHeight=Math.max(240,Math.floor(nextWidth*.43));
+      const nextHeight=Math.max(290,Math.floor(nextWidth*.485));
       if(Math.abs(nextWidth-this.width)<3 && Math.abs(nextHeight-this.height)<3)return;
 
       const grid=this.currentGrid();

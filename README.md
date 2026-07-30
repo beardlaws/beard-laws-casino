@@ -1,55 +1,70 @@
-# Beard Laws Casino — Beard Engine 1.1 / Living Vault Milestone
+# Beard Laws Casino — Gold Master Art Pass v1.2
 
-This release preserves the working v0.9 PixiJS reel renderer and refactors the game logic into the published Beard Engine 1.1 feature pipeline.
+This is a presentation-only milestone built on Beard Engine 1.1.
 
-## Published feature order
+## Protected systems
 
-1. Payline evaluation
-2. Scatter evaluation
-3. Vernon's Favor
-4. Living Vault charges
-5. Ledger, museum and save update
+This release does **not** change:
 
-## Living Vault
+- Feature pipeline order
+- Weighted reel strips
+- Payline evaluation
+- Scatter evaluation
+- Vernon's Favor payout rules
+- Living Vault charge rules
+- Vault Burst prize table
+- Wallet deductions or payouts
+- Save behavior
 
-- Every visible Beard Coin adds exactly one charge
-- Current progress is displayed above the reels
-- Meter threshold is exactly 30 charges
-- At 30 charges the meter resets to zero
-- The Living Vault Burst overlay opens automatically
-- The player chooses Gold Chest, Safe, Coin Stack or Treasure Shelf
-- All four choices use the same transparent weighted prize table:
-  - 50%: 5× total bet
-  - 28%: 10× total bet
-  - 15%: 20× total bet
-  - 5.5%: 50× total bet
-  - 1.5%: 100× total bet
+## Visual upgrades
 
-## Vernon's Favor
+### Living Vault
 
-- Vernon is present only on Reel 3's configured strip
-- When Vernon is visible on Reel 3 and one or more Beard Coins are visible:
-  - Every coin receives a defined value
-  - The visible values are summed
-  - That amount is added to the same spin win
-  - Coins remain visible
-- The event resolves after paylines and scatters
+- Physical cabinet module forced above the reels
+- Exact X / 30 charge text
+- Animated gold-fill meter
+- Shimmer and cabinet-feedback animation
+- Runtime fallback creates the meter if an incomplete deployment leaves the old SEALED element
 
-## Vaultmaster's Ledger
+### Vaultmaster's Ledger
 
-The leather book attached to the cabinet opens a slide-out drawer with:
+- Larger leather-bound book mounted to the right cabinet bezel
+- Visible OPEN tab
+- Runtime fallback restores the book if index.html and app.js are uploaded out of sync
 
-- Current visit statistics
-- Coins landed
-- Vaults opened
-- Vernon's Favor triggers
-- Biggest win
-- Target RTP
-- Live session RTP
-- Current Living Vault charges
-- RNG source: crypto.getRandomValues()
-- Lifetime Beard Museum badges
+### Reel matrix
 
-## Math status
+- Taller cinematic 5×3 window
+- Canvas renderer height increased
+- Responsive height increased
+- Layered animated glass reflection
+- Linear texture filtering and shadow preparation for future painted PNG/WebP symbols
 
-The 94.20% figure remains a target, not a verified final RTP. Living Vault and Vernon's Favor materially alter the return model. The next math-lab simulation must include the complete feature pipeline and published Vault Burst prize distribution before the target can be considered audited.
+### Vernon presentation
+
+When Vernon's Favor resolves:
+
+- Cabinet dims
+- Reel 3 receives a purple/gold glowing border pulse
+- A short synthesized Vernon fanfare plays
+
+### Audio and anticipation hooks
+
+- Mechanical synthesized CLANG when Beard Coins add Living Vault charges
+- Rising tension tones when the predetermined Reel 1–3 results contain coin/scatter feature potential
+- Anticipation effects do not alter the result or math
+
+## Cache verification
+
+The lobby marquee visibly displays:
+
+`GOLD MASTER ART PASS • v1.2`
+
+If this label is missing after deployment, the browser or GitHub Pages is still serving an older file.
+
+All CSS and scripts use `?v=1.2.0` cache-busting parameters.
+
+After upload, use:
+
+- Windows: Ctrl + F5
+- Mac: Command + Shift + R
