@@ -10,7 +10,7 @@ const defaultState = () => ({
   roulette:{bets:{},previous:{},history:[],last:null,lastNet:0,spins:0,wagered:0},
   blackjack:{inRound:false,player:[],dealer:[],bet:0,hidden:true,message:"Place a bet to begin.",stats:{hands:0,wagered:0}},
   beardBank:{progress:0,chase:0,spins:0,wagered:0,lastGrid:[]},
-  lumber:{level:3,spins:0,wagered:0,lastGrid:[]},
+  lumber:{level:1,spins:0,wagered:0,lastGrid:[]},
   trips:[], lifetime:{trips:0,net:0,wagered:0,atmFees:0}, settings:{quick:false}
 });
 
@@ -83,7 +83,7 @@ function renderClock(){if(!state.activeTrip)return;const sec=Math.floor((Date.no
 function render(){
   $("bankBalance").textContent=money(state.bank);$("walletBalance").textContent=money(state.wallet);
   document.querySelectorAll(".trip-btn[data-amount]").forEach(b=>b.classList.toggle("selected",Number(b.dataset.amount)===state.selectedTrip));
-  $("startTripBtn").textContent=`Start Visit With ${money(state.selectedTrip)}`;
+  $("startTripBtn").textContent=`Start Visit With ${money(state.selectedTrip)}`;if($("previewBuyIn"))$("previewBuyIn").textContent=money(state.selectedTrip);
   if(!state.activeTrip)return;
   $("tripResult").textContent=money(tripNet());$("tripResult").className=tripNet()>=0?"win":"loss";renderClock();
   renderRoulette();renderBlackjack();renderBeardBank();renderLumber()
@@ -153,6 +153,25 @@ const BEARD_BANK_PAY={
 };
 const BEARD_BANK_ICONS={BLANK:"",OIL:"🧴",COMB:"🪮",KEY:"🗝️",BAG:"💰",COIN:"🪙",WILD:"🧔",VAULT:"🏦"};
 let beardBankLocked=false;
+
+
+/* Lumber Beard v0.6 fixed virtual reel math */
+const LUMBER_REELS=[
+ [...Array(18).fill("BLANK"),...Array(14).fill("TREE"),...Array(12).fill("LOG"),...Array(10).fill("DEER"),...Array(7).fill("BEAR"),...Array(2).fill("AXE"),...Array(2).fill("WILD")],
+ [...Array(20).fill("BLANK"),...Array(14).fill("TREE"),...Array(12).fill("LOG"),...Array(10).fill("DEER"),...Array(7).fill("BEAR"),...Array(2).fill("AXE"),...Array(2).fill("WILD")],
+ [...Array(22).fill("BLANK"),...Array(14).fill("TREE"),...Array(12).fill("LOG"),...Array(10).fill("DEER"),...Array(7).fill("BEAR"),...Array(2).fill("AXE"),...Array(2).fill("WILD")],
+ [...Array(20).fill("BLANK"),...Array(14).fill("TREE"),...Array(12).fill("LOG"),...Array(10).fill("DEER"),...Array(7).fill("BEAR"),...Array(2).fill("AXE"),...Array(2).fill("WILD")],
+ [...Array(18).fill("BLANK"),...Array(14).fill("TREE"),...Array(12).fill("LOG"),...Array(10).fill("DEER"),...Array(7).fill("BEAR"),...Array(2).fill("AXE"),...Array(2).fill("WILD")]
+];
+const LUMBER_LINES=[[0,0,0,0,0],[1,1,1,1,1],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]];
+const LUMBER_PAY={
+ TREE:{2:1.4,3:8,4:24,5:80},
+ LOG:{2:1.8,3:11.2,4:32,5:112},
+ DEER:{2:2.4,3:16,4:48,5:160},
+ BEAR:{2:3.2,3:24,4:80,5:280}
+};
+const LUMBER_ICONS={BLANK:"",TREE:"🌲",LOG:"🪵",DEER:"🦌",BEAR:"🐻",AXE:"🪓",WILD:"🧔"};
+let lumberLocked=false;
 
 /* Slots */
 const bankSymbols=["🪙","🪙","🧔","🔑","💰","🧴","✂️","🪙","🧔","💰"];
@@ -252,8 +271,100 @@ async function spinBeardBank(){
    save();render();
  })
 }
-function renderLumber(){const l=state.lumber;$("lumberReels").innerHTML=gridHtml(l.lastGrid.length?l.lastGrid:createGrid(lumberSymbols,l.level));$("forestLevel").textContent=`${l.level} reels`;$("forestMeter").style.width=`${(l.level-3)/2*100}%`}
-function spinLumber(){safe(()=>{const bet=Number($("lumberBet").value);spend(bet);const l=state.lumber;l.spins++;l.wagered+=bet;const grid=createGrid(lumberSymbols,l.level);l.lastGrid=grid;const axes=count(grid,"🪓"),wilds=count(grid,"🧔"),trees=count(grid,"🌲");let payout=0,msg=`${axes} axes landed.`;if(trees>=4)payout+=bet*(trees-2);if(wilds>=2)payout+=bet*4;if(axes>=2&&l.level<5){l.level++;msg=`The forest expanded to ${l.level} reels!`}else if(axes>=2&&l.level===5){const bonus=bet*(10+randomInt(16));payout+=bonus;l.level=3;msg=`TIMBER BEARD FEATURE! Paid ${money(bonus)} and the forest reset.`}if(payout)win(payout);$("lumberMessage").textContent=msg+(payout?` Total return ${money(payout)}.`:"");save();render()})}
+function lumberGrid(){
+ return LUMBER_REELS.map(strip=>{
+   const stop=randomInt(strip.length);
+   return [strip[(stop-1+strip.length)%strip.length],strip[stop],strip[(stop+1)%strip.length]];
+ });
+}
+function lumberLinePay(symbols){
+ let base=null,count=0;
+ for(const symbol of symbols){
+   if(count===0){
+     if(symbol==="BLANK"||symbol==="AXE")return 0;
+     base=symbol==="WILD"?null:symbol;
+     count=1;
+   }else if(symbol==="WILD")count++;
+   else if(base===null&&LUMBER_PAY[symbol]){base=symbol;count++}
+   else if(symbol===base)count++;
+   else break;
+ }
+ return base&&LUMBER_PAY[base]&&LUMBER_PAY[base][count]||0;
+}
+function evaluateLumber(grid,bet,level){
+ let returned=0;
+ for(const line of LUMBER_LINES){
+   returned+=lumberLinePay(line.map((row,col)=>grid[col][row]))*bet/LUMBER_LINES.length;
+ }
+ const axeReels=grid.filter(col=>col.includes("AXE")).length;
+ let feature=0;
+ if(axeReels>=3){
+   feature=bet*(10+randomInt(31))*level;
+   returned+=feature;
+ }
+ return {returned:Math.round(returned),axeReels,feature:Math.round(feature)};
+}
+function lumberGridHtml(grid){
+ return grid.map(col=>`<div class="reel">${col.map(s=>`<div class="symbol ${s==="WILD"?"wild":s==="BLANK"?"blank":""}">${LUMBER_ICONS[s]}</div>`).join("")}</div>`).join("");
+}
+function renderLumber(){
+ const l=state.lumber;
+ const display=l.lastGrid.length?l.lastGrid:lumberGrid();
+ $("lumberReels").innerHTML=lumberGridHtml(display);
+ $("forestLevel").textContent=`Forest Level ${l.level} of 3`;
+ $("forestMeter").style.width=`${Math.max(0,(l.level-1)/2*100)}%`;
+}
+async function spinLumber(){
+ if(lumberLocked)return;
+ safe(async()=>{
+   const bet=Number($("lumberBet").value);
+   spend(bet);
+   lumberLocked=true;
+   $("lumberSpin").disabled=true;
+
+   const l=state.lumber;
+   l.spins++;
+   l.wagered+=bet;
+
+   // Result is fixed before the visual reel cycling.
+   const finalGrid=lumberGrid();
+
+   for(let frame=0;frame<12;frame++){
+     $("lumberReels").innerHTML=lumberGridHtml(lumberGrid());
+     await new Promise(resolve=>setTimeout(resolve,55+frame*7));
+   }
+
+   l.lastGrid=finalGrid;
+   const result=evaluateLumber(finalGrid,bet,l.level);
+   let returned=result.returned;
+   let message="No win.";
+
+   if(result.axeReels>=3){
+     if(l.level<3){
+       message=`FOREST EXPANSION! ${result.axeReels} axe reels advanced Timber Tom to level ${l.level+1}. Feature returned ${money(result.feature)}.`;
+       l.level++;
+     }else{
+       const finalBonus=bet*(20+randomInt(41));
+       returned+=finalBonus;
+       message=`TIMBER FEATURE! The completed forest returned ${money(result.feature+finalBonus)}. Forest reset to level 1.`;
+       l.level=1;
+     }
+   }else if(returned>bet){
+     message=`Winner. Returned ${money(returned)} on a ${money(bet)} bet.`;
+   }else if(returned===bet){
+     message="Bet returned.";
+   }else if(returned>0){
+     message=`Small return ${money(returned)}. Net loss ${money(bet-returned)}.`;
+   }
+
+   if(returned)win(returned);
+   $("lumberMessage").textContent=message;
+   lumberLocked=false;
+   $("lumberSpin").disabled=false;
+   save();
+   render();
+ })
+}
 
 /* Modal content */
 function showATM(){const t=state.activeTrip;modal("Casino ATM",`<p class="muted">Each fictional withdrawal costs $7.99. Used ${t.atmCount} of 3 withdrawals.</p><div class="atm-grid">${[10000,20000,30000,50000].map(a=>`<button class="primary atm-choice" data-a="${a}">Withdraw ${money(a)}</button>`).join("")}</div>`);document.querySelectorAll(".atm-choice").forEach(b=>b.onclick=()=>safe(()=>{const a=Number(b.dataset.a);if(t.atmCount>=3)throw new Error("Maximum of three withdrawals.");if(state.bank<a+ATM_FEE)throw new Error("Not enough in the fictional bank.");state.bank-=a+ATM_FEE;state.wallet+=a;t.atmWithdrawals+=a;t.atmFees+=ATM_FEE;t.atmCount++;state.lifetime.atmFees+=ATM_FEE;save();closeModal();render()}))}
@@ -266,6 +377,7 @@ function showBank(){modal("Beard Laws Bank",`<div class="stat-row"><span>Bank ba
 document.querySelectorAll(".trip-btn[data-amount]").forEach(b=>b.onclick=()=>{state.selectedTrip=Number(b.dataset.amount);save();render()});
 $("customTripBtn").onclick=()=>{modal("Custom Casino Cash",`<input id="customAmount" placeholder="200.00"><button id="useCustom" class="primary">Use Amount</button>`);$("useCustom").onclick=()=>{const n=Math.round(Number($("customAmount").value)*100);if(!Number.isFinite(n)||n<2000||n>50000)return alert("Choose between $20 and $500.");state.selectedTrip=n;save();closeModal();render()}};
 $("startTripBtn").onclick=()=>safe(()=>startTrip(state.selectedTrip));
+$("entrancePreview").onclick=()=>safe(()=>startTrip(state.selectedTrip));
 document.querySelectorAll(".game-card").forEach(b=>b.onclick=()=>showScreen(b.dataset.game));document.querySelectorAll(".back-lobby").forEach(b=>b.onclick=()=>showScreen("lobby"));
 $("lobbyBtn").onclick=()=>showScreen("lobby");$("atmBtn").onclick=showATM;$("currentTripBtn").onclick=showTrip;$("cashierBtn").onclick=()=>modal("Cashier",`<p>Return ${money(state.wallet)} to the fictional Beard Laws Bank and end this visit?</p><button id="confirmCash" class="primary">Cash Out and End Visit</button>`);$("modal").addEventListener("click",e=>{if(e.target.id==="confirmCash"){closeModal();cashOut()}});
 $("welcomeHistoryBtn").onclick=showHistory;$("welcomeSettingsBtn").onclick=showSettings;$("bankCard").onclick=showBank;$("modalClose").onclick=closeModal;$("modalX").onclick=closeModal;

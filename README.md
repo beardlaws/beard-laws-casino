@@ -1,35 +1,44 @@
-# Beard Laws Casino v0.5 — Playable Beard Bank Math Build
+# Beard Laws Casino v0.6 — Interactive Entrance and Lumber Math Fix
 
-Version 0.5 connects the live Beard Bank game to a fixed virtual-reel model.
+## Home Screen
 
-## What Changed
+The concept artwork is now clearly marked as a preview and functions as an entrance button.
 
-- Real losing spins
-- Fixed weighted reel strips
-- Independent cryptographic random stops
-- Outcome selected before animation
-- Twelve-frame reel animation
-- Normal line-pay evaluation
+1. Choose a fictional buy-in.
+2. Click the main Start Visit button or the casino preview image.
+3. The playable casino lobby opens.
+
+## Lumber Beard
+
+The prototype payout logic has been replaced.
+
+- Five fixed weighted virtual reel strips
+- Natural blank stops
+- Ten left-to-right paylines
 - Wild substitution
-- Six-coin Beard Vault trigger on a single spin
-- Transparent 30-spark secondary chase meter
-- Small returns are identified as net losses instead of celebrated as wins
+- Axe symbols do not pay as ordinary symbols
+- Three separate axe reels trigger a forest event
+- Three forest levels lead to the larger Timber Feature
+- Losing spins and net-losing small returns are reported honestly
+- Result is selected before the animation
 
-## Expected Alpha Profile
+## Expected Alpha Behavior
 
-The current tuned model was designed around approximately:
+The current Lumber model is intentionally capable of long dry stretches:
 
-- 94%–95% long-run RTP
-- About 32% of spins returning something
-- About 68% completely losing
-- Six-coin feature approximately once every 200–250 spins
+- Roughly 24% of spins return something
+- Roughly 76% return nothing
+- Axe feature is rare
+- Long-run return is tuned near the low-90% range in the initial alpha model
 
-Session results can vary dramatically. Ten spins are far too few to judge RTP.
+This is still an alpha math profile and will receive larger simulation testing before visual polish is locked.
 
 ## Upload
 
-Replace the live repository with all files from this package and commit:
+Upload all files to the GitHub repository and replace the existing versions.
 
-`Release Beard Bank math build v0.5`
+Commit:
 
-Then hard-refresh with Ctrl+F5.
+`Release interactive entrance and Lumber math v0.6`
+
+After deployment, press Ctrl+F5.

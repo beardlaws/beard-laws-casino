@@ -46,9 +46,13 @@
           </div>
           <p class="small-print">No purchases, prizes, withdrawals, transfers, or redemptions. Every balance shown is fictional.</p>
         </div>
-        <div class="welcome-art">
-          <img src="assets/casino-concept.png" alt="Beard Laws Casino concept art">
-        </div>
+        <button id="entrancePreview" class="welcome-art entrance-preview" aria-label="Enter Beard Laws Casino">
+          <img src="assets/casino-concept.png" alt="Preview of the future Beard Laws Casino">
+          <span class="preview-shade"></span>
+          <span class="preview-label">CASINO CONCEPT PREVIEW</span>
+          <span class="preview-cta">Click to enter with <strong id="previewBuyIn">$200.00</strong></span>
+          <span class="preview-note">The artwork is a preview. The playable casino opens after entering.</span>
+        </button>
       </section>
 
       <section id="casinoView" class="hidden">
@@ -100,7 +104,7 @@
             <button class="game-card" data-game="lumber">
               <div class="game-badge">ORIGINAL SLOT</div>
               <h3>Lumber Beard</h3>
-              <p>Axes expand the reels while Timber Tom grows wild stacks through the forest.</p>
+              <p>Real weighted reels, natural losing spins, Timber Tom wilds and rare axe-triggered forest features.</p>
               <span>Play Lumber Beard</span>
             </button>
           </div>
@@ -245,8 +249,8 @@
             <aside class="panel side-panel">
               <h3>Forest Expansion</h3>
               <div class="meter"><div id="forestMeter"></div></div>
-              <p><strong id="forestLevel">3 reels</strong></p>
-              <p class="muted">Land axes to expand from 3 reels up to 5 reels. Expansion resets after a feature win.</p>
+              <p><strong id="forestLevel">Forest Level 1</strong></p>
+              <p class="muted">Three axe reels advance the forest. Complete three levels to trigger the Timber Feature.</p>
             </aside>
           </div>
         </section>

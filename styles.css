@@ -9,3 +9,62 @@
 .slot-cabinet:before{content:"BEARD BANK";display:block;text-align:center;font-size:clamp(1.5rem,4vw,3rem);font-weight:1000;letter-spacing:.08em;color:#f2cf72;text-shadow:0 0 18px rgba(218,165,54,.55);padding:8px 0 18px}
 #beardBankReels .reel{box-shadow:inset 0 0 16px #000,0 0 8px rgba(215,170,66,.22)}
 #beardBankSpin{min-width:120px;font-size:1.1rem;box-shadow:0 0 20px rgba(215,170,66,.24)}
+
+.entrance-preview{
+  position:relative;
+  padding:0;
+  border:0;
+  color:var(--text);
+  cursor:pointer;
+  text-align:left;
+  overflow:hidden;
+}
+.entrance-preview img{
+  transition:transform .35s ease,filter .35s ease;
+}
+.entrance-preview:hover img{
+  transform:scale(1.018);
+  filter:brightness(1.08);
+}
+.preview-shade{
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.12),rgba(0,0,0,.28) 48%,rgba(0,0,0,.88));
+}
+.preview-label{
+  position:absolute;
+  top:18px;
+  left:18px;
+  padding:8px 11px;
+  border:1px solid rgba(244,210,123,.55);
+  border-radius:7px;
+  background:rgba(8,10,15,.82);
+  color:var(--gold2);
+  font-size:.7rem;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+.preview-cta{
+  position:absolute;
+  left:28px;
+  right:28px;
+  bottom:54px;
+  font-size:clamp(1.25rem,2.5vw,2.2rem);
+  font-weight:1000;
+  color:white;
+  text-shadow:0 3px 14px #000;
+}
+.preview-note{
+  position:absolute;
+  left:28px;
+  right:28px;
+  bottom:24px;
+  color:#ddd7cb;
+  font-size:.78rem;
+}
+#lumberReels .reel{
+  box-shadow:inset 0 0 18px #000,0 0 8px rgba(117,76,33,.35);
+}
+#lumberReels .symbol.blank{
+  background:linear-gradient(#11151c,#080a0e);
+}
