@@ -3,21 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080a0f">
   <title>Beard Laws Casino</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div>
+      <div class="brand">
         <div class="eyebrow">FREE ENTERTAINMENT SIMULATOR</div>
         <h1>BEARD LAWS CASINO</h1>
       </div>
+
       <div class="balances">
-        <div class="balance-card">
+        <button id="bankCard" class="balance-card">
           <span>Beard Laws Bank</span>
           <strong id="bankBalance">$2,000.00</strong>
-        </div>
+        </button>
         <div class="balance-card active">
           <span>Casino Wallet</span>
           <strong id="walletBalance">$0.00</strong>
@@ -29,18 +31,34 @@
       <section id="welcomePanel" class="panel hero">
         <div class="hero-copy">
           <p class="eyebrow">WELCOME BACK</p>
-          <h2>Bring real-world discipline. Leave the real money at home.</h2>
-          <p>Start a casino visit with a believable fictional bankroll, play American roulette, use the ATM if you must, and cash out when you are done.</p>
-          <div class="trip-options">
-            <button class="trip-btn" data-amount="100">$100</button>
-            <button class="trip-btn" data-amount="150">$150</button>
-            <button class="trip-btn selected" data-amount="200">$200</button>
-            <button class="trip-btn" data-amount="300">$300</button>
+          <h2>A casino trip should feel like a casino trip.</h2>
+          <p>
+            Choose what you are bringing through the doors. Your bankroll is fictional,
+            but the decisions and session history remain believable.
+          </p>
+
+          <div class="trip-options" aria-label="Casino visit amount">
+            <button class="trip-btn" data-amount="10000">$100</button>
+            <button class="trip-btn" data-amount="15000">$150</button>
+            <button class="trip-btn selected" data-amount="20000">$200</button>
+            <button class="trip-btn" data-amount="30000">$300</button>
+            <button id="customTripBtn" class="trip-btn">Custom</button>
           </div>
+
           <button id="startTripBtn" class="primary">Start Visit With $200</button>
+
+          <div class="welcome-actions">
+            <button id="historyWelcomeBtn" class="secondary">Trip History</button>
+            <button id="settingsWelcomeBtn" class="secondary">Settings</button>
+          </div>
+
+          <p class="small-print">
+            No purchases, prizes, withdrawals, transfers, or redemptions. Every dollar shown is fictional.
+          </p>
         </div>
+
         <div class="hero-art">
-          <img src="assets/casino-concept.png" alt="Beard Laws Casino concept art">
+          <img src="assets/casino-concept.png" alt="Beard Laws Casino concept">
         </div>
       </section>
 
@@ -50,7 +68,10 @@
           <button class="nav-btn active">Beard Roulette</button>
           <button id="atmBtn" class="nav-btn">ATM</button>
           <button id="cashierBtn" class="nav-btn">Cashier</button>
-          <button id="statsBtn" class="nav-btn">Trip Statistics</button>
+          <button id="statsBtn" class="nav-btn">Current Trip</button>
+          <button id="historyBtn" class="nav-btn">Trip History</button>
+          <button id="settingsBtn" class="nav-btn">Settings</button>
+
           <div class="session-box">
             <span>Trip Result</span>
             <strong id="tripNet">$0.00</strong>
@@ -63,17 +84,19 @@
             <div>
               <p class="eyebrow">AMERICAN ROULETTE</p>
               <h2>Beard Roulette</h2>
+              <p class="table-limits">Table limits: $1 minimum · $500 maximum per spin</p>
             </div>
-            <div class="history" id="history"></div>
+            <div class="history" id="spinHistory" aria-label="Previous roulette results"></div>
           </div>
 
           <div class="wheel-wrap">
-            <div id="wheel" class="wheel">
+            <div id="wheel" class="wheel" aria-label="Roulette wheel">
               <div class="wheel-center">BL</div>
             </div>
             <div class="result-box">
               <span>Last Result</span>
               <strong id="lastResult">—</strong>
+              <small id="lastSpinMessage"></small>
             </div>
           </div>
 
@@ -81,11 +104,11 @@
             <div>
               <span class="label">Chip</span>
               <div class="chips">
-                <button class="chip selected" data-chip="1">$1</button>
-                <button class="chip" data-chip="5">$5</button>
-                <button class="chip" data-chip="10">$10</button>
-                <button class="chip" data-chip="25">$25</button>
-                <button class="chip" data-chip="100">$100</button>
+                <button class="chip selected" data-chip="100">$1</button>
+                <button class="chip" data-chip="500">$5</button>
+                <button class="chip" data-chip="1000">$10</button>
+                <button class="chip" data-chip="2500">$25</button>
+                <button class="chip" data-chip="10000">$100</button>
               </div>
             </div>
             <div class="current-bet">
@@ -97,8 +120,10 @@
           <div id="rouletteBoard" class="roulette-board"></div>
 
           <div class="action-row">
-            <button id="clearBetsBtn" class="secondary">Clear Bets</button>
-            <button id="repeatBetBtn" class="secondary">Repeat Last Bet</button>
+            <button id="undoBetBtn" class="secondary">Undo</button>
+            <button id="clearBetsBtn" class="secondary">Clear</button>
+            <button id="repeatBetBtn" class="secondary">Repeat</button>
+            <button id="doubleBetBtn" class="secondary">Double</button>
             <button id="spinBtn" class="primary spin">Spin</button>
           </div>
         </section>
@@ -112,18 +137,20 @@
           <div class="stat-row"><span>Total Wagered</span><strong id="totalWagered">$0.00</strong></div>
           <div class="stat-row"><span>Spins</span><strong id="spinCount">0</strong></div>
           <div class="stat-row"><span>ATM Fees</span><strong id="atmFees">$0.00</strong></div>
+          <div class="stat-row"><span>Highest Wallet</span><strong id="highestWallet">$0.00</strong></div>
         </aside>
       </section>
     </main>
 
     <footer>
-      Beard Laws Casino is a free entertainment simulator. All balances and credits are fictional and have no monetary value.
+      Beard Laws Casino is a free entertainment simulator. All balances, wagers and winnings are fictional and have no monetary value.
     </footer>
   </div>
 
   <dialog id="modal">
     <div class="modal-content">
-      <h2 id="modalTitle">Modal</h2>
+      <button id="modalX" class="modal-x" aria-label="Close">×</button>
+      <h2 id="modalTitle">Beard Laws Casino</h2>
       <div id="modalBody"></div>
       <div class="modal-actions">
         <button id="modalClose" class="secondary">Close</button>
@@ -131,6 +158,6 @@
     </div>
   </dialog>
 
-  <script src="app.js"></script>
+  <script type="module" src="js/ui.js"></script>
 </body>
 </html>

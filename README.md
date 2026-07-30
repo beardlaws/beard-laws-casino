@@ -1,48 +1,49 @@
-# Beard Laws Casino Starter
+# Beard Laws Casino v0.2
 
-This starter contains:
+Version 0.2 is the first reusable casino-engine build.
 
-- `index.html` — working browser prototype
-- `styles.css` — visual styling
-- `app.js` — fictional bank, ATM, cashier, trip tracking, and American roulette
-- `docs/BEARD-LAWS-CASINO-BLUEPRINT.md` — full design blueprint
-- `assets/casino-concept.png` — current concept artwork, when available
+## What Changed
 
-## Run Locally
+- All financial values now use integer cents to prevent floating-point money errors.
+- Existing Version 0.1 browser balances migrate automatically.
+- Reusable casino and roulette engine modules.
+- Persistent trip history.
+- Fictional bank activity ledger.
+- Custom casino cash from $20–$500.
+- Undo, repeat and double bet controls.
+- Roulette column bets.
+- $1 minimum and $500 maximum per spin.
+- Rejection-sampling secure random selection.
+- Settings and confirmed reset.
+- Browser payout test page.
 
-Open `index.html` in a browser.
+## Upload to GitHub
 
-For best results, use a simple local server:
+Upload every file and folder in this package to the repository root and allow GitHub to replace the older files.
 
-```bash
-python -m http.server 8000
-```
-
-Then visit:
+Required root structure:
 
 ```text
-http://localhost:8000
+index.html
+styles.css
+assets/
+docs/
+js/
+tests/
 ```
 
-## Deploy to GitHub Pages
+The old root-level `app.js` is no longer used and may be deleted after Version 0.2 is working.
 
-1. Create a new GitHub repository.
-2. Upload the contents of this folder.
-3. Open repository Settings.
-4. Open Pages.
-5. Select deployment from the main branch/root.
-6. Save.
+## Test Page
 
-## Current Prototype Storage
+After deployment, open:
 
-Version 0.1 uses browser `localStorage` only as a temporary development fallback.
+```text
+https://beardlaws.github.io/beard-laws-casino/tests/roulette-tests.html
+```
 
-The next milestone replaces this with:
-- Firebase Authentication
-- Cloud Firestore
-- Google sign-in
-- Approved-account access
+All payout tests should pass.
 
-## Disclaimer
+## Current Saving
 
-Beard Laws Casino is a free entertainment simulator. All balances, wagers, winnings, bank funds, and credits are fictional and have no monetary value. Nothing can be purchased, transferred, redeemed, withdrawn, or exchanged for money, property, prizes, services, or anything else of value.
+Version 0.2 still uses browser localStorage. Firebase Authentication and Firestore are the next milestone.

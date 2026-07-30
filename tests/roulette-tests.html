@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Roulette Tests</title>
+<style>body{font-family:system-ui;background:#111;color:#eee;padding:30px}.pass{color:#72dc9d}.fail{color:#ff7d89}</style></head>
+<body><h1>Beard Roulette Payout Tests</h1><div id="out"></div>
+<script type="module">
+import {evaluateBet, settleBets} from "../js/roulette-engine.js";
+const cases = [
+ ["number:17","17",35],["number:17","18",-1],["red","1",1],["red","2",-1],
+ ["red","0",-1],["black","2",1],["odd","3",1],["even","4",1],
+ ["dozen1","12",2],["dozen1","13",-1],["column1","1",2],["column1","4",2],
+ ["column2","2",2],["column3","36",2],["column3","35",-1]
+];
+let passed=0;
+const out=document.getElementById("out");
+for(const [bet,result,expected] of cases){
+ const actual=evaluateBet(bet,result);
+ const ok=actual===expected; if(ok) passed++;
+ out.innerHTML += `<p class="${ok?"pass":"fail"}">${ok?"PASS":"FAIL"}: ${bet} on ${result}; expected ${expected}, received ${actual}</p>`;
+}
+const settlement=settleBets({"number:17":100,"red":500},"17");
+const settleOk=settlement===4100;
+if(settleOk) passed++;
+out.innerHTML += `<p class="${settleOk?"pass":"fail"}">${settleOk?"PASS":"FAIL"}: combined settlement expected 4100 cents, received ${settlement}</p>`;
+out.innerHTML = `<h2>${passed}/${cases.length+1} tests passed</h2>` + out.innerHTML;
+</script></body></html>
