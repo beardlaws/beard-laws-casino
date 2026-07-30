@@ -1,13 +1,26 @@
-# Beard Laws Casino 2.0.1 — Direct GitHub Pages Build
+# Beard Laws Casino 2.0.2 — True Reels & Logos
 
-This package requires no Node installation, Vite build, or GitHub Actions workflow.
+This patch removes the fake whole-stage shake.
 
-Upload the contents directly to the root of the `beard-laws-casino` repository and use:
+## Changes
 
-**Settings → Pages → Deploy from a branch → main → /(root)**
+- Each reel now animates independently.
+- Reels stop sequentially from left to right.
+- The cabinet remains stationary.
+- Reels receive a small recoil/settle motion only after stopping.
+- Added an original Beard Laws crest.
+- Added an original Beard Bank marquee logo.
+- Added original SVG symbol icons for:
+  - Beard Oil
+  - Comb
+  - Razor
+  - Balm
+  - Golden Key
+  - Crown
+  - Beard Coin
+  - Vault
+  - Vaultmaster Vernon
 
-The package uses native browser ES modules and loads PixiJS 8.6.6 from jsDelivr through an import map.
+Upload the package contents directly to the repository root and keep GitHub Pages set to:
 
-A network connection is required for PixiJS to load.
-
-This direct build is the immediate working deployment path. The separate Source/GitHub Actions package remains the long-term TypeScript development project.
+Deploy from a branch → main → /(root)

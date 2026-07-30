@@ -172,3 +172,15 @@ footer { padding: 20px; text-align: center; color: #736b76; font-size: .68rem; }
 }
 
 .startup{max-width:760px;margin:12vh auto;padding:28px;background:#171019;color:#f8efd9;border:1px solid #5b4161}.startup h1{color:#ffe18b}
+
+.brand-crest{width:52px;height:52px;filter:drop-shadow(0 0 10px #d7aa4c55)}
+.bank-logo{display:block;width:min(92%,820px);height:auto;margin:4px auto 0}
+.marquee h1{display:none}
+.slot-canvas{display:block;width:100%;height:auto}
+.reel-host{overflow:hidden}
+.spin-button{animation:spinBreathe 1.8s ease-in-out infinite}
+.spin-button:disabled{animation:none}
+@keyframes spinBreathe{
+  0%,100%{transform:scale(1);box-shadow:0 7px 0 #4b0815,0 0 25px #ff365b88}
+  50%{transform:scale(1.04);box-shadow:0 7px 0 #4b0815,0 0 42px #ff5578aa}
+}
