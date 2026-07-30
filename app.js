@@ -38,7 +38,7 @@ const LINES = [
 
 const state = {
  bank:2000,wallet:0,startWallet:0,bet:1,spins:0,wagered:0,returned:0,biggest:0,features:0,
- started:null,sound:true,speed:'normal',grid:[],bonus:null
+ started:null,sound:true,speed:'normal',grid:[],bonus:null,vaultCharges:0,visitCoins:0,visitVaults:0,visitVernon:0,lifetime:{goldenKey:false,megaVault:false,vernonWild:false,fullCoinScreen:false},pendingBurstPrize:0
 };
 
 function rngInt(max){
@@ -50,7 +50,8 @@ function save(){
  localStorage.setItem('blcGoldBeard',JSON.stringify({
   bank:state.bank,wallet:state.wallet,startWallet:state.startWallet,bet:state.bet,spins:state.spins,
   wagered:state.wagered,returned:state.returned,biggest:state.biggest,features:state.features,
-  started:state.started
+  started:state.started,vaultCharges:state.vaultCharges,visitCoins:state.visitCoins,
+  visitVaults:state.visitVaults,visitVernon:state.visitVernon,lifetime:state.lifetime
  }));
 }
 function load(){
@@ -61,7 +62,7 @@ function load(){
 }
 function resetSession(start){
  state.startWallet=start; state.wallet=start; state.bank=Math.max(0,state.bank-start); state.started=Date.now();
- state.spins=0;state.wagered=0;state.returned=0;state.biggest=0;state.features=0;state.grid=[];
+ state.spins=0;state.wagered=0;state.returned=0;state.biggest=0;state.features=0;state.grid=[];state.visitCoins=0;state.visitVaults=0;state.visitVernon=0;
  save(); updateUI();
 }
 
@@ -79,7 +80,15 @@ function coinValue(){
  const roll=rng();
  if(roll<.48)return 1;if(roll<.72)return 2;if(roll<.86)return 3;if(roll<.94)return 5;if(roll<.98)return 10;if(roll<.995)return 25;return 50;
 }
-function evaluate(grid){
+function createCoinValues(grid){
+ const values={};
+ for(let c=0;c<5;c++)for(let r=0;r<3;r++){
+  if(grid[c][r]==='coin') values[`${c}-${r}`]=coinValue()*state.bet;
+ }
+ return values;
+}
+
+function evaluatePaylines(grid){
  let total=0,winners=[];
  LINES.forEach((line,li)=>{
   const seq=line.map((row,c)=>grid[c][row]);
@@ -92,34 +101,100 @@ function evaluate(grid){
     winners.push({li,count,base,line});
   }
  });
- const coins=grid.flat().filter(x=>x==='coin').length;
- const scatters=grid.flat().filter(x=>x==='vault').length;
- if(scatters>=3) total += ({3:2,4:10,5:50}[Math.min(5,scatters)]||0)*state.bet;
- return {total:+total.toFixed(2),winners,coins,scatters};
+ return {amount:+total.toFixed(2),winners};
 }
+
+function evaluateScatters(grid){
+ const count=grid.flat().filter(x=>x==='vault').length;
+ const amount=count>=3?(({3:2,4:10,5:50}[Math.min(5,count)]||0)*state.bet):0;
+ return {amount:+amount.toFixed(2),count};
+}
+
+function evaluateVernonsFavor(grid,coinValues){
+ const vernonOnReel3=grid[2].includes('vernon');
+ const coinEntries=Object.entries(coinValues);
+ if(!vernonOnReel3||!coinEntries.length)return {amount:0,triggered:false,coins:0};
+ const amount=coinEntries.reduce((sum,[,value])=>sum+value,0);
+ return {amount:+amount.toFixed(2),triggered:true,coins:coinEntries.length};
+}
+
+function applyLivingVaultCharges(grid){
+ const coins=grid.flat().filter(x=>x==='coin').length;
+ state.visitCoins+=coins;
+ state.vaultCharges+=coins;
+ const burst=state.vaultCharges>=30;
+ if(burst){
+  state.vaultCharges=0;
+  state.visitVaults++;
+  state.lifetime.megaVault=true;
+ }
+ return {coins,burst};
+}
+
+function updateMuseumBadges(grid,vernonResult){
+ if(grid.flat().includes('key'))state.lifetime.goldenKey=true;
+ if(vernonResult.triggered)state.lifetime.vernonWild=true;
+ if(grid.flat().every(x=>x==='coin'))state.lifetime.fullCoinScreen=true;
+}
+
+function runFeaturePipeline(grid,coinValues){
+ // Beard Engine 1.1 published queue:
+ // 1. Paylines -> 2. Scatters -> 3. Vernon's Favor
+ // 4. Living Vault Charges -> 5. Ledger/Save
+ const paylines=evaluatePaylines(grid);
+ const scatters=evaluateScatters(grid);
+ const vernon=evaluateVernonsFavor(grid,coinValues);
+ const livingVault=applyLivingVaultCharges(grid);
+ updateMuseumBadges(grid,vernon);
+
+ if(vernon.triggered)state.visitVernon++;
+
+ const total=+(paylines.amount+scatters.amount+vernon.amount).toFixed(2);
+ return {total,paylines,scatters,vernon,livingVault,coinValues};
+}
+
 async function spin(){
  if(state.wallet<state.bet||$('#spinBtn').disabled)return;
  $('#spinBtn').disabled=true; clearWinners();
  state.wallet-=state.bet;state.spins++;state.wagered+=state.bet;$('#messageBar').textContent='REELS IN MOTION';
  updateUI();
- const grid=generateGrid();
 
+ const grid=generateGrid();
+ const coinValues=createCoinValues(grid);
  await window.BeardReels.spinTo(grid,state.speed==='quick');
 
  state.grid=grid;
- const result=evaluate(grid);
+ const result=runFeaturePipeline(grid,coinValues);
+
  if(result.total>0){
   state.wallet+=result.total;state.returned+=result.total;state.biggest=Math.max(state.biggest,result.total);
   $('#lastWin').textContent=money(result.total);
-  $('#messageBar').textContent=result.total>=state.bet*20?'MASSIVE VAULT WIN':result.total>=state.bet*5?'BEAUTIFUL WIN':'WIN PAID';
+
+  if(result.vernon.triggered){
+    $('#messageBar').textContent=`VERNON'S FAVOR COLLECTED ${money(result.vernon.amount)}`;
+    $('#messageBar').classList.add('vernon-message');
+    setTimeout(()=>$('#messageBar').classList.remove('vernon-message'),1800);
+  }else{
+    $('#messageBar').textContent=result.total>=state.bet*20?'MASSIVE VAULT WIN':result.total>=state.bet*5?'BEAUTIFUL WIN':'WIN PAID';
+  }
+
   $('#paylineFlash').classList.add('show');setTimeout(()=>$('#paylineFlash').classList.remove('show'),1000);
  }else{
-  $('#lastWin').textContent=money(0);$('#messageBar').textContent='NO WIN — NEXT SPIN IS INDEPENDENT';
+  $('#lastWin').textContent=money(0);
+  $('#messageBar').textContent=result.livingVault.coins?`${result.livingVault.coins} VAULT CHARGE${result.livingVault.coins===1?'':'S'} ADDED`:'NO WIN — NEXT SPIN IS INDEPENDENT';
  }
+
  updateUI();save();
- if(result.coins>=6){
-  state.features++; updateUI(); save(); setTimeout(()=>startBonus(grid),700); return;
+
+ if(result.livingVault.burst){
+  setTimeout(()=>openVaultBurst(),650);
+  return;
  }
+
+ if(result.livingVault.coins>=6){
+  state.features++;updateUI();save();setTimeout(()=>startBonus(grid),700);return;
+ }
+
  $('#spinBtn').disabled=false;
 }
 function clearWinners(){ $('#paylineFlash').classList.remove('show'); }
@@ -129,7 +204,7 @@ function startBonus(baseGrid){
  let idx=0;
  for(let c=0;c<5;c++)for(let r=0;r<3;r++)if(baseGrid[c][r]==='coin')locked[idx]={value:coinValue()*state.bet,new:false},idx++;else idx++;
  state.bonus={locked,respins:3,total:locked.filter(Boolean).reduce((a,x)=>a+x.value,0)};
- renderBonus();$('#bonusOverlay').classList.remove('hidden');$('#vaultStatus').textContent='OPEN';
+ renderBonus();$('#bonusOverlay').classList.remove('hidden');
 }
 function renderBonus(){
  const g=$('#bonusGrid');g.innerHTML='';
@@ -152,7 +227,7 @@ async function bonusSpin(){
   await new Promise(r=>setTimeout(r,800));
   state.wallet+=state.bonus.total;state.returned+=state.bonus.total;state.biggest=Math.max(state.biggest,state.bonus.total);
   $('#lastWin').textContent=money(state.bonus.total);$('#messageBar').textContent='VAULT FEATURE PAID '+money(state.bonus.total);
-  $('#bonusOverlay').classList.add('hidden');$('#vaultStatus').textContent='SEALED';state.bonus=null;updateUI();save();$('#spinBtn').disabled=false;
+  $('#bonusOverlay').classList.add('hidden');state.bonus=null;updateUI();save();$('#spinBtn').disabled=false;
  }else btn.disabled=false;
 }
 function updateUI(){
@@ -162,8 +237,62 @@ function updateUI(){
  $('#spinsStat').textContent=state.spins;$('#wageredStat').textContent=money(state.wagered);$('#returnedStat').textContent=money(state.returned);
  $('#biggestStat').textContent=money(state.biggest);$('#featuresStat').textContent=state.features;
  $('#sessionLine').textContent='SESSION RTP '+(state.wagered?((state.returned/state.wagered)*100).toFixed(2):'0.00')+'%';
+ const chargePct=(state.vaultCharges/30)*100;
+ $('#vaultChargeText').textContent=`${state.vaultCharges} / 30 CHARGES`;
+ $('#vaultChargeFill').style.width=chargePct+'%';
+ $('#ledgerSpins').textContent=state.spins;
+ $('#ledgerCoins').textContent=state.visitCoins;
+ $('#ledgerVaults').textContent=state.visitVaults;
+ $('#ledgerVernon').textContent=state.visitVernon;
+ $('#ledgerBiggest').textContent=money(state.biggest);
+ $('#ledgerSessionRtp').textContent=(state.wagered?((state.returned/state.wagered)*100).toFixed(2):'0.00')+'%';
+ $('#ledgerCharges').textContent=`${state.vaultCharges} / 30`;
+ Object.entries(state.lifetime).forEach(([key,unlocked])=>{
+   document.querySelector(`[data-badge="${key}"]`)?.classList.toggle('unlocked',!!unlocked);
+ });
+
  $('#spinBtn').disabled=state.wallet<state.bet||!!state.bonus;
 }
+
+function openVaultBurst(){
+ $('#vaultBurstOverlay').classList.remove('hidden');
+ $('#vaultBurstResult').textContent='SELECT A TREASURE';
+ $('#vaultBurstCollectBtn').classList.add('hidden');
+ $$('.vault-pick').forEach(btn=>{btn.disabled=false;btn.classList.remove('revealed')});
+ state.pendingBurstPrize=0;
+ updateUI();
+}
+
+function chooseVaultPrize(button){
+ if(state.pendingBurstPrize>0)return;
+ // Published weighted prize table in total-bet multipliers.
+ const roll=rng();
+ const multiplier=roll<.50?5:roll<.78?10:roll<.93?20:roll<.985?50:100;
+ state.pendingBurstPrize=multiplier*state.bet;
+ button.classList.add('revealed');
+ $$('.vault-pick').forEach(btn=>btn.disabled=true);
+ $('#vaultBurstResult').textContent=`${button.dataset.pick.toUpperCase()} REVEALS ${money(state.pendingBurstPrize)}`;
+ $('#vaultBurstCollectBtn').classList.remove('hidden');
+}
+
+function collectVaultBurst(){
+ const prize=state.pendingBurstPrize;
+ if(!prize)return;
+ state.wallet+=prize;state.returned+=prize;state.biggest=Math.max(state.biggest,prize);
+ $('#lastWin').textContent=money(prize);
+ $('#messageBar').textContent=`LIVING VAULT BURST PAID ${money(prize)}`;
+ state.pendingBurstPrize=0;
+ $('#vaultBurstOverlay').classList.add('hidden');
+ updateUI();save();$('#spinBtn').disabled=false;
+}
+
+function toggleLedger(open){
+ const drawer=$('#ledgerDrawer');
+ const next=typeof open==='boolean'?open:!drawer.classList.contains('open');
+ drawer.classList.toggle('open',next);
+ drawer.setAttribute('aria-hidden',String(!next));
+}
+
 function showModal(type){
  let html='';
  if(type==='info')html=`<p class="eyebrow">GAME INFORMATION</p><h2>Beard Bank</h2><p><strong>Theoretical RTP:</strong> 94.20% target model<br><strong>Volatility:</strong> Medium-high<br><strong>Layout:</strong> 5 reels × 3 rows<br><strong>Paylines:</strong> 20 fixed lines<br><strong>Feature:</strong> Six or more Beard Coins trigger Vault Hold & Spin.</p><h3>Integrity</h3><p>Reel stops are selected independently with <code>crypto.getRandomValues()</code>. Results do not react to your wallet, streak, prior spins, or play time. This alpha model is for fictional entertainment and still requires large-scale simulation and tuning before certification as a final math model.</p>`;
@@ -191,6 +320,17 @@ $('#infoBtn').onclick=()=>showModal('info');$('#statsBtn').onclick=()=>showModal
 $('#modalClose').onclick=()=>$('#modal').close();$('#cashoutBtn').onclick=cashout;
 $('#speedBtn').onclick=()=>{state.speed=state.speed==='normal'?'quick':'normal';$('#speedBtn').textContent=state.speed.toUpperCase()};
 $('#soundBtn').onclick=()=>{state.sound=!state.sound;$('#soundBtn').textContent='SOUND '+(state.sound?'ON':'OFF')};
+$('#ledgerBookBtn').onclick=()=>toggleLedger(true);
+$('#ledgerCloseBtn').onclick=()=>toggleLedger(false);
+$$('.ledger-tab').forEach(tab=>tab.onclick=()=>{
+ $$('.ledger-tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');
+ $$('.ledger-page').forEach(x=>x.classList.remove('active'));
+ const pageId={visit:'ledgerVisit',integrity:'ledgerIntegrity',museum:'ledgerMuseum'}[tab.dataset.ledgerTab];
+ $('#'+pageId).classList.add('active');
+});
+$$('.vault-pick').forEach(btn=>btn.onclick=()=>chooseVaultPrize(btn));
+$('#vaultBurstCollectBtn').onclick=collectVaultBurst;
+
 setInterval(()=>{if(state.started){const s=Math.floor((Date.now()-state.started)/1000);$('#visitTime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}},1000);
 setInterval(()=>{const g=12845.27+(Date.now()%100000)/100000;$('#grandMeter').textContent=money(g);$('#majorMeter').textContent=money(1284.50+(Date.now()%25000)/100000)},1200);
 updateUI();

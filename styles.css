@@ -50,3 +50,114 @@ footer{text-align:center;padding:22px;color:#756c78;font-size:.68rem;border-top:
 @media(max-width:820px){
   #slot-canvas,.reel-window{min-height:240px}
 }
+
+
+/* Beard Engine 1.1 — Living Vault and Ledger */
+.living-vault-header{
+  display:grid;
+  grid-template-columns:52px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:7px 12px!important;
+}
+.vault-door-mini{
+  width:45px;height:45px;border-radius:9px;
+  background:linear-gradient(145deg,#4f5561,#191d24);
+  border:2px solid #b99043;
+  display:grid;place-items:center;
+  box-shadow:inset 0 0 13px #000,0 0 10px #d6a84b33;
+}
+.vault-wheel{
+  width:25px;height:25px;border:4px solid #e1bd63;border-radius:50%;position:relative;
+}
+.vault-wheel:before,.vault-wheel:after{
+  content:"";position:absolute;left:50%;top:50%;background:#e1bd63;transform:translate(-50%,-50%);
+}
+.vault-wheel:before{width:30px;height:3px}
+.vault-wheel:after{width:3px;height:30px}
+.vault-meter-copy{text-align:left}
+.vault-meter-copy span{font-size:.56rem;letter-spacing:.15em;color:#d8b966}
+.vault-meter-copy strong{font-size:.78rem;color:#fff0a0;margin:2px 0 5px}
+.vault-charge-track{
+  width:100%;height:9px;border:1px solid #6b526e;border-radius:99px;background:#050407;overflow:hidden;
+}
+.vault-charge-fill{
+  width:0%;height:100%;
+  background:linear-gradient(90deg,#814ac0,#d5a847,#ffe898);
+  box-shadow:0 0 12px #e2b552;
+  transition:width .45s ease;
+}
+.vault-charge-fill.bump{animation:vaultBump .5s}
+@keyframes vaultBump{50%{filter:brightness(1.8);transform:scaleY(1.35)}}
+
+.ledger-book-button{
+  position:absolute;right:-64px;top:260px;z-index:9;
+  width:58px;height:92px;border-radius:5px 12px 12px 5px;
+  border:2px solid #bb8a45;
+  background:linear-gradient(90deg,#2c120d 0 15%,#6d321e 16% 100%);
+  box-shadow:0 8px 20px #000c,inset 0 0 12px #0008;
+  color:#f1d188;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.book-spine{font-family:Georgia,serif;font-size:1.15rem;font-weight:900}
+.book-title{font-size:.48rem;letter-spacing:.12em;transform:rotate(90deg);margin-top:12px}
+.ledger-drawer{
+  position:fixed;right:-460px;top:0;width:min(440px,94vw);height:100vh;z-index:110;
+  padding:16px;transition:right .35s ease;background:#09070bcf;backdrop-filter:blur(8px);
+}
+.ledger-drawer.open{right:0}
+.ledger-cover{
+  height:100%;overflow:auto;padding:28px;
+  border:4px solid #9c6937;border-radius:14px 4px 4px 14px;
+  background:
+    linear-gradient(90deg,#32140e 0 8%,transparent 8%),
+    radial-gradient(circle at 75% 15%,#8c4c2c,#4b2116 52%,#2c120e);
+  box-shadow:inset 12px 0 20px #0008,0 0 40px #000;
+}
+.ledger-cover h2{font-family:Georgia,serif;font-size:3rem;color:#f1d08a;margin:4px 0 20px}
+.ledger-close{position:absolute;right:28px;top:22px;border:0;background:transparent;font-size:2rem}
+.ledger-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:18px}
+.ledger-tab{padding:9px 5px;border:1px solid #a66d3a;background:#2d130e;border-radius:5px;font-size:.58rem;font-weight:900}
+.ledger-tab.active{background:#e0b55c;color:#2a140b}
+.ledger-page{display:none;background:#ead9ad;color:#352312;padding:17px;border-radius:4px;box-shadow:inset 0 0 18px #72562f66;min-height:320px}
+.ledger-page.active{display:block}
+.ledger-row{display:flex;justify-content:space-between;gap:15px;padding:12px 0;border-bottom:1px solid #9e8458;font-size:.78rem}
+.ledger-row strong{text-align:right}
+.rng-source{font-family:monospace;font-size:.66rem;overflow-wrap:anywhere}
+.integrity-copy{margin-top:18px;line-height:1.6;font-size:.75rem;padding:12px;border:1px solid #9c835a;background:#f4e9c9}
+.museum-badge{display:flex;gap:13px;align-items:center;padding:12px 0;border-bottom:1px solid #a68d63;opacity:.35;filter:grayscale(1)}
+.museum-badge.unlocked{opacity:1;filter:none}
+.museum-badge>span{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#6d321c;color:#f5d678;font-weight:900}
+.museum-badge strong,.museum-badge small{display:block}.museum-badge small{margin-top:3px}
+
+.vault-burst-overlay{
+  position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:20px;
+  background:radial-gradient(circle,#8d6224ef,#100a0cf9 68%);
+}
+.vault-burst-shell{
+  width:min(940px,96vw);text-align:center;padding:34px;border-radius:24px;
+  border:4px solid #e4bd61;background:linear-gradient(145deg,#311829,#110b12 55%,#5b351c);
+  box-shadow:0 0 80px #f2bd46aa,inset 0 0 35px #000;
+}
+.vault-burst-shell h2{font-family:Georgia,serif;color:#ffe289;font-size:clamp(2rem,5vw,4.4rem);line-height:.95;margin:8px}
+.vault-burst-shell>p:not(.eyebrow){color:#d8c9d7}
+.vault-picks{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0}
+.vault-pick{
+  min-height:160px;border:2px solid #b78443;border-radius:12px;
+  background:linear-gradient(145deg,#5b321e,#1c1016);box-shadow:inset 0 0 18px #000;
+}
+.vault-pick:hover{transform:translateY(-4px);box-shadow:0 9px 25px #000,0 0 25px #d7a34455}
+.vault-pick span,.vault-pick strong{display:block}.vault-pick span{font-size:3.2rem;color:#f3cc66}.vault-pick strong{margin-top:12px}
+.vault-pick.revealed{border-color:#ffe68f;background:radial-gradient(circle,#d09831,#4b2517)}
+.vault-burst-result{min-height:52px;font-size:1.45rem;font-weight:1000;color:#ffe595;margin:10px}
+#vaultBurstCollectBtn{padding:15px 28px}
+.vernon-message{color:#d8a5ff!important;text-shadow:0 0 12px #9f4ee6}
+
+@media(max-width:1100px){
+  .ledger-book-button{right:5px;top:230px}
+}
+@media(max-width:820px){
+  .living-vault-header{grid-template-columns:35px 1fr;padding:5px!important}
+  .vault-door-mini{width:32px;height:32px}.vault-wheel{transform:scale(.65)}
+  .vault-picks{grid-template-columns:repeat(2,1fr)}
+  .ledger-book-button{position:fixed;right:8px;bottom:95px;top:auto;width:48px;height:70px}
+}

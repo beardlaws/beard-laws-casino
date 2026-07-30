@@ -1,39 +1,55 @@
-# Beard Laws Casino — Project Gold Beard v0.9 True Reels
+# Beard Laws Casino — Beard Engine 1.1 / Living Vault Milestone
 
-This release fixes the v0.8 canvas reel movement defect.
+This release preserves the working v0.9 PixiJS reel renderer and refactors the game logic into the published Beard Engine 1.1 feature pipeline.
 
-## Fixed
+## Published feature order
 
-The v0.8 controller repositioned individual symbol containers in a way that could appear as vibration or shaking rather than full reel travel.
+1. Payline evaluation
+2. Scatter evaluation
+3. Vernon's Favor
+4. Living Vault charges
+5. Ledger, museum and save update
 
-v0.9 replaces that animation with a true row-position reel loop:
+## Living Vault
 
-- Visible symbols travel through complete vertical rows
-- Symbols wrap from below the window to above the window
-- New passing symbols are assigned only when a symbol wraps
-- Reels accelerate into full speed
-- Reels cruise long enough for obvious vertical movement
-- Reels stop one at a time
-- Every reel continues through a real deceleration phase
-- Final weighted outcomes are applied only at lock
-- Each reel recoils and settles after stopping
-- Resize rebuilding is disabled while a spin is running
+- Every visible Beard Coin adds exactly one charge
+- Current progress is displayed above the reels
+- Meter threshold is exactly 30 charges
+- At 30 charges the meter resets to zero
+- The Living Vault Burst overlay opens automatically
+- The player chooses Gold Chest, Safe, Coin Stack or Treasure Shelf
+- All four choices use the same transparent weighted prize table:
+  - 50%: 5× total bet
+  - 28%: 10× total bet
+  - 15%: 20× total bet
+  - 5.5%: 50× total bet
+  - 1.5%: 100× total bet
 
-## Cache note
+## Vernon's Favor
 
-The game scripts now include a `v=0.9.0` query string. This helps prevent GitHub Pages and the browser from continuing to use the older v0.8 reel controller.
+- Vernon is present only on Reel 3's configured strip
+- When Vernon is visible on Reel 3 and one or more Beard Coins are visible:
+  - Every coin receives a defined value
+  - The visible values are summed
+  - That amount is added to the same spin win
+  - Coins remain visible
+- The event resolves after paylines and scatters
 
-After uploading, still perform a hard refresh:
+## Vaultmaster's Ledger
 
-- Windows: Ctrl + F5
-- Mac: Command + Shift + R
+The leather book attached to the cabinet opens a slide-out drawer with:
 
-## Files to replace
+- Current visit statistics
+- Coins landed
+- Vaults opened
+- Vernon's Favor triggers
+- Biggest win
+- Target RTP
+- Live session RTP
+- Current Living Vault charges
+- RNG source: crypto.getRandomValues()
+- Lifetime Beard Museum badges
 
-Upload the entire extracted package, or at minimum replace:
+## Math status
 
-- `index.html`
-- `pixi-reels.js`
-- `README.md`
-
-The existing fictional wallet, weighted outcome engine, payline logic, session statistics and Hold & Spin controller remain unchanged.
+The 94.20% figure remains a target, not a verified final RTP. Living Vault and Vernon's Favor materially alter the return model. The next math-lab simulation must include the complete feature pipeline and published Vault Burst prize distribution before the target can be considered audited.

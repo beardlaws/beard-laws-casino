@@ -87,10 +87,26 @@
             </div>
           </div>
 
+          <button id="ledgerBookBtn" class="ledger-book-button" aria-label="Open Vaultmaster's Ledger">
+            <span class="book-spine">BL</span>
+            <span class="book-title">LEDGER</span>
+          </button>
+
           <div class="screen-bezel">
             <div class="screen-header">
               <div><span>MINI</span><strong>$15.00</strong></div>
-              <div class="feature-meter"><span>VAULT STATUS</span><strong id="vaultStatus">SEALED</strong></div>
+              <div class="living-vault-header">
+                <div class="vault-door-mini" aria-hidden="true">
+                  <div class="vault-wheel"></div>
+                </div>
+                <div class="vault-meter-copy">
+                  <span>THE LIVING VAULT</span>
+                  <strong id="vaultChargeText">0 / 30 CHARGES</strong>
+                  <div class="vault-charge-track" aria-label="Living Vault charge progress">
+                    <div id="vaultChargeFill" class="vault-charge-fill"></div>
+                  </div>
+                </div>
+              </div>
               <div><span>MINOR</span><strong>$50.00</strong></div>
             </div>
 
@@ -166,6 +182,62 @@
     </div>
   </dialog>
 
+
+  <aside id="ledgerDrawer" class="ledger-drawer" aria-hidden="true">
+    <div class="ledger-cover">
+      <button id="ledgerCloseBtn" class="ledger-close" aria-label="Close ledger">×</button>
+      <p class="eyebrow">VAULTMASTER VERNON'S</p>
+      <h2>LEDGER</h2>
+      <div class="ledger-tabs">
+        <button class="ledger-tab active" data-ledger-tab="visit">CURRENT VISIT</button>
+        <button class="ledger-tab" data-ledger-tab="integrity">GAME INTEGRITY</button>
+        <button class="ledger-tab" data-ledger-tab="museum">BEARD MUSEUM</button>
+      </div>
+
+      <section id="ledgerVisit" class="ledger-page active">
+        <div class="ledger-row"><span>Spins</span><strong id="ledgerSpins">0</strong></div>
+        <div class="ledger-row"><span>Coins landed</span><strong id="ledgerCoins">0</strong></div>
+        <div class="ledger-row"><span>Vaults opened</span><strong id="ledgerVaults">0</strong></div>
+        <div class="ledger-row"><span>Vernon's Favor</span><strong id="ledgerVernon">0</strong></div>
+        <div class="ledger-row"><span>Biggest win</span><strong id="ledgerBiggest">$0.00</strong></div>
+      </section>
+
+      <section id="ledgerIntegrity" class="ledger-page">
+        <div class="ledger-row"><span>Target RTP</span><strong>94.20%</strong></div>
+        <div class="ledger-row"><span>Session RTP</span><strong id="ledgerSessionRtp">0.00%</strong></div>
+        <div class="ledger-row"><span>Current charges</span><strong id="ledgerCharges">0 / 30</strong></div>
+        <div class="ledger-row"><span>RNG source</span><strong class="rng-source">crypto.getRandomValues()</strong></div>
+        <div class="integrity-copy">
+          Outcomes are independently generated. The feature queue resolves in this published order:
+          Paylines → Scatters → Vernon's Favor → Living Vault Charges → Ledger/Save.
+        </div>
+      </section>
+
+      <section id="ledgerMuseum" class="ledger-page">
+        <div class="museum-badge" data-badge="goldenKey"><span>◆</span><div><strong>Golden Key</strong><small>Land a Vault Key.</small></div></div>
+        <div class="museum-badge" data-badge="megaVault"><span>▣</span><div><strong>Mega Vault</strong><small>Open the Living Vault.</small></div></div>
+        <div class="museum-badge" data-badge="vernonWild"><span>V</span><div><strong>Vernon Wild</strong><small>Trigger Vernon's Favor.</small></div></div>
+        <div class="museum-badge" data-badge="fullCoinScreen"><span>●</span><div><strong>Full Coin Screen</strong><small>Fill all 15 positions with coins.</small></div></div>
+      </section>
+    </div>
+  </aside>
+
+  <div id="vaultBurstOverlay" class="vault-burst-overlay hidden">
+    <div class="vault-burst-shell">
+      <p class="eyebrow">30 / 30 CHARGES</p>
+      <h2>THE LIVING VAULT HAS BURST OPEN</h2>
+      <p>Choose one treasure. Each option uses the same published prize table.</p>
+      <div class="vault-picks">
+        <button class="vault-pick" data-pick="Gold Chest"><span>▰</span><strong>Gold Chest</strong></button>
+        <button class="vault-pick" data-pick="Safe"><span>▣</span><strong>Safe</strong></button>
+        <button class="vault-pick" data-pick="Coin Stack"><span>●</span><strong>Coin Stack</strong></button>
+        <button class="vault-pick" data-pick="Treasure Shelf"><span>▤</span><strong>Treasure Shelf</strong></button>
+      </div>
+      <div id="vaultBurstResult" class="vault-burst-result">SELECT A TREASURE</div>
+      <button id="vaultBurstCollectBtn" class="primary hidden">COLLECT PRIZE</button>
+    </div>
+  </div>
+
   <div id="bonusOverlay" class="bonus-overlay hidden">
     <div class="bonus-vault">
       <div class="vault-title">
@@ -187,7 +259,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
-  <script src="pixi-reels.js?v=0.9.0"></script>
-  <script src="app.js?v=0.9.0"></script>
+  <script src="pixi-reels.js?v=1.1.0"></script>
+  <script src="app.js?v=1.1.0"></script>
 </body>
 </html>
