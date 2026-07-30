@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#120d16">
   <title>Beard Bank: Gold Master Alpha</title>
-  <link rel="stylesheet" href="styles.css?v=1.2.0">
+  <link rel="stylesheet" href="styles.css?v=1.3.0">
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -79,7 +79,7 @@
             <div class="logo-block">
               <small>VAULTMASTER VERNON PRESENTS</small>
               <h2>BEARD BANK</h2>
-              <p>FORTUNE FAVORS THE FULLY BEARDED</p><span class="build-badge">GOLD MASTER ART PASS • v1.2</span>
+              <p>FORTUNE FAVORS THE FULLY BEARDED</p><span class="build-badge">BEARD ENGINE 1.3 • MULTI-WAYS & SCREEN THRILL</span>
             </div>
             <div class="progressive">
               <span>MAJOR</span>
@@ -115,6 +115,7 @@
 
             <div class="reel-window" id="reelWindow">
               <canvas id="slot-canvas" aria-label="Five reel, three row animated slot display"></canvas>
+              <div id="multiplierLayer" class="multiplier-layer" aria-hidden="true"></div>
               <div id="reelThreePulse" class="reel-three-pulse" aria-hidden="true"></div>
               <div class="payline-flash" id="paylineFlash"></div>
               <div class="glass-shine cinematic-glass"></div>
@@ -122,6 +123,7 @@
 
             <div class="screen-footer">
               <button id="paytableBtn">PAYTABLE</button>
+              <button id="waysModeBtn" class="ways-mode active">243 WAYS</button>
               <div><span>LAST WIN</span><strong id="lastWin">$0.00</strong></div>
               <div><span>BET</span><strong id="betDisplay">$1.00</strong></div>
               <button id="speedBtn">NORMAL</button>
@@ -158,7 +160,7 @@
           <h3>BEARD BANK</h3>
           <div class="stat"><span>THEORETICAL RTP</span><strong>94.20%</strong></div>
           <div class="stat"><span>VOLATILITY</span><strong>MEDIUM-HIGH</strong></div>
-          <div class="stat"><span>PAYLINES</span><strong>20</strong></div>
+          <div class="stat"><span>WIN MODE</span><strong id="profileWinMode">243 WAYS</strong></div>
           <div class="stat"><span>FEATURE</span><strong>6+ COINS</strong></div>
         </div>
         <div class="panel-card live">
@@ -205,13 +207,25 @@
       </section>
 
       <section id="ledgerIntegrity" class="ledger-page">
-        <div class="ledger-row"><span>Target RTP</span><strong>94.20%</strong></div>
+        <div class="ledger-row"><span>Legacy RTP target</span><strong>94.20%*</strong></div>
         <div class="ledger-row"><span>Session RTP</span><strong id="ledgerSessionRtp">0.00%</strong></div>
+        <div class="ledger-row"><span>Evaluation mode</span><strong id="ledgerWinMode">243 Ways</strong></div>
+        <div class="ledger-row"><span>Current grid</span><strong id="ledgerGridSize">5 × 3</strong></div>
         <div class="ledger-row"><span>Current charges</span><strong id="ledgerCharges">0 / 30</strong></div>
         <div class="ledger-row"><span>RNG source</span><strong class="rng-source">crypto.getRandomValues()</strong></div>
         <div class="integrity-copy">
-          Outcomes are independently generated. The feature queue resolves in this published order:
-          Paylines → Scatters → Vernon's Favor → Living Vault Charges → Ledger/Save.
+          Outcomes are independently generated. Engine 1.3 resolves:
+          Ways/Lines → Wild Multipliers → Scatters → Vernon's Favor → Living Vault Charges → Ledger/Save.
+          <br><br>*The 94.20% figure predates Multi-Ways and multiplier wilds. A new complete simulation is required.
+        </div>
+        <div class="expansion-lab">
+          <strong>EXPANSION FRAMEWORK PREVIEW</strong>
+          <div>
+            <button data-grid-rows="3">5×3</button>
+            <button data-grid-rows="4">5×4</button>
+            <button data-grid-rows="5">5×5</button>
+          </div>
+          <small>Visual/state-controller preview for future feature modules. Preview changes do not create a payout.</small>
         </div>
       </section>
 
@@ -261,7 +275,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/pixi.js@7.4.2/dist/pixi.min.js"></script>
-  <script src="pixi-reels.js?v=1.2.0"></script>
-  <script src="app.js?v=1.2.0"></script>
+  <script src="pixi-reels.js?v=1.3.0"></script>
+  <script src="app.js?v=1.3.0"></script>
 </body>
 </html>

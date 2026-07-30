@@ -115,7 +115,7 @@ function playVernonPresentation(){
 
 const state = {
  bank:2000,wallet:0,startWallet:0,bet:1,spins:0,wagered:0,returned:0,biggest:0,features:0,
- started:null,sound:true,speed:'normal',grid:[],bonus:null,vaultCharges:0,visitCoins:0,visitVaults:0,visitVernon:0,lifetime:{goldenKey:false,megaVault:false,vernonWild:false,fullCoinScreen:false},pendingBurstPrize:0
+ started:null,sound:true,speed:'normal',grid:[],bonus:null,vaultCharges:0,visitCoins:0,visitVaults:0,visitVernon:0,lifetime:{goldenKey:false,megaVault:false,vernonWild:false,fullCoinScreen:false},pendingBurstPrize:0,winMode:'ways',gridRows:3,lastWildMultipliers:{}
 };
 
 function rngInt(max){
@@ -128,7 +128,7 @@ function save(){
   bank:state.bank,wallet:state.wallet,startWallet:state.startWallet,bet:state.bet,spins:state.spins,
   wagered:state.wagered,returned:state.returned,biggest:state.biggest,features:state.features,
   started:state.started,vaultCharges:state.vaultCharges,visitCoins:state.visitCoins,
-  visitVaults:state.visitVaults,visitVernon:state.visitVernon,lifetime:state.lifetime
+  visitVaults:state.visitVaults,visitVernon:state.visitVernon,lifetime:state.lifetime,winMode:state.winMode,gridRows:state.gridRows
  }));
 }
 function load(){
@@ -150,7 +150,10 @@ async function buildGrid(grid){
 function generateGrid(){
  return REELS.map(strip=>{
   const stop=rngInt(strip.length);
-  return [strip[(stop-1+strip.length)%strip.length],strip[stop],strip[(stop+1)%strip.length]];
+  const rows=[];
+  const startOffset=-Math.floor(state.gridRows/2);
+  for(let r=0;r<state.gridRows;r++)rows.push(strip[(stop+startOffset+r+strip.length)%strip.length]);
+  return rows;
  });
 }
 function coinValue(){
@@ -163,6 +166,66 @@ function createCoinValues(grid){
   if(grid[c][r]==='coin') values[`${c}-${r}`]=coinValue()*state.bet;
  }
  return values;
+}
+
+
+function assignWildMultipliers(grid){
+ const map={};
+ // Reels 2, 3 and 4 in player-facing numbering => indexes 1,2,3.
+ [1,2,3].forEach(c=>{
+  grid[c].forEach((symbol,r)=>{
+   if(symbol==='vernon'){
+    const roll=rng();
+    map[`${c}-${r}`]=roll<.62?2:roll<.90?3:5;
+   }
+  });
+ });
+ state.lastWildMultipliers=map;
+ return map;
+}
+
+function evaluateAllWays(grid,wildMultipliers){
+ let total=0;
+ const details=[];
+ const baseSymbols=['oil','comb','razor','balm','key','crown'];
+
+ baseSymbols.forEach(symbol=>{
+  const reelWeights=[];
+  let length=0;
+
+  for(let c=0;c<5;c++){
+   let weight=0;
+   grid[c].forEach((cell,r)=>{
+    if(cell===symbol)weight+=1;
+    else if(cell==='vernon')weight+=(wildMultipliers[`${c}-${r}`]||1);
+   });
+   if(weight<=0)break;
+   reelWeights.push(weight);
+   length++;
+  }
+
+  if(length>=3 && PAY[symbol]?.[length]){
+   const weightedWays=reelWeights.reduce((a,b)=>a*b,1);
+   const amount=PAY[symbol][length]*weightedWays*state.bet/243;
+   total+=amount;
+   details.push({symbol,length,weightedWays,amount:+amount.toFixed(2),reelWeights});
+  }
+ });
+
+ return {amount:+total.toFixed(2),details};
+}
+
+function renderWildMultipliers(grid,multipliers){
+ const layer=$('#multiplierLayer');layer.innerHTML='';
+ Object.entries(multipliers).forEach(([key,multiplier])=>{
+  const [c,r]=key.split('-').map(Number);
+  const badge=document.createElement('div');
+  badge.className='wild-multiplier';
+  badge.textContent=`${multiplier}×`;
+  badge.style.left=`${(c+.78)*20}%`;
+  badge.style.top=`${((r+.25)/state.gridRows)*100}%`;
+  layer.appendChild(badge);
+ });
 }
 
 function evaluatePaylines(grid){
@@ -215,10 +278,13 @@ function updateMuseumBadges(grid,vernonResult){
 }
 
 function runFeaturePipeline(grid,coinValues){
- // Beard Engine 1.1 published queue:
- // 1. Paylines -> 2. Scatters -> 3. Vernon's Favor
- // 4. Living Vault Charges -> 5. Ledger/Save
- const paylines=evaluatePaylines(grid);
+ // Beard Engine 1.3 published queue:
+ // 1. Ways/Lines -> 2. Wild Multipliers -> 3. Scatters
+ // 4. Vernon's Favor -> 5. Living Vault Charges -> 6. Ledger/Save
+ const wildMultipliers=assignWildMultipliers(grid);
+ const primary=state.winMode==='ways'
+   ? evaluateAllWays(grid,wildMultipliers)
+   : evaluatePaylines(grid);
  const scatters=evaluateScatters(grid);
  const vernon=evaluateVernonsFavor(grid,coinValues);
  const livingVault=applyLivingVaultCharges(grid);
@@ -226,8 +292,8 @@ function runFeaturePipeline(grid,coinValues){
 
  if(vernon.triggered)state.visitVernon++;
 
- const total=+(paylines.amount+scatters.amount+vernon.amount).toFixed(2);
- return {total,paylines,scatters,vernon,livingVault,coinValues};
+ const total=+(primary.amount+scatters.amount+vernon.amount).toFixed(2);
+ return {total,primary,scatters,vernon,livingVault,coinValues,wildMultipliers};
 }
 
 async function spin(){
@@ -239,13 +305,27 @@ async function spin(){
  const grid=generateGrid();
  const coinValues=createCoinValues(grid);
  runScatterAnticipationHooks(grid);
+ const earlyPotential=grid.slice(0,3).flat().filter(x=>x==='vault'||x==='coin').length>=2;
+ if(earlyPotential){
+  $('#cabinet').classList.add('thrill-zoom');
+  $('#reelWindow').classList.add('thrill-focus');
+  window.BeardReels.thrillZoom([3,4]);
+  setTimeout(()=>{$('#cabinet').classList.remove('thrill-zoom');$('#reelWindow').classList.remove('thrill-focus')},900);
+ }
  await window.BeardReels.spinTo(grid,state.speed==='quick');
 
  state.grid=grid;
  const result=runFeaturePipeline(grid,coinValues);
+ renderWildMultipliers(grid,result.wildMultipliers);
 
  playCoinChargePresentation(result.livingVault.coins);
  if(result.vernon.triggered)playVernonPresentation();
+ const highCoin=Object.values(coinValues).some(value=>value>=10);
+ if(highCoin||result.vernon.triggered){
+  $('#cabinet').classList.remove('impact-shake');void $('#cabinet').offsetWidth;
+  $('#cabinet').classList.add('impact-shake');
+  setTimeout(()=>$('#cabinet').classList.remove('impact-shake'),550);
+ }
 
  if(result.total>0){
   state.wallet+=result.total;state.returned+=result.total;state.biggest=Math.max(state.biggest,result.total);
@@ -328,6 +408,13 @@ function updateUI(){
  $('#ledgerBiggest').textContent=money(state.biggest);
  $('#ledgerSessionRtp').textContent=(state.wagered?((state.returned/state.wagered)*100).toFixed(2):'0.00')+'%';
  $('#ledgerCharges').textContent=`${state.vaultCharges} / 30`;
+ $('#ledgerWinMode').textContent=state.winMode==='ways'?'243 Ways':'20 Lines';
+ $('#profileWinMode').textContent=state.winMode==='ways'?'243 WAYS':'20 LINES';
+ $('#waysModeBtn').textContent=state.winMode==='ways'?'243 WAYS':'20 LINES';
+ $('#waysModeBtn').classList.toggle('active',state.winMode==='ways');
+ $('#ledgerGridSize').textContent=`5 × ${state.gridRows}`;
+ $('#reelWindow').dataset.gridRows=state.gridRows;
+
  Object.entries(state.lifetime).forEach(([key,unlocked])=>{
    document.querySelector(`[data-badge="${key}"]`)?.classList.toggle('unlocked',!!unlocked);
  });
@@ -400,6 +487,25 @@ $('#betDown').onclick=()=>{const bets=[.5,1,2,3,5,10];state.bet=bets[Math.max(0,
 $('#infoBtn').onclick=()=>showModal('info');$('#statsBtn').onclick=()=>showModal('stats');$('#paytableBtn').onclick=()=>showModal('pay');
 $('#modalClose').onclick=()=>$('#modal').close();$('#cashoutBtn').onclick=cashout;
 $('#speedBtn').onclick=()=>{state.speed=state.speed==='normal'?'quick':'normal';$('#speedBtn').textContent=state.speed.toUpperCase()};
+$('#waysModeBtn').onclick=()=>{
+ if($('#spinBtn').disabled)return;
+ state.winMode=state.winMode==='ways'?'lines':'ways';
+ updateUI();save();
+};
+$$('[data-grid-rows]').forEach(button=>button.onclick=()=>{
+ if($('#spinBtn').disabled)return;
+ const rows=Number(button.dataset.gridRows);
+ state.gridRows=rows;
+ const grid=generateGrid();
+ state.grid=grid;
+ window.BeardReels.setRows(rows,grid);
+ $('#reelWindow').dataset.gridRows=rows;
+ $('#reelWindow').classList.remove('grid-expansion-flash');void $('#reelWindow').offsetWidth;
+ $('#reelWindow').classList.add('grid-expansion-flash');
+ setTimeout(()=>$('#reelWindow').classList.remove('grid-expansion-flash'),800);
+ updateUI();save();
+});
+
 $('#soundBtn').onclick=()=>{state.sound=!state.sound;PresentationAudio.enabled=state.sound;$('#soundBtn').textContent='SOUND '+(state.sound?'ON':'OFF')};
 $('#ledgerBookBtn').onclick=()=>toggleLedger(true);
 $('#ledgerCloseBtn').onclick=()=>toggleLedger(false);

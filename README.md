@@ -1,70 +1,78 @@
-# Beard Laws Casino — Gold Master Art Pass v1.2
+# Beard Laws Casino — Beard Engine 1.3: Multi-Ways & Screen Thrill
 
-This is a presentation-only milestone built on Beard Engine 1.1.
+## New engine modules
 
-## Protected systems
+### Toggleable 243-Ways evaluation
 
-This release does **not** change:
+The player can toggle between:
 
-- Feature pipeline order
-- Weighted reel strips
-- Payline evaluation
-- Scatter evaluation
-- Vernon's Favor payout rules
-- Living Vault charge rules
-- Vault Burst prize table
-- Wallet deductions or payouts
-- Save behavior
+- 243 Ways
+- Legacy 20 Lines
 
-## Visual upgrades
+In 243-Ways mode, a symbol pays when it appears on adjacent reels from left to right, regardless of row.
 
-### Living Vault
+The evaluator calculates a weighted number of ways for each paying symbol and normalizes the award against 243 total ways.
 
-- Physical cabinet module forced above the reels
-- Exact X / 30 charge text
-- Animated gold-fill meter
-- Shimmer and cabinet-feedback animation
-- Runtime fallback creates the meter if an incomplete deployment leaves the old SEALED element
+### Multiplier Wilds
 
-### Vaultmaster's Ledger
+Vaultmaster Vernon acts as the Wild symbol.
 
-- Larger leather-bound book mounted to the right cabinet bezel
-- Visible OPEN tab
-- Runtime fallback restores the book if index.html and app.js are uploaded out of sync
+When Vernon appears on Reels 2, 3 or 4, that position receives:
 
-### Reel matrix
+- 2× with 62% probability
+- 3× with 28% probability
+- 5× with 10% probability
 
-- Taller cinematic 5×3 window
-- Canvas renderer height increased
-- Responsive height increased
-- Layered animated glass reflection
-- Linear texture filtering and shadow preparation for future painted PNG/WebP symbols
+During Ways evaluation, a multiplier wild contributes its multiplier as the matching count on that reel. Multipliers therefore combine multiplicatively across adjacent reels.
 
-### Vernon presentation
+The exact multiplier badges are drawn over the landed Vernon symbols and remain visible for the resolved spin.
 
-When Vernon's Favor resolves:
+### Screen Thrill
 
-- Cabinet dims
-- Reel 3 receives a purple/gold glowing border pulse
-- A short synthesized Vernon fanfare plays
+When the predetermined first three reels contain at least two coin/scatter-potential symbols:
 
-### Audio and anticipation hooks
+- The PixiJS stage performs a subtle viewport zoom
+- Reels 4 and 5 remain visually emphasized
+- The cabinet receives a short lighting pulse
 
-- Mechanical synthesized CLANG when Beard Coins add Living Vault charges
-- Rising tension tones when the predetermined Reel 1–3 results contain coin/scatter feature potential
-- Anticipation effects do not alter the result or math
+This is presentation only and cannot change the outcome.
 
-## Cache verification
+### Cabinet impact
 
-The lobby marquee visibly displays:
+The full cabinet shakes when:
 
-`GOLD MASTER ART PASS • v1.2`
+- A visible Beard Coin is worth at least 10× the current bet, or
+- Vernon's Favor triggers
 
-If this label is missing after deployment, the browser or GitHub Pages is still serving an older file.
+### Expansion state controller
 
-All CSS and scripts use `?v=1.2.0` cache-busting parameters.
+The PixiJS renderer can rebuild dynamically as:
 
-After upload, use:
+- 5×3
+- 5×4
+- 5×5
 
-- Windows: Ctrl + F5
-- Mac: Command + Shift + R
+The Vaultmaster's Ledger includes preview controls for this framework.
+
+The preview expands the state, renderer, symbol rows and responsive reel-window height. It does not independently award a prize. Future machines can call `window.BeardReels.setRows(rows, grid)` from a defined feature trigger.
+
+## Transparent math warning
+
+The former 94.20% target was created before:
+
+- 243-Ways evaluation
+- Wild multipliers
+- Variable grid heights
+
+It is retained only as a legacy design target. It is not the current verified RTP.
+
+A new simulator must model:
+
+- Both evaluation modes
+- Every multiplier assignment
+- Vernon collection
+- Living Vault charges and burst awards
+- Hold & Spin
+- Each supported grid height
+
+before a new RTP can be published.

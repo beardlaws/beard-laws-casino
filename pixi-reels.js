@@ -26,6 +26,7 @@
       this.reelWidth = 0;
       this.rowHeight = 0;
       this.symbolSize = 256;
+      this.visibleRows = 3;
       this.resizeTimer = null;
     }
 
@@ -85,7 +86,7 @@
       this.app.stage.removeChildren();
       this.reels = [];
       this.reelWidth = this.width/5;
-      this.rowHeight = this.height/3;
+      this.rowHeight = this.height/this.visibleRows;
 
       const background = new PIXI.Graphics();
       background.beginFill(0x06162f);
@@ -113,9 +114,9 @@
         viewport.filters = [blur];
 
         const sprites = [];
-        // Five symbols: one above, three visible, one below.
-        for (let i=0;i<5;i++) {
-          const key = (i>=1 && i<=3 && grid?.[c]) ? grid[c][i-1] : this.randomKey();
+        // One buffer symbol above and below the visible grid.
+        for (let i=0;i<this.visibleRows+2;i++) {
+          const key = (i>=1 && i<=this.visibleRows && grid?.[c]) ? (grid[c][i-1]||this.randomKey()) : this.randomKey();
           const symbol = this.makeSymbol(key);
           symbol._slotIndex = i;
           symbol.y = (i-1)*this.rowHeight;
@@ -198,7 +199,7 @@
         const ordered = [...reel.sprites].sort((a,b)=>a.y-b.y);
         ordered.forEach((s,i) => {
           s.y=(i-1)*this.rowHeight;
-          this.replaceSymbol(s,(i>=1&&i<=3)?grid[c][i-1]:this.randomKey());
+          this.replaceSymbol(s,(i>=1&&i<=this.visibleRows)?(grid[c][i-1]||this.randomKey()):this.randomKey());
         });
         reel.sprites=ordered;
         reel.strip.y=0;
@@ -225,7 +226,7 @@
       const ordered=[...reel.sprites].sort((a,b)=>a.y-b.y);
       ordered.forEach((s,i) => {
         s.y=(i-1)*this.rowHeight;
-        this.replaceSymbol(s,(i>=1&&i<=3)?reel.finalGrid[i-1]:this.randomKey());
+        this.replaceSymbol(s,(i>=1&&i<=this.visibleRows)?(reel.finalGrid[i-1]||this.randomKey()):this.randomKey());
       });
       reel.sprites=ordered;
       reel.strip.y=0;
@@ -314,7 +315,7 @@
     }
 
     pulseVisible(reel) {
-      const visible=[...reel.sprites].sort((a,b)=>a.y-b.y).slice(1,4);
+      const visible=[...reel.sprites].sort((a,b)=>a.y-b.y).slice(1,1+this.visibleRows);
       const start=performance.now();
       const animate=now => {
         const t=clamp((now-start)/190,0,1);
@@ -326,10 +327,51 @@
       requestAnimationFrame(animate);
     }
 
+
+    async thrillZoom(targetReels=[3,4]) {
+      if(!this.ready)return;
+      const stage=this.app.stage;
+      const original={x:stage.x,y:stage.y,sx:stage.scale.x,sy:stage.scale.y};
+      const start=performance.now();
+      const duration=760;
+      await new Promise(resolve=>{
+        const frame=now=>{
+          const t=Math.min(1,(now-start)/duration);
+          const pulse=Math.sin(t*Math.PI);
+          const scale=1+pulse*.035;
+          stage.scale.set(scale);
+          stage.x=-(this.width*(scale-1))*.68;
+          stage.y=-(this.height*(scale-1))*.5;
+          if(t<1)requestAnimationFrame(frame);
+          else{
+            stage.scale.set(original.sx,original.sy);
+            stage.x=original.x;stage.y=original.y;resolve();
+          }
+        };
+        requestAnimationFrame(frame);
+      });
+    }
+
+    setRows(rows,grid=null){
+      const next=Math.max(3,Math.min(5,Number(rows)||3));
+      if(this.running)return false;
+      const current=grid||this.currentGrid();
+      this.visibleRows=next;
+      this.height=Math.max(290,Math.floor(this.width*(next===3?.485:next===4?.59:.70)));
+      this.app.renderer.resize(this.width,this.height);
+      const expanded=current.map(col=>{
+        const copy=[...col];
+        while(copy.length<next)copy.push(this.randomKey());
+        return copy.slice(0,next);
+      });
+      this.buildStage(expanded);
+      return true;
+    }
+
     currentGrid() {
       return this.reels.map(reel => {
         const ordered=[...reel.sprites].sort((a,b)=>a.y-b.y);
-        return ordered.slice(1,4).map(s=>s._symbolKey);
+        return ordered.slice(1,1+this.visibleRows).map(s=>s._symbolKey);
       });
     }
 

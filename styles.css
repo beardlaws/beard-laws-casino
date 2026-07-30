@@ -393,3 +393,109 @@ footer{text-align:center;padding:22px;color:#756c78;font-size:.68rem;border-top:
   }
   .book-title{display:none}
 }
+
+
+/* =========================================================
+   BEARD ENGINE 1.3 — MULTI-WAYS & SCREEN THRILL
+   ========================================================= */
+.screen-footer{
+  grid-template-columns:.78fr .82fr 1fr 1fr .72fr!important;
+}
+.ways-mode{
+  background:#26112d!important;
+  border:1px solid #8d54ae!important;
+  color:#dca4ff!important;
+  font-size:.62rem!important;
+  font-weight:1000!important;
+}
+.ways-mode.active{
+  color:#27140a!important;
+  background:linear-gradient(#ffe28c,#bd8430)!important;
+  border-color:#ffe79c!important;
+}
+.multiplier-layer{
+  position:absolute;
+  inset:0;
+  z-index:9;
+  pointer-events:none;
+}
+.wild-multiplier{
+  position:absolute;
+  width:54px;height:54px;
+  transform:translate(-50%,-50%);
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 28%,#fff,#ffe986 17%,#b362dc 50%,#3e1552 72%);
+  border:3px solid #fff0a7;
+  box-shadow:0 0 16px #fff1a8,0 0 36px #a842e8;
+  color:#241026;
+  font-family:Georgia,serif;
+  font-size:1.05rem;
+  font-weight:1000;
+  animation:multiplierPop .6s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes multiplierPop{
+  from{transform:translate(-50%,-50%) scale(0) rotate(-180deg);opacity:0}
+  to{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:1}
+}
+.cabinet.thrill-zoom{
+  animation:cabinetThrillZoom .85s ease-in-out;
+  transform-origin:center 53%;
+}
+@keyframes cabinetThrillZoom{
+  0%,100%{transform:scale(1)}
+  48%{transform:scale(1.022)}
+}
+.cabinet.impact-shake{
+  animation:cabinetImpact .48s cubic-bezier(.36,.07,.19,.97);
+}
+@keyframes cabinetImpact{
+  0%,100%{transform:translate3d(0,0,0) rotate(0)}
+  14%{transform:translate3d(-8px,3px,0) rotate(-.25deg)}
+  28%{transform:translate3d(8px,-3px,0) rotate(.25deg)}
+  43%{transform:translate3d(-6px,2px,0)}
+  60%{transform:translate3d(5px,-1px,0)}
+  78%{transform:translate3d(-2px,1px,0)}
+}
+.reel-window.thrill-focus:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:7;
+  pointer-events:none;
+  background:linear-gradient(90deg,#050209b8 0 59%,transparent 69% 100%);
+  animation:thrillFocus .9s ease;
+}
+@keyframes thrillFocus{
+  0%,100%{opacity:0}
+  25%,72%{opacity:1}
+}
+.expansion-lab{
+  margin-top:16px;
+  padding:12px;
+  border:1px solid #9c835a;
+  background:#f4e9c9;
+}
+.expansion-lab>strong,.expansion-lab small{display:block}
+.expansion-lab>div{display:flex;gap:6px;margin:9px 0}
+.expansion-lab button{
+  flex:1;padding:8px;
+  background:#5a2d1c;color:#f5dfaa;border:1px solid #8e6138;border-radius:4px;font-weight:900;
+}
+.expansion-lab small{line-height:1.4}
+.reel-window[data-grid-rows="4"]{aspect-ratio:5 / 2.95!important;min-height:535px!important}
+.reel-window[data-grid-rows="5"]{aspect-ratio:5 / 3.48!important;min-height:620px!important}
+.grid-expansion-flash{
+  animation:gridExpandFlash .7s ease;
+}
+@keyframes gridExpandFlash{
+  0%,100%{filter:none}
+  40%{filter:brightness(1.55);box-shadow:0 0 65px #b563ff}
+}
+@media(max-width:820px){
+  .screen-footer{grid-template-columns:repeat(3,1fr)!important}
+  .screen-footer>div:nth-of-type(2){display:none}
+  .wild-multiplier{width:40px;height:40px;font-size:.8rem}
+  .reel-window[data-grid-rows="4"]{min-height:350px!important}
+  .reel-window[data-grid-rows="5"]{min-height:420px!important}
+}
