@@ -1,78 +1,117 @@
-# Beard Laws Casino — Beard Engine 1.3: Multi-Ways & Screen Thrill
+# Beard Laws Casino 2.0 — Phase 1
 
-## New engine modules
+This repository is the clean-slate replacement for the frozen vanilla JavaScript prototype.
 
-### Toggleable 243-Ways evaluation
+## Stack
 
-The player can toggle between:
+- Vite
+- TypeScript in strict mode
+- PixiJS 8
+- Modular engine core
+- Typed application store
+- Vitest
+- GitHub Actions deployment to GitHub Pages
 
-- 243 Ways
-- Legacy 20 Lines
+## Architecture
 
-In 243-Ways mode, a symbol pays when it appears on adjacent reels from left to right, regardless of row.
+```text
+src/
+├── engine/
+│   ├── BeardEngine.ts
+│   ├── FeaturePipeline.ts
+│   ├── RNG.ts
+│   ├── ReelEvaluator.ts
+│   └── Wallet.ts
+├── graphics/
+│   ├── CabinetRenderer.ts
+│   └── ReelStripView.ts
+├── games/
+│   └── BeardBank/
+│       └── BeardBankConfig.ts
+├── state/
+│   └── AppStore.ts
+├── types/
+│   └── GameTypes.ts
+├── ui/
+│   └── AppShell.ts
+└── index.ts
+```
 
-The evaluator calculates a weighted number of ways for each paying symbol and normalizes the award against 243 total ways.
+## Phase 1 behavior
 
-### Multiplier Wilds
+The first build includes a working vertical slice:
 
-Vaultmaster Vernon acts as the Wild symbol.
+- Clickable Spin button
+- Crypto-secure random source
+- Weighted Beard Bank reel strips
+- Pure 243-Ways evaluator
+- Typed feature pipeline
+- Vernon's Favor collector rule
+- Deterministic Living Vault charges
+- Fictional wallet deductions and awards
+- PixiJS reel presentation
+- Live typed state synchronization
+- Slide-out Game Integrity ledger
+- Visible startup error screen if initialization fails
 
-When Vernon appears on Reels 2, 3 or 4, that position receives:
+The first automatic spin during startup is temporary seed behavior for Phase 1 and verifies the complete engine-to-renderer connection.
 
-- 2× with 62% probability
-- 3× with 28% probability
-- 5× with 10% probability
+## Local development
 
-During Ways evaluation, a multiplier wild contributes its multiplier as the matching count on that reel. Multipliers therefore combine multiplicatively across adjacent reels.
+```bash
+npm install
+npm run dev
+```
 
-The exact multiplier badges are drawn over the landed Vernon symbols and remain visible for the resolved spin.
+Typecheck:
 
-### Screen Thrill
+```bash
+npm run typecheck
+```
 
-When the predetermined first three reels contain at least two coin/scatter-potential symbols:
+Tests:
 
-- The PixiJS stage performs a subtle viewport zoom
-- Reels 4 and 5 remain visually emphasized
-- The cabinet receives a short lighting pulse
+```bash
+npm test
+```
 
-This is presentation only and cannot change the outcome.
+Production build:
 
-### Cabinet impact
+```bash
+npm run build
+```
 
-The full cabinet shakes when:
+## GitHub Pages
 
-- A visible Beard Coin is worth at least 10× the current bet, or
-- Vernon's Favor triggers
+The Vite base path is currently:
 
-### Expansion state controller
+```ts
+base: '/beard-laws-casino/'
+```
 
-The PixiJS renderer can rebuild dynamically as:
+This matches the existing repository URL:
 
-- 5×3
-- 5×4
-- 5×5
+```text
+https://beardlaws.github.io/beard-laws-casino/
+```
 
-The Vaultmaster's Ledger includes preview controls for this framework.
+The included GitHub Actions workflow builds and deploys `dist/`.
 
-The preview expands the state, renderer, symbol rows and responsive reel-window height. It does not independently award a prize. Future machines can call `window.BeardReels.setRows(rows, grid)` from a defined feature trigger.
+In the repository settings, set **Pages → Source** to **GitHub Actions**.
 
-## Transparent math warning
+## Math status
 
-The former 94.20% target was created before:
+The legacy 94.20% number is retained only as a design reference. It is not a verified Engine 2.0 RTP.
 
-- 243-Ways evaluation
-- Wild multipliers
-- Variable grid heights
+No final RTP should be published until the full v2 feature pipeline is simulated at scale.
 
-It is retained only as a legacy design target. It is not the current verified RTP.
+## Product boundary
 
-A new simulator must model:
+Beard Laws Casino is a fictional entertainment simulator.
 
-- Both evaluation modes
-- Every multiplier assignment
-- Vernon collection
-- Living Vault charges and burst awards
-- Hold & Spin
-- Each supported grid height
-
-before a new RTP can be published.
+- No deposits
+- No purchases
+- No prizes
+- No withdrawals
+- No transfers
+- No redeemable credits
