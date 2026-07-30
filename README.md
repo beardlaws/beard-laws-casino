@@ -1,44 +1,40 @@
-# Beard Laws Casino v0.6 — Interactive Entrance and Lumber Math Fix
+# Beard Laws Casino — Project Gold Beard v0.7
 
-## Home Screen
+This release is the first focused **Beard Bank Gold Master Alpha**.
 
-The concept artwork is now clearly marked as a preview and functions as an entrance button.
+## What is included
 
-1. Choose a fictional buy-in.
-2. Click the main Start Visit button or the casino preview image.
-3. The playable casino lobby opens.
+- Premium responsive slot cabinet presentation
+- Five reels by three rows
+- 20 fixed paylines
+- Fixed weighted virtual reel strips
+- Independent browser-crypto random reel stops
+- Wild, scatter and Beard Coin symbols
+- Six-or-more-coin Vault Hold & Spin feature
+- Three respins, resetting when a new coin lands
+- Real fictional wallet deductions and payouts
+- Session RTP, wagered, returned, feature count and biggest-win tracking
+- Fictional Beard Laws Bank and cash-out flow
+- Local browser save
+- Transparent game-information and paytable screens
+- Original SVG symbol artwork
+- Desktop and mobile layouts
 
-## Lumber Beard
+## Important alpha note
 
-The prototype payout logic has been replaced.
+The displayed 94.20% RTP is the target design profile, not a certification claim. The reel strips and feature values require automated multi-million-spin simulation and tuning before the math model can be called final.
 
-- Five fixed weighted virtual reel strips
-- Natural blank stops
-- Ten left-to-right paylines
-- Wild substitution
-- Axe symbols do not pay as ordinary symbols
-- Three separate axe reels trigger a forest event
-- Three forest levels lead to the larger Timber Feature
-- Losing spins and net-losing small returns are reported honestly
-- Result is selected before the animation
+## GitHub Pages upload
 
-## Expected Alpha Behavior
+Upload the contents of this folder to the root of the GitHub Pages repository:
 
-The current Lumber model is intentionally capable of long dry stretches:
+- index.html
+- styles.css
+- app.js
+- assets/
 
-- Roughly 24% of spins return something
-- Roughly 76% return nothing
-- Axe feature is rare
-- Long-run return is tuned near the low-90% range in the initial alpha model
+Then refresh the published site with a hard reload.
 
-This is still an alpha math profile and will receive larger simulation testing before visual polish is locked.
+## Permanent product boundary
 
-## Upload
-
-Upload all files to the GitHub repository and replace the existing versions.
-
-Commit:
-
-`Release interactive entrance and Lumber math v0.6`
-
-After deployment, press Ctrl+F5.
+This is a fictional entertainment simulator. No funds, credits, wagers or winnings have monetary value. Nothing can be purchased, transferred, redeemed, withdrawn or exchanged.
