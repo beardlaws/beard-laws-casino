@@ -9,7 +9,7 @@ const defaultState = () => ({
   version:3, bank:200000, wallet:0, activeTrip:null, selectedTrip:20000, selectedChip:100,
   roulette:{bets:{},previous:{},history:[],last:null,lastNet:0,spins:0,wagered:0},
   blackjack:{inRound:false,player:[],dealer:[],bet:0,hidden:true,message:"Place a bet to begin.",stats:{hands:0,wagered:0}},
-  beardBank:{progress:0,spins:0,wagered:0,lastGrid:[]},
+  beardBank:{progress:0,chase:0,spins:0,wagered:0,lastGrid:[]},
   lumber:{level:3,spins:0,wagered:0,lastGrid:[]},
   trips:[], lifetime:{trips:0,net:0,wagered:0,atmFees:0}, settings:{quick:false}
 });
@@ -134,14 +134,124 @@ function hitBlackjack(){const b=state.blackjack;b.player.push(card());const v=ha
 function standBlackjack(){const b=state.blackjack;b.hidden=false;while(handValue(b.dealer)<17)b.dealer.push(card());const p=handValue(b.player),d=handValue(b.dealer);if(d>21)settleBlackjack(2,"Dealer busts. You win.");else if(p>d)settleBlackjack(2,"You win.");else if(p<d)settleBlackjack(0,"Dealer wins.");else settleBlackjack(1,"Push. Bet returned.")}
 function doubleBlackjack(){safe(()=>{const b=state.blackjack;spend(b.bet);b.bet*=2;b.player.push(card());if(handValue(b.player)>21)settleBlackjack(0,"Double-down bust.");else standBlackjack()})}
 
+
+/* Beard Bank v0.5 fixed virtual reel math */
+const BEARD_BANK_REELS = [
+  [...Array(8).fill("BLANK"),...Array(14).fill("OIL"),...Array(12).fill("COMB"),...Array(10).fill("KEY"),...Array(8).fill("BAG"),...Array(3).fill("COIN"),...Array(3).fill("WILD"),...Array(2).fill("VAULT")],
+  [...Array(10).fill("BLANK"),...Array(14).fill("OIL"),...Array(12).fill("COMB"),...Array(10).fill("KEY"),...Array(8).fill("BAG"),...Array(3).fill("COIN"),...Array(3).fill("WILD"),...Array(2).fill("VAULT")],
+  [...Array(11).fill("BLANK"),...Array(14).fill("OIL"),...Array(12).fill("COMB"),...Array(10).fill("KEY"),...Array(8).fill("BAG"),...Array(3).fill("COIN"),...Array(3).fill("WILD"),...Array(2).fill("VAULT")],
+  [...Array(10).fill("BLANK"),...Array(14).fill("OIL"),...Array(12).fill("COMB"),...Array(10).fill("KEY"),...Array(8).fill("BAG"),...Array(3).fill("COIN"),...Array(3).fill("WILD"),...Array(2).fill("VAULT")],
+  [...Array(8).fill("BLANK"),...Array(14).fill("OIL"),...Array(12).fill("COMB"),...Array(10).fill("KEY"),...Array(8).fill("BAG"),...Array(3).fill("COIN"),...Array(3).fill("WILD"),...Array(2).fill("VAULT")]
+];
+const BEARD_BANK_LINES=[[0,0,0,0,0],[1,1,1,1,1],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,0,0,1],[1,2,2,2,1],[0,1,1,1,0]];
+const BEARD_BANK_PAY={
+ OIL:{2:.6,3:4.8,4:14.4,5:48},
+ COMB:{2:.72,3:6,4:18,5:60},
+ KEY:{2:.96,3:8.4,4:24,5:84},
+ BAG:{2:1.2,3:12,4:36,5:120},
+ VAULT:{2:2.4,3:24,4:96,5:480}
+};
+const BEARD_BANK_ICONS={BLANK:"",OIL:"🧴",COMB:"🪮",KEY:"🗝️",BAG:"💰",COIN:"🪙",WILD:"🧔",VAULT:"🏦"};
+let beardBankLocked=false;
+
 /* Slots */
 const bankSymbols=["🪙","🪙","🧔","🔑","💰","🧴","✂️","🪙","🧔","💰"];
 const lumberSymbols=["🪓","🌲","🧔","🦌","🐻","🪵","🌲","🪓","🧔"];
 function createGrid(symbols,reels){return Array.from({length:reels},()=>Array.from({length:3},()=>symbols[randomInt(symbols.length)]))}
 function gridHtml(grid){return grid.map(col=>`<div class="reel">${col.map(s=>`<div class="symbol ${s==="🪙"?"coin":s==="🧔"?"wild":""}">${s}</div>`).join("")}</div>`).join("")}
 function count(grid,s){return grid.flat().filter(x=>x===s).length}
-function renderBeardBank(){const b=state.beardBank;$("beardBankReels").innerHTML=gridHtml(b.lastGrid.length?b.lastGrid:createGrid(bankSymbols,5));$("vaultProgress").textContent=`${b.progress} / 6`;$("vaultMeter").style.width=`${Math.min(100,b.progress/6*100)}%`}
-function spinBeardBank(){safe(()=>{const bet=Number($("beardBankBet").value);spend(bet);const b=state.beardBank;b.spins++;b.wagered+=bet;const grid=createGrid(bankSymbols,5);b.lastGrid=grid;const coins=count(grid,"🪙");const wilds=count(grid,"🧔");let payout=0;if(coins>=3)payout+=bet*(coins-1);if(wilds>=2)payout+=bet*3;b.progress=Math.min(6,b.progress+Math.min(2,coins));let msg=`${coins} beard coins collected.`;if(b.progress>=6){const bonus=bet*(8+randomInt(13));payout+=bonus;b.progress=0;msg=`BEARD VAULT! Bonus pays ${money(bonus)}.`}if(payout)win(payout);$("beardBankMessage").textContent=msg+(payout?` Total return ${money(payout)}.`:"");save();render()})}
+function beardBankGrid(){
+ return BEARD_BANK_REELS.map(strip=>{
+   const stop=randomInt(strip.length);
+   return [strip[(stop-1+strip.length)%strip.length],strip[stop],strip[(stop+1)%strip.length]];
+ });
+}
+function beardBankLinePay(symbols){
+ let base=null,count=0;
+ for(const symbol of symbols){
+   if(count===0){
+     if(symbol==="BLANK"||symbol==="COIN")return 0;
+     base=symbol==="WILD"?null:symbol;count=1;
+   }else if(symbol==="WILD")count++;
+   else if(base===null&&BEARD_BANK_PAY[symbol]){base=symbol;count++}
+   else if(symbol===base)count++;
+   else break;
+ }
+ return base&&BEARD_BANK_PAY[base]&&BEARD_BANK_PAY[base][count]||0;
+}
+function evaluateBeardBank(grid,bet){
+ let returned=0;
+ for(const line of BEARD_BANK_LINES){
+   const symbols=line.map((row,col)=>grid[col][row]);
+   returned+=beardBankLinePay(symbols)*bet/BEARD_BANK_LINES.length;
+ }
+ const coins=grid.flat().filter(x=>x==="COIN").length;
+ let bonus=0;
+ if(coins>=6){
+   const awards=[1,1,1,2,2,3,3,4,5,7,10,15,25];
+   for(let i=0;i<coins;i++)bonus+=awards[randomInt(awards.length)]*bet;
+   returned+=bonus;
+ }
+ return {returned:Math.round(returned),coins,bonus:Math.round(bonus)};
+}
+function beardBankGridHtml(grid){
+ return grid.map(col=>`<div class="reel">${col.map(s=>`<div class="symbol ${s==="COIN"?"coin":s==="WILD"?"wild":s==="BLANK"?"blank":""}">${BEARD_BANK_ICONS[s]}</div>`).join("")}</div>`).join("");
+}
+function renderBeardBank(){
+ const b=state.beardBank;
+ const display=b.lastGrid.length?b.lastGrid:beardBankGrid();
+ $("beardBankReels").innerHTML=beardBankGridHtml(display);
+ const chase=Math.min(100,(b.chase||0)/30*100);
+ $("vaultProgress").textContent=`${b.chase||0} / 30 vault sparks`;
+ $("vaultMeter").style.width=`${chase}%`;
+}
+async function spinBeardBank(){
+ if(beardBankLocked)return;
+ safe(async()=>{
+   const bet=Number($("beardBankBet").value);
+   spend(bet);
+   beardBankLocked=true;
+   $("beardBankSpin").disabled=true;
+   const b=state.beardBank;b.spins++;b.wagered+=bet;
+   const finalGrid=beardBankGrid();
+
+   // Visual-only cycling. Outcome was selected before animation.
+   for(let frame=0;frame<12;frame++){
+     $("beardBankReels").innerHTML=beardBankGridHtml(beardBankGrid());
+     await new Promise(r=>setTimeout(r,55+frame*7));
+   }
+
+   b.lastGrid=finalGrid;
+   const result=evaluateBeardBank(finalGrid,bet);
+   b.chase=(b.chase||0)+result.coins;
+   let returned=result.returned;
+   let message="No win.";
+
+   if(result.coins>=6){
+     message=`BEARD VAULT HOLD FEATURE! ${result.coins} coins returned ${money(result.bonus)}.`;
+     b.chase=0;
+   }else if(returned>bet){
+     message=`Winner. Returned ${money(returned)} on a ${money(bet)} bet.`;
+   }else if(returned===bet){
+     message=`Bet returned.`;
+   }else if(returned>0){
+     message=`Small return ${money(returned)}. Net loss ${money(bet-returned)}.`;
+   }
+
+   // The chase meter is a transparent secondary feature with a fixed threshold.
+   if(b.chase>=30){
+     const chaseBonus=bet*(5+randomInt(11));
+     returned+=chaseBonus;
+     message+=` VAULT SPARKS BONUS returned ${money(chaseBonus)}.`;
+     b.chase=0;
+   }
+
+   if(returned)win(returned);
+   $("beardBankMessage").textContent=message;
+   beardBankLocked=false;$("beardBankSpin").disabled=false;
+   save();render();
+ })
+}
 function renderLumber(){const l=state.lumber;$("lumberReels").innerHTML=gridHtml(l.lastGrid.length?l.lastGrid:createGrid(lumberSymbols,l.level));$("forestLevel").textContent=`${l.level} reels`;$("forestMeter").style.width=`${(l.level-3)/2*100}%`}
 function spinLumber(){safe(()=>{const bet=Number($("lumberBet").value);spend(bet);const l=state.lumber;l.spins++;l.wagered+=bet;const grid=createGrid(lumberSymbols,l.level);l.lastGrid=grid;const axes=count(grid,"🪓"),wilds=count(grid,"🧔"),trees=count(grid,"🌲");let payout=0,msg=`${axes} axes landed.`;if(trees>=4)payout+=bet*(trees-2);if(wilds>=2)payout+=bet*4;if(axes>=2&&l.level<5){l.level++;msg=`The forest expanded to ${l.level} reels!`}else if(axes>=2&&l.level===5){const bonus=bet*(10+randomInt(16));payout+=bonus;l.level=3;msg=`TIMBER BEARD FEATURE! Paid ${money(bonus)} and the forest reset.`}if(payout)win(payout);$("lumberMessage").textContent=msg+(payout?` Total return ${money(payout)}.`:"");save();render()})}
 

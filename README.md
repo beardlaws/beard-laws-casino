@@ -1,24 +1,35 @@
-# Beard Laws Casino v0.4 — Beard Bank Math Lab
+# Beard Laws Casino v0.5 — Playable Beard Bank Math Build
 
-This release does not pretend the current emoji slot is finished. It establishes the auditable math model that the polished Beard Bank cabinet will use.
+Version 0.5 connects the live Beard Bank game to a fixed virtual-reel model.
 
-## New Files
+## What Changed
 
-- `docs/BEARD-BANK-SLOT-DESIGN-BIBLE.md`
-- `docs/BEARD-BANK-MATH-REPORT.md`
-- `math/beard-bank-math.json`
-- `math/beard-bank-math-lab.html`
+- Real losing spins
+- Fixed weighted reel strips
+- Independent cryptographic random stops
+- Outcome selected before animation
+- Twelve-frame reel animation
+- Normal line-pay evaluation
+- Wild substitution
+- Six-coin Beard Vault trigger on a single spin
+- Transparent 30-spark secondary chase meter
+- Small returns are identified as net losses instead of celebrated as wins
 
-## Online Math Lab
+## Expected Alpha Profile
 
-After uploading, open:
+The current tuned model was designed around approximately:
 
-```text
-https://beardlaws.github.io/beard-laws-casino/math/beard-bank-math-lab.html
-```
+- 94%–95% long-run RTP
+- About 32% of spins returning something
+- About 68% completely losing
+- Six-coin feature approximately once every 200–250 spins
 
-Run 100,000 spins. The page displays RTP, winning-spin frequency, losing-spin frequency, bonus frequency and largest observed win.
+Session results can vary dramatically. Ten spins are far too few to judge RTP.
 
-## Important
+## Upload
 
-Version 0.4 is a math alpha. We will tune the reel strips and paytable until the simulated profile matches the approved target. Only then do we replace the prototype Beard Bank with the premium animated cabinet.
+Replace the live repository with all files from this package and commit:
+
+`Release Beard Bank math build v0.5`
+
+Then hard-refresh with Ctrl+F5.
