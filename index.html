@@ -10,11 +10,10 @@
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div class="brand">
+      <div>
         <div class="eyebrow">FREE ENTERTAINMENT SIMULATOR</div>
         <h1>BEARD LAWS CASINO</h1>
       </div>
-
       <div class="balances">
         <button id="bankCard" class="balance-card">
           <span>Beard Laws Bank</span>
@@ -28,81 +27,103 @@
     </header>
 
     <main>
-      <section id="welcomePanel" class="panel hero">
-        <div class="hero-copy">
+      <section id="welcomeView" class="panel welcome-layout">
+        <div class="welcome-copy">
           <p class="eyebrow">WELCOME BACK</p>
           <h2>A casino trip should feel like a casino trip.</h2>
-          <p>
-            Choose what you are bringing through the doors. Your bankroll is fictional,
-            but the decisions and session history remain believable.
-          </p>
-
-          <div class="trip-options" aria-label="Casino visit amount">
+          <p>Choose how much fictional cash to bring through the doors. Every game shares the same wallet.</p>
+          <div class="trip-options">
             <button class="trip-btn" data-amount="10000">$100</button>
             <button class="trip-btn" data-amount="15000">$150</button>
             <button class="trip-btn selected" data-amount="20000">$200</button>
             <button class="trip-btn" data-amount="30000">$300</button>
             <button id="customTripBtn" class="trip-btn">Custom</button>
           </div>
-
-          <button id="startTripBtn" class="primary">Start Visit With $200</button>
-
-          <div class="welcome-actions">
-            <button id="historyWelcomeBtn" class="secondary">Trip History</button>
-            <button id="settingsWelcomeBtn" class="secondary">Settings</button>
+          <button id="startTripBtn" class="primary wide">Start Visit With $200</button>
+          <div class="secondary-row">
+            <button id="welcomeHistoryBtn" class="secondary">Trip History</button>
+            <button id="welcomeSettingsBtn" class="secondary">Settings</button>
           </div>
-
-          <p class="small-print">
-            No purchases, prizes, withdrawals, transfers, or redemptions. Every dollar shown is fictional.
-          </p>
+          <p class="small-print">No purchases, prizes, withdrawals, transfers, or redemptions. Every balance shown is fictional.</p>
         </div>
-
-        <div class="hero-art">
-          <img src="assets/casino-concept.png" alt="Beard Laws Casino concept">
+        <div class="welcome-art">
+          <img src="assets/casino-concept.png" alt="Beard Laws Casino concept art">
         </div>
       </section>
 
-      <section id="casinoPanel" class="casino-layout hidden">
-        <aside class="sidebar panel">
-          <h3>Casino Floor</h3>
-          <button class="nav-btn active">Beard Roulette</button>
-          <button id="atmBtn" class="nav-btn">ATM</button>
-          <button id="cashierBtn" class="nav-btn">Cashier</button>
-          <button id="statsBtn" class="nav-btn">Current Trip</button>
-          <button id="historyBtn" class="nav-btn">Trip History</button>
-          <button id="settingsBtn" class="nav-btn">Settings</button>
-
-          <div class="session-box">
-            <span>Trip Result</span>
-            <strong id="tripNet">$0.00</strong>
-            <small id="tripTime">00:00</small>
+      <section id="casinoView" class="hidden">
+        <div class="casino-toolbar panel">
+          <div>
+            <span class="eyebrow">CURRENT VISIT</span>
+            <strong id="tripResult">$0.00</strong>
+            <small id="tripClock">00:00</small>
           </div>
-        </aside>
+          <div class="toolbar-actions">
+            <button id="lobbyBtn" class="secondary">Casino Lobby</button>
+            <button id="atmBtn" class="secondary">ATM</button>
+            <button id="currentTripBtn" class="secondary">Current Trip</button>
+            <button id="cashierBtn" class="primary">Cash Out</button>
+          </div>
+        </div>
 
-        <section class="game panel">
-          <div class="game-header">
+        <section id="lobbyScreen" class="screen">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CHOOSE YOUR GAME</p>
+              <h2>Casino Floor</h2>
+            </div>
+            <p>Every machine and table uses your current fictional casino wallet.</p>
+          </div>
+
+          <div class="game-grid">
+            <button class="game-card" data-game="roulette">
+              <div class="game-badge">TABLE GAME</div>
+              <h3>Beard Roulette</h3>
+              <p>Authentic American roulette with 0 and 00, straight bets, dozens, columns, red/black and more.</p>
+              <span>Play Beard Roulette</span>
+            </button>
+
+            <button class="game-card" data-game="blackjack">
+              <div class="game-badge">TABLE GAME</div>
+              <h3>Black Beard Blackjack</h3>
+              <p>Dealer stands on soft 17. Blackjack pays 3:2. Hit, stand and double down.</p>
+              <span>Play Blackjack</span>
+            </button>
+
+            <button class="game-card featured" data-game="beardbank">
+              <div class="game-badge">ORIGINAL SLOT</div>
+              <h3>Beard Bank</h3>
+              <p>Collect beard coins, grow their values and trigger the Vault Hold bonus.</p>
+              <span>Play Beard Bank</span>
+            </button>
+
+            <button class="game-card" data-game="lumber">
+              <div class="game-badge">ORIGINAL SLOT</div>
+              <h3>Lumber Beard</h3>
+              <p>Axes expand the reels while Timber Tom grows wild stacks through the forest.</p>
+              <span>Play Lumber Beard</span>
+            </button>
+          </div>
+        </section>
+
+        <section id="rouletteScreen" class="screen hidden">
+          <div class="game-topline">
             <div>
               <p class="eyebrow">AMERICAN ROULETTE</p>
               <h2>Beard Roulette</h2>
-              <p class="table-limits">Table limits: $1 minimum · $500 maximum per spin</p>
             </div>
-            <div class="history" id="spinHistory" aria-label="Previous roulette results"></div>
+            <button class="secondary back-lobby">Back to Lobby</button>
           </div>
-
-          <div class="wheel-wrap">
-            <div id="wheel" class="wheel" aria-label="Roulette wheel">
-              <div class="wheel-center">BL</div>
-            </div>
-            <div class="result-box">
-              <span>Last Result</span>
-              <strong id="lastResult">—</strong>
-              <small id="lastSpinMessage"></small>
-            </div>
-          </div>
-
-          <div class="bet-controls">
-            <div>
-              <span class="label">Chip</span>
+          <div class="game-layout">
+            <div class="panel game-main">
+              <div class="roulette-visual">
+                <div id="rouletteWheel" class="wheel"><div class="wheel-center">BL</div></div>
+                <div class="result-box">
+                  <span>Last Result</span>
+                  <strong id="rouletteResult">—</strong>
+                  <small id="rouletteMessage"></small>
+                </div>
+              </div>
               <div class="chips">
                 <button class="chip selected" data-chip="100">$1</button>
                 <button class="chip" data-chip="500">$5</button>
@@ -110,35 +131,125 @@
                 <button class="chip" data-chip="2500">$25</button>
                 <button class="chip" data-chip="10000">$100</button>
               </div>
+              <div id="rouletteBoard" class="roulette-board"></div>
+              <div class="action-row">
+                <button id="rouletteClear" class="secondary">Clear</button>
+                <button id="rouletteRepeat" class="secondary">Repeat</button>
+                <button id="rouletteSpin" class="primary">Spin</button>
+              </div>
             </div>
-            <div class="current-bet">
-              <span>Current Bet</span>
-              <strong id="currentBet">$0.00</strong>
-            </div>
-          </div>
-
-          <div id="rouletteBoard" class="roulette-board"></div>
-
-          <div class="action-row">
-            <button id="undoBetBtn" class="secondary">Undo</button>
-            <button id="clearBetsBtn" class="secondary">Clear</button>
-            <button id="repeatBetBtn" class="secondary">Repeat</button>
-            <button id="doubleBetBtn" class="secondary">Double</button>
-            <button id="spinBtn" class="primary spin">Spin</button>
+            <aside class="panel side-panel">
+              <h3>Bet Slip</h3>
+              <div id="rouletteBetList"></div>
+              <div class="divider"></div>
+              <div class="stat-row"><span>Current Bet</span><strong id="rouletteBetTotal">$0.00</strong></div>
+              <div class="stat-row"><span>Total Wagered</span><strong id="rouletteWagered">$0.00</strong></div>
+              <div class="stat-row"><span>Spins</span><strong id="rouletteSpins">0</strong></div>
+            </aside>
           </div>
         </section>
 
-        <aside class="panel bet-slip">
-          <h3>Bet Slip</h3>
-          <div id="betList" class="bet-list">
-            <p class="muted">No bets placed.</p>
+        <section id="blackjackScreen" class="screen hidden">
+          <div class="game-topline">
+            <div>
+              <p class="eyebrow">BLACKJACK PAYS 3:2</p>
+              <h2>Black Beard Blackjack</h2>
+            </div>
+            <button class="secondary back-lobby">Back to Lobby</button>
           </div>
-          <div class="divider"></div>
-          <div class="stat-row"><span>Total Wagered</span><strong id="totalWagered">$0.00</strong></div>
-          <div class="stat-row"><span>Spins</span><strong id="spinCount">0</strong></div>
-          <div class="stat-row"><span>ATM Fees</span><strong id="atmFees">$0.00</strong></div>
-          <div class="stat-row"><span>Highest Wallet</span><strong id="highestWallet">$0.00</strong></div>
-        </aside>
+          <div class="panel blackjack-table">
+            <div class="hand-block">
+              <h3>Dealer <span id="dealerScore"></span></h3>
+              <div id="dealerCards" class="cards"></div>
+            </div>
+            <div id="blackjackMessage" class="table-message">Place a bet to begin.</div>
+            <div class="hand-block">
+              <h3>Your Hand <span id="playerScore"></span></h3>
+              <div id="playerCards" class="cards"></div>
+            </div>
+            <div class="blackjack-controls">
+              <label>Bet
+                <select id="blackjackBet">
+                  <option value="500">$5</option>
+                  <option value="1000" selected>$10</option>
+                  <option value="2500">$25</option>
+                  <option value="5000">$50</option>
+                  <option value="10000">$100</option>
+                </select>
+              </label>
+              <button id="dealBtn" class="primary">Deal</button>
+              <button id="hitBtn" class="secondary" disabled>Hit</button>
+              <button id="standBtn" class="secondary" disabled>Stand</button>
+              <button id="doubleBtn" class="secondary" disabled>Double</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="beardbankScreen" class="screen hidden">
+          <div class="game-topline">
+            <div>
+              <p class="eyebrow">ORIGINAL HOLD-AND-GROW SLOT</p>
+              <h2>Beard Bank</h2>
+            </div>
+            <button class="secondary back-lobby">Back to Lobby</button>
+          </div>
+          <div class="game-layout">
+            <div class="panel slot-cabinet">
+              <div id="beardBankReels" class="slot-reels"></div>
+              <div id="beardBankMessage" class="slot-message">Grow the coins. Crack the vault.</div>
+              <div class="slot-controls">
+                <label>Bet
+                  <select id="beardBankBet">
+                    <option value="100">$1</option>
+                    <option value="200">$2</option>
+                    <option value="500" selected>$5</option>
+                    <option value="1000">$10</option>
+                  </select>
+                </label>
+                <button id="beardBankSpin" class="primary">Spin</button>
+              </div>
+            </div>
+            <aside class="panel side-panel">
+              <h3>Beard Vault</h3>
+              <div class="meter"><div id="vaultMeter"></div></div>
+              <p><strong id="vaultProgress">0 / 6</strong> beard coins collected</p>
+              <p class="muted">Six coins trigger the Vault Hold bonus. Progress resets after the feature.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section id="lumberScreen" class="screen hidden">
+          <div class="game-topline">
+            <div>
+              <p class="eyebrow">ORIGINAL EXPANDING-REEL SLOT</p>
+              <h2>Lumber Beard</h2>
+            </div>
+            <button class="secondary back-lobby">Back to Lobby</button>
+          </div>
+          <div class="game-layout">
+            <div class="panel slot-cabinet">
+              <div id="lumberReels" class="slot-reels"></div>
+              <div id="lumberMessage" class="slot-message">Axes expand the forest. Timber Tom brings the wilds.</div>
+              <div class="slot-controls">
+                <label>Bet
+                  <select id="lumberBet">
+                    <option value="100">$1</option>
+                    <option value="200">$2</option>
+                    <option value="500" selected>$5</option>
+                    <option value="1000">$10</option>
+                  </select>
+                </label>
+                <button id="lumberSpin" class="primary">Spin</button>
+              </div>
+            </div>
+            <aside class="panel side-panel">
+              <h3>Forest Expansion</h3>
+              <div class="meter"><div id="forestMeter"></div></div>
+              <p><strong id="forestLevel">3 reels</strong></p>
+              <p class="muted">Land axes to expand from 3 reels up to 5 reels. Expansion resets after a feature win.</p>
+            </aside>
+          </div>
+        </section>
       </section>
     </main>
 
@@ -149,15 +260,13 @@
 
   <dialog id="modal">
     <div class="modal-content">
-      <button id="modalX" class="modal-x" aria-label="Close">×</button>
-      <h2 id="modalTitle">Beard Laws Casino</h2>
+      <button id="modalX" class="modal-x">×</button>
+      <h2 id="modalTitle"></h2>
       <div id="modalBody"></div>
-      <div class="modal-actions">
-        <button id="modalClose" class="secondary">Close</button>
-      </div>
+      <div class="modal-actions"><button id="modalClose" class="secondary">Close</button></div>
     </div>
   </dialog>
 
-  <script type="module" src="js/ui.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

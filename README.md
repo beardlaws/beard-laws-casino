@@ -1,49 +1,44 @@
-# Beard Laws Casino v0.2
+# Beard Laws Casino v0.3 — Playable Casino Floor
 
-Version 0.2 is the first reusable casino-engine build.
+Version 0.3 fixes the core usability issue: the lobby is now an actual clickable interface rather than concept artwork.
 
-## What Changed
+## Working Games
 
-- All financial values now use integer cents to prevent floating-point money errors.
-- Existing Version 0.1 browser balances migrate automatically.
-- Reusable casino and roulette engine modules.
-- Persistent trip history.
-- Fictional bank activity ledger.
-- Custom casino cash from $20–$500.
-- Undo, repeat and double bet controls.
-- Roulette column bets.
-- $1 minimum and $500 maximum per spin.
-- Rejection-sampling secure random selection.
-- Settings and confirmed reset.
-- Browser payout test page.
+- Beard Roulette
+- Black Beard Blackjack
+- Beard Bank
+- Lumber Beard
 
-## Upload to GitHub
+All four games share the same fictional casino wallet.
 
-Upload every file and folder in this package to the repository root and allow GitHub to replace the older files.
+## Important
 
-Required root structure:
+The concept image remains artwork only. The working game cards are now rendered below the live casino toolbar after starting a visit.
+
+## Upload
+
+Upload all files and folders from this package to the root of the GitHub repository and replace the existing files.
+
+Root files:
 
 ```text
 index.html
 styles.css
+app.js
 assets/
 docs/
-js/
-tests/
 ```
 
-The old root-level `app.js` is no longer used and may be deleted after Version 0.2 is working.
+You may delete the old `js/` and `tests/` folders after v0.3 is confirmed working because this release intentionally returns to a single-script build for reliability while the game systems are still changing rapidly.
 
-## Test Page
+## Test
 
-After deployment, open:
-
-```text
-https://beardlaws.github.io/beard-laws-casino/tests/roulette-tests.html
-```
-
-All payout tests should pass.
-
-## Current Saving
-
-Version 0.2 still uses browser localStorage. Firebase Authentication and Firestore are the next milestone.
+1. Start a $200 visit.
+2. Open every game from the lobby.
+3. Play one roulette spin.
+4. Play one blackjack hand.
+5. Spin Beard Bank until the progress meter changes.
+6. Spin Lumber Beard until an axe expands the reels.
+7. Visit the ATM.
+8. Cash out.
+9. Confirm Trip History contains the completed visit.

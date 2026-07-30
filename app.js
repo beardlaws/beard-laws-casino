@@ -1,389 +1,167 @@
 
-const STORAGE_KEY = "beardLawsCasinoV01";
+const KEY = "beardLawsCasinoV03";
+const OLD_KEYS = ["beardLawsCasinoV02","beardLawsCasinoV01"];
+const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+const RESULTS = ["0","00",...Array.from({length:36},(_,i)=>String(i+1))];
+const ATM_FEE = 799;
 
-const RED_NUMBERS = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
-const ALL_RESULTS = ["0","00", ...Array.from({length:36}, (_,i) => String(i+1))];
-
-const defaultState = {
-  bank: 2000,
-  wallet: 0,
-  activeTrip: null,
-  selectedTripAmount: 200,
-  selectedChip: 1,
-  bets: {},
-  previousBets: {},
-  history: [],
-  lifetime: {
-    totalWagered: 0,
-    spins: 0,
-    atmFees: 0,
-    trips: 0
-  }
-};
-
-let state = loadState();
-let spinLocked = false;
-let tripTimer = null;
-
-function money(v) {
-  return new Intl.NumberFormat("en-US", {style:"currency", currency:"USD"}).format(v);
-}
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return structuredClone(defaultState);
-    return {...structuredClone(defaultState), ...JSON.parse(raw)};
-  } catch {
-    return structuredClone(defaultState);
-  }
-}
-
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function secureRandomIndex(max) {
-  const a = new Uint32Array(1);
-  crypto.getRandomValues(a);
-  return a[0] % max;
-}
-
-function colorOf(result) {
-  if (result === "0" || result === "00") return "green";
-  return RED_NUMBERS.has(Number(result)) ? "red" : "black";
-}
-
-function startTrip(amount) {
-  if (state.activeTrip) return;
-  if (amount > state.bank) return alert("Your fictional bank does not have enough funds.");
-  state.bank -= amount;
-  state.wallet = amount;
-  state.activeTrip = {
-    startedAt: Date.now(),
-    startingCash: amount,
-    atmWithdrawals: 0,
-    atmFees: 0,
-    totalWagered: 0,
-    spins: 0,
-    highestWallet: amount,
-    lowestWallet: amount,
-    openingBank: state.bank + amount
-  };
-  state.bets = {};
-  state.history = [];
-  saveState();
-  render();
-  startTimer();
-}
-
-function endTrip() {
-  if (!state.activeTrip) return;
-  const trip = state.activeTrip;
-  const returned = state.wallet;
-  state.bank += returned;
-  const net = state.bank - trip.openingBank;
-  state.lifetime.trips += 1;
-
-  showModal("Trip Complete", `
-    <div class="stat-row"><span>Started With</span><strong>${money(trip.startingCash)}</strong></div>
-    <div class="stat-row"><span>ATM Withdrawals</span><strong>${money(trip.atmWithdrawals)}</strong></div>
-    <div class="stat-row"><span>ATM Fees</span><strong>${money(trip.atmFees)}</strong></div>
-    <div class="stat-row"><span>Total Wagered</span><strong>${money(trip.totalWagered)}</strong></div>
-    <div class="stat-row"><span>Cash Returned</span><strong>${money(returned)}</strong></div>
-    <div class="stat-row"><span>Net Trip Result</span><strong class="${net >= 0 ? "win":"loss"}">${money(net)}</strong></div>
-  `);
-
-  state.wallet = 0;
-  state.activeTrip = null;
-  state.bets = {};
-  saveState();
-  stopTimer();
-  render();
-}
-
-function atmWithdraw(amount) {
-  if (!state.activeTrip) return;
-  const fee = 7.99;
-  if ((state.activeTrip.atmCount || 0) >= 3) {
-    return alert("Maximum of three fictional ATM withdrawals per trip.");
-  }
-  if (state.bank < amount + fee) {
-    return alert("Your fictional bank does not have enough for that withdrawal plus the ATM fee.");
-  }
-  state.bank -= amount + fee;
-  state.wallet += amount;
-  state.activeTrip.atmWithdrawals += amount;
-  state.activeTrip.atmFees += fee;
-  state.activeTrip.atmCount = (state.activeTrip.atmCount || 0) + 1;
-  state.activeTrip.highestWallet = Math.max(state.activeTrip.highestWallet, state.wallet);
-  state.lifetime.atmFees += fee;
-  saveState();
-  render();
-  document.getElementById("modal").close();
-}
-
-function betKeyLabel(key) {
-  if (key.startsWith("number:")) return `Number ${key.split(":")[1]}`;
-  const labels = {
-    red:"Red", black:"Black", odd:"Odd", even:"Even",
-    low:"1–18", high:"19–36",
-    dozen1:"1st 12", dozen2:"2nd 12", dozen3:"3rd 12"
-  };
-  return labels[key] || key;
-}
-
-function placeBet(key) {
-  if (!state.activeTrip || spinLocked) return;
-  const chip = state.selectedChip;
-  if (currentBetTotal() + chip > state.wallet) return;
-  state.bets[key] = (state.bets[key] || 0) + chip;
-  saveState();
-  render();
-}
-
-function currentBetTotal() {
-  return Object.values(state.bets).reduce((a,b) => a+b, 0);
-}
-
-function clearBets() {
-  if (spinLocked) return;
-  state.bets = {};
-  saveState();
-  render();
-}
-
-function repeatBets() {
-  if (spinLocked) return;
-  const total = Object.values(state.previousBets).reduce((a,b) => a+b, 0);
-  if (total === 0 || total > state.wallet) return;
-  state.bets = {...state.previousBets};
-  saveState();
-  render();
-}
-
-function evaluateBet(key, result) {
-  const n = Number(result);
-  if (key.startsWith("number:")) return result === key.split(":")[1] ? 35 : -1;
-  if (result === "0" || result === "00") return -1;
-  if (key === "red") return colorOf(result) === "red" ? 1 : -1;
-  if (key === "black") return colorOf(result) === "black" ? 1 : -1;
-  if (key === "odd") return n % 2 === 1 ? 1 : -1;
-  if (key === "even") return n % 2 === 0 ? 1 : -1;
-  if (key === "low") return n >= 1 && n <= 18 ? 1 : -1;
-  if (key === "high") return n >= 19 && n <= 36 ? 1 : -1;
-  if (key === "dozen1") return n >= 1 && n <= 12 ? 2 : -1;
-  if (key === "dozen2") return n >= 13 && n <= 24 ? 2 : -1;
-  if (key === "dozen3") return n >= 25 && n <= 36 ? 2 : -1;
-  return -1;
-}
-
-async function spin() {
-  if (spinLocked || !state.activeTrip) return;
-  const total = currentBetTotal();
-  if (total <= 0) return alert("Place at least one bet.");
-  if (total > state.wallet) return alert("Not enough in the casino wallet.");
-
-  spinLocked = true;
-  state.wallet -= total;
-  state.activeTrip.totalWagered += total;
-  state.activeTrip.spins += 1;
-  state.lifetime.totalWagered += total;
-  state.lifetime.spins += 1;
-  state.previousBets = {...state.bets};
-
-  const result = ALL_RESULTS[secureRandomIndex(ALL_RESULTS.length)];
-  const wheel = document.getElementById("wheel");
-  const rotation = 1440 + secureRandomIndex(720);
-  wheel.style.transform = `rotate(${rotation}deg)`;
-
-  render();
-  await new Promise(r => setTimeout(r, 2500));
-
-  let returned = 0;
-  for (const [key, wager] of Object.entries(state.bets)) {
-    const outcome = evaluateBet(key, result);
-    if (outcome >= 0) returned += wager * (outcome + 1);
-  }
-
-  state.wallet += returned;
-  state.activeTrip.highestWallet = Math.max(state.activeTrip.highestWallet, state.wallet);
-  state.activeTrip.lowestWallet = Math.min(state.activeTrip.lowestWallet, state.wallet);
-  state.history.unshift(result);
-  state.history = state.history.slice(0, 12);
-  state.bets = {};
-  state.lastResult = result;
-  state.lastSpinNet = returned - total;
-  saveState();
-  spinLocked = false;
-  render();
-}
-
-function buildBoard() {
-  const board = document.getElementById("rouletteBoard");
-  board.innerHTML = "";
-
-  ["0","00"].forEach(z => {
-    const cell = makeCell(z, `number:${z}`, "green zero");
-    board.appendChild(cell);
-  });
-
-  for (let n = 1; n <= 36; n++) {
-    board.appendChild(makeCell(String(n), `number:${n}`, colorOf(String(n))));
-  }
-
-  [
-    ["1st 12","dozen1"],["2nd 12","dozen2"],["3rd 12","dozen3"],
-    ["1–18","low"],["Even","even"],["Red","red"],["Black","black"],["Odd","odd"],["19–36","high"]
-  ].forEach(([label,key]) => board.appendChild(makeCell(label,key,"outside")));
-}
-
-function makeCell(label,key,classes) {
-  const div = document.createElement("button");
-  div.className = `bet-cell ${classes}`;
-  div.dataset.bet = key;
-  div.innerHTML = `<span>${label}</span>`;
-  div.addEventListener("click", () => placeBet(key));
-  return div;
-}
-
-function renderBoardBets() {
-  document.querySelectorAll("[data-bet]").forEach(cell => {
-    const key = cell.dataset.bet;
-    cell.querySelector(".wager")?.remove();
-    if (state.bets[key]) {
-      const marker = document.createElement("span");
-      marker.className = "wager";
-      marker.textContent = state.bets[key];
-      cell.appendChild(marker);
-    }
-  });
-}
-
-function showModal(title, html) {
-  document.getElementById("modalTitle").textContent = title;
-  document.getElementById("modalBody").innerHTML = html;
-  document.getElementById("modal").showModal();
-}
-
-function showATM() {
-  showModal("Casino ATM", `
-    <p class="notice">Each fictional withdrawal carries a $7.99 ATM fee. Maximum three withdrawals per trip.</p>
-    <div class="atm-grid">
-      ${[100,200,300,500].map(a => `<button class="primary atm-choice" data-atm="${a}">Withdraw $${a}</button>`).join("")}
-    </div>
-  `);
-  document.querySelectorAll("[data-atm]").forEach(btn => {
-    btn.addEventListener("click", () => atmWithdraw(Number(btn.dataset.atm)));
-  });
-}
-
-function showStats() {
-  const t = state.activeTrip;
-  if (!t) return;
-  showModal("Current Trip", `
-    <div class="stat-row"><span>Starting Cash</span><strong>${money(t.startingCash)}</strong></div>
-    <div class="stat-row"><span>Current Wallet</span><strong>${money(state.wallet)}</strong></div>
-    <div class="stat-row"><span>ATM Withdrawals</span><strong>${money(t.atmWithdrawals)}</strong></div>
-    <div class="stat-row"><span>ATM Fees</span><strong>${money(t.atmFees)}</strong></div>
-    <div class="stat-row"><span>Total Wagered</span><strong>${money(t.totalWagered)}</strong></div>
-    <div class="stat-row"><span>Highest Wallet</span><strong>${money(t.highestWallet)}</strong></div>
-    <div class="stat-row"><span>Lowest Wallet</span><strong>${money(t.lowestWallet)}</strong></div>
-    <div class="stat-row"><span>Spins</span><strong>${t.spins}</strong></div>
-  `);
-}
-
-function currentTripNet() {
-  if (!state.activeTrip) return 0;
-  return (state.bank + state.wallet) - state.activeTrip.openingBank;
-}
-
-function startTimer() {
-  stopTimer();
-  tripTimer = setInterval(renderTime, 1000);
-  renderTime();
-}
-function stopTimer() {
-  if (tripTimer) clearInterval(tripTimer);
-  tripTimer = null;
-}
-function renderTime() {
-  if (!state.activeTrip) return;
-  const sec = Math.floor((Date.now() - state.activeTrip.startedAt) / 1000);
-  const min = String(Math.floor(sec/60)).padStart(2,"0");
-  const rem = String(sec%60).padStart(2,"0");
-  document.getElementById("tripTime").textContent = `${min}:${rem}`;
-}
-
-function render() {
-  const active = Boolean(state.activeTrip);
-  document.getElementById("welcomePanel").classList.toggle("hidden", active);
-  document.getElementById("casinoPanel").classList.toggle("hidden", !active);
-  document.getElementById("bankBalance").textContent = money(state.bank);
-  document.getElementById("walletBalance").textContent = money(state.wallet);
-
-  if (!active) return;
-
-  const net = currentTripNet();
-  const netEl = document.getElementById("tripNet");
-  netEl.textContent = money(net);
-  netEl.className = net >= 0 ? "win" : "loss";
-
-  document.getElementById("currentBet").textContent = money(currentBetTotal());
-  document.getElementById("totalWagered").textContent = money(state.activeTrip.totalWagered);
-  document.getElementById("spinCount").textContent = state.activeTrip.spins;
-  document.getElementById("atmFees").textContent = money(state.activeTrip.atmFees);
-  document.getElementById("lastResult").textContent = state.lastResult || "—";
-
-  const history = document.getElementById("history");
-  history.innerHTML = state.history.map(r => `<span class="${colorOf(r)}">${r}</span>`).join("");
-
-  const betList = document.getElementById("betList");
-  const entries = Object.entries(state.bets);
-  betList.innerHTML = entries.length
-    ? entries.map(([k,v]) => `<div class="bet-item"><span>${betKeyLabel(k)}</span><strong>${money(v)}</strong></div>`).join("")
-    : `<p class="muted">No bets placed.</p>`;
-
-  renderBoardBets();
-  renderTime();
-}
-
-document.querySelectorAll(".trip-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".trip-btn").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    state.selectedTripAmount = Number(btn.dataset.amount);
-    document.getElementById("startTripBtn").textContent = `Start Visit With $${state.selectedTripAmount}`;
-    saveState();
-  });
+const defaultState = () => ({
+  version:3, bank:200000, wallet:0, activeTrip:null, selectedTrip:20000, selectedChip:100,
+  roulette:{bets:{},previous:{},history:[],last:null,lastNet:0,spins:0,wagered:0},
+  blackjack:{inRound:false,player:[],dealer:[],bet:0,hidden:true,message:"Place a bet to begin.",stats:{hands:0,wagered:0}},
+  beardBank:{progress:0,spins:0,wagered:0,lastGrid:[]},
+  lumber:{level:3,spins:0,wagered:0,lastGrid:[]},
+  trips:[], lifetime:{trips:0,net:0,wagered:0,atmFees:0}, settings:{quick:false}
 });
 
-document.getElementById("startTripBtn").addEventListener("click", () => startTrip(state.selectedTripAmount));
-document.querySelectorAll(".chip").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".chip").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-    state.selectedChip = Number(btn.dataset.chip);
-    saveState();
-  });
-});
-document.getElementById("spinBtn").addEventListener("click", spin);
-document.getElementById("clearBetsBtn").addEventListener("click", clearBets);
-document.getElementById("repeatBetBtn").addEventListener("click", repeatBets);
-document.getElementById("atmBtn").addEventListener("click", showATM);
-document.getElementById("statsBtn").addEventListener("click", showStats);
-document.getElementById("cashierBtn").addEventListener("click", () => {
-  showModal("Cashier", `
-    <p class="notice">You are returning ${money(state.wallet)} to your fictional Beard Laws Bank and ending this casino visit.</p>
-    <button id="confirmCashout" class="primary">Cash Out and End Visit</button>
-  `);
-  document.getElementById("confirmCashout").addEventListener("click", () => {
-    document.getElementById("modal").close();
-    endTrip();
-  });
-});
-document.getElementById("modalClose").addEventListener("click", () => document.getElementById("modal").close());
+function money(c){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(c/100)}
+function clone(v){return JSON.parse(JSON.stringify(v))}
+function randomInt(max){const a=new Uint32Array(1);const limit=Math.floor(0x100000000/max)*max;do{crypto.getRandomValues(a)}while(a[0]>=limit);return a[0]%max}
+function colorOf(r){if(r==="0"||r==="00")return"green";return RED.has(Number(r))?"red":"black"}
 
-buildBoard();
-render();
-if (state.activeTrip) startTimer();
+function migrate(raw){
+  const s=defaultState();
+  if(!raw)return s;
+  const cents=v=>Math.round(Number(v||0)*(raw.schemaVersion===2?1:100));
+  s.bank=cents(raw.bank); s.wallet=cents(raw.wallet);
+  if(raw.activeTrip){
+    const t=raw.activeTrip;
+    s.activeTrip={
+      id:t.id||crypto.randomUUID(),startedAt:t.startedAt||Date.now(),
+      startingCash:cents(t.startingCash),openingTotal:cents(t.openingTotalFunds??t.openingBank),
+      atmWithdrawals:cents(t.atmWithdrawals),atmFees:cents(t.atmFees),atmCount:Number(t.atmCount||0),
+      wagered:cents(t.totalWagered),highest:cents(t.highestWallet),lowest:cents(t.lowestWallet)
+    };
+  }
+  return s;
+}
+function load(){
+  try{
+    const current=localStorage.getItem(KEY); if(current)return {...defaultState(),...JSON.parse(current)};
+    for(const k of OLD_KEYS){const raw=localStorage.getItem(k);if(raw){const s=migrate(JSON.parse(raw));save(s);return s}}
+  }catch(e){console.error(e)}
+  return defaultState()
+}
+function save(s=state){localStorage.setItem(KEY,JSON.stringify(s))}
+let state=load(); let timer=null; let currentScreen="lobby"; let rouletteLocked=false;
+
+const $=id=>document.getElementById(id);
+function modal(title,html){$("modalTitle").textContent=title;$("modalBody").innerHTML=html;$("modal").showModal()}
+function closeModal(){$("modal").close()}
+function totalFunds(){return state.bank+state.wallet}
+function tripNet(){return state.activeTrip?totalFunds()-state.activeTrip.openingTotal:0}
+function addWager(amount){state.activeTrip.wagered+=amount;state.lifetime.wagered+=amount}
+function ensureTrip(){if(!state.activeTrip)throw new Error("Start a casino visit first.")}
+function spend(amount){ensureTrip();if(amount>state.wallet)throw new Error("Not enough in the casino wallet.");state.wallet-=amount;addWager(amount)}
+function win(amount){state.wallet+=amount;state.activeTrip.highest=Math.max(state.activeTrip.highest,state.wallet);state.activeTrip.lowest=Math.min(state.activeTrip.lowest,state.wallet)}
+function safe(fn){try{fn()}catch(e){alert(e.message)}}
+
+function startTrip(amount){
+  if(amount<2000||amount>50000)throw new Error("Choose between $20 and $500.");
+  if(amount>state.bank)throw new Error("Not enough in the fictional Beard Laws Bank.");
+  const opening=totalFunds();state.bank-=amount;state.wallet=amount;
+  state.activeTrip={id:crypto.randomUUID(),startedAt:Date.now(),startingCash:amount,openingTotal:opening,atmWithdrawals:0,atmFees:0,atmCount:0,wagered:0,highest:amount,lowest:amount};
+  state.roulette.bets={};state.roulette.previous={};save();showCasino();render();startClock()
+}
+function cashOut(){
+  const t=state.activeTrip;const ending=state.wallet;state.bank+=ending;
+  const completed={...t,endedAt:Date.now(),endingCash:ending,net:state.bank-t.openingTotal};
+  state.trips.unshift(completed);state.trips=state.trips.slice(0,100);state.lifetime.trips++;state.lifetime.net+=completed.net;
+  state.wallet=0;state.activeTrip=null;state.blackjack.inRound=false;save();showWelcome();render();
+  modal("Trip Complete",`<div class="stat-row"><span>Started with</span><strong>${money(completed.startingCash)}</strong></div><div class="stat-row"><span>ATM fees</span><strong>${money(completed.atmFees)}</strong></div><div class="stat-row"><span>Total wagered</span><strong>${money(completed.wagered)}</strong></div><div class="stat-row"><span>Cash returned</span><strong>${money(completed.endingCash)}</strong></div><div class="stat-row"><span>Net visit result</span><strong class="${completed.net>=0?"win":"loss"}">${money(completed.net)}</strong></div>`)
+}
+function showWelcome(){$("welcomeView").classList.remove("hidden");$("casinoView").classList.add("hidden")}
+function showCasino(){$("welcomeView").classList.add("hidden");$("casinoView").classList.remove("hidden");showScreen("lobby")}
+function showScreen(name){
+  currentScreen=name;
+  ["lobby","roulette","blackjack","beardbank","lumber"].forEach(n=>$(n+"Screen").classList.toggle("hidden",n!==name));
+  render();
+}
+function startClock(){if(timer)clearInterval(timer);timer=setInterval(renderClock,1000);renderClock()}
+function renderClock(){if(!state.activeTrip)return;const sec=Math.floor((Date.now()-state.activeTrip.startedAt)/1000);$("tripClock").textContent=`${String(Math.floor(sec/60)).padStart(2,"0")}:${String(sec%60).padStart(2,"0")}`}
+
+function render(){
+  $("bankBalance").textContent=money(state.bank);$("walletBalance").textContent=money(state.wallet);
+  document.querySelectorAll(".trip-btn[data-amount]").forEach(b=>b.classList.toggle("selected",Number(b.dataset.amount)===state.selectedTrip));
+  $("startTripBtn").textContent=`Start Visit With ${money(state.selectedTrip)}`;
+  if(!state.activeTrip)return;
+  $("tripResult").textContent=money(tripNet());$("tripResult").className=tripNet()>=0?"win":"loss";renderClock();
+  renderRoulette();renderBlackjack();renderBeardBank();renderLumber()
+}
+
+/* Roulette */
+function buildRoulette(){
+  const board=$("rouletteBoard");board.innerHTML="";
+  ["0","00"].forEach(r=>board.appendChild(betCell(r,"number:"+r,"green")));
+  for(let n=1;n<=36;n++)board.appendChild(betCell(String(n),"number:"+n,colorOf(String(n))));
+  [["1st 12","dozen1"],["2nd 12","dozen2"],["3rd 12","dozen3"],["1–18","low"],["Even","even"],["Red","red"],["Black","black"],["Odd","odd"],["19–36","high"],["1st Col","column1"],["2nd Col","column2"],["3rd Col","column3"]].forEach(([l,k])=>board.appendChild(betCell(l,k,"outside")))
+}
+function betCell(label,key,klass){const b=document.createElement("button");b.className=`bet-cell ${klass}`;b.dataset.bet=key;b.textContent=label;b.onclick=()=>{if(rouletteLocked)return;safe(()=>{const total=Object.values(state.roulette.bets).reduce((a,b)=>a+b,0);if(total+state.selectedChip>state.wallet)throw new Error("Not enough in the casino wallet.");state.roulette.bets[key]=(state.roulette.bets[key]||0)+state.selectedChip;save();renderRoulette()})};return b}
+function evalBet(key,r){const n=Number(r);if(key.startsWith("number:"))return r===key.split(":")[1]?35:-1;if(r==="0"||r==="00")return-1;if(key==="red")return colorOf(r)==="red"?1:-1;if(key==="black")return colorOf(r)==="black"?1:-1;if(key==="odd")return n%2?1:-1;if(key==="even")return n%2===0?1:-1;if(key==="low")return n<=18?1:-1;if(key==="high")return n>=19?1:-1;if(key==="dozen1")return n<=12?2:-1;if(key==="dozen2")return n>=13&&n<=24?2:-1;if(key==="dozen3")return n>=25?2:-1;if(key==="column1")return n%3===1?2:-1;if(key==="column2")return n%3===2?2:-1;if(key==="column3")return n%3===0?2:-1;return-1}
+function renderRoulette(){
+  if(!state.activeTrip)return;
+  document.querySelectorAll("[data-bet]").forEach(cell=>{cell.querySelector(".marker")?.remove();const v=state.roulette.bets[cell.dataset.bet];if(v){const m=document.createElement("span");m.className="marker";m.textContent=money(v).replace(".00","");cell.appendChild(m)}});
+  const entries=Object.entries(state.roulette.bets);$("rouletteBetList").innerHTML=entries.length?entries.map(([k,v])=>`<div class="stat-row"><span>${k.replace("number:","Number ")}</span><strong>${money(v)}</strong></div>`).join(""):`<p class="muted">No bets placed.</p>`;
+  $("rouletteBetTotal").textContent=money(entries.reduce((a,[,v])=>a+v,0));$("rouletteWagered").textContent=money(state.roulette.wagered);$("rouletteSpins").textContent=state.roulette.spins;$("rouletteResult").textContent=state.roulette.last||"—";$("rouletteMessage").textContent=state.roulette.last?(state.roulette.lastNet>=0?`Won ${money(state.roulette.lastNet)}`:`Lost ${money(Math.abs(state.roulette.lastNet))}`):""
+}
+async function spinRoulette(){
+  if(rouletteLocked)return;const total=Object.values(state.roulette.bets).reduce((a,b)=>a+b,0);if(!total)return alert("Place a bet first.");
+  safe(()=>spend(total));if(total>state.wallet+total)return;
+  rouletteLocked=true;state.roulette.previous=clone(state.roulette.bets);state.roulette.spins++;state.roulette.wagered+=total;
+  const result=RESULTS[randomInt(RESULTS.length)];$("rouletteWheel").style.transform=`rotate(${1440+randomInt(720)}deg)`;render();
+  await new Promise(r=>setTimeout(r,state.settings.quick?300:2200));
+  let returned=0;for(const[k,v]of Object.entries(state.roulette.bets)){const odds=evalBet(k,result);if(odds>=0)returned+=v*(odds+1)}
+  win(returned);state.roulette.last=result;state.roulette.lastNet=returned-total;state.roulette.history.unshift(result);state.roulette.bets={};rouletteLocked=false;save();render()
+}
+
+/* Blackjack */
+const ranks=["A","2","3","4","5","6","7","8","9","10","J","Q","K"], suits=["♠","♥","♦","♣"];
+function card(){return{rank:ranks[randomInt(ranks.length)],suit:suits[randomInt(suits.length)]}}
+function handValue(hand){let total=0,aces=0;for(const c of hand){if(c.rank==="A"){aces++;total+=11}else if(["J","Q","K"].includes(c.rank))total+=10;else total+=Number(c.rank)}while(total>21&&aces){total-=10;aces--}return total}
+function cardHtml(c,back=false){if(back)return`<div class="card back">?</div>`;return`<div class="card ${["♥","♦"].includes(c.suit)?"red-suit":""}"><span>${c.rank}${c.suit}</span><span>${c.suit}</span></div>`}
+function renderBlackjack(){
+  const b=state.blackjack;$("dealerCards").innerHTML=b.dealer.map((c,i)=>cardHtml(c,b.hidden&&i===1)).join("");$("playerCards").innerHTML=b.player.map(c=>cardHtml(c)).join("");
+  $("dealerScore").textContent=b.dealer.length?`(${b.hidden?handValue([b.dealer[0]]):handValue(b.dealer)})`:"";$("playerScore").textContent=b.player.length?`(${handValue(b.player)})`:"";$("blackjackMessage").textContent=b.message;
+  $("dealBtn").disabled=b.inRound;$("hitBtn").disabled=!b.inRound;$("standBtn").disabled=!b.inRound;$("doubleBtn").disabled=!b.inRound||b.player.length!==2||b.bet>state.wallet
+}
+function settleBlackjack(mult,message){const b=state.blackjack;if(mult>0)win(Math.round(b.bet*mult));b.hidden=false;b.inRound=false;b.message=message;save();render()}
+function dealBlackjack(){
+  safe(()=>{const bet=Number($("blackjackBet").value);spend(bet);const b=state.blackjack;b.inRound=true;b.bet=bet;b.player=[card(),card()];b.dealer=[card(),card()];b.hidden=true;b.message="Your move.";b.stats.hands++;b.stats.wagered+=bet;
+    const pv=handValue(b.player),dv=handValue(b.dealer);if(pv===21&&dv===21)settleBlackjack(1,"Push. Both have blackjack.");else if(pv===21)settleBlackjack(2.5,"Blackjack! Paid 3:2.");else save();render()
+  })
+}
+function hitBlackjack(){const b=state.blackjack;b.player.push(card());const v=handValue(b.player);if(v>21)settleBlackjack(0,"Bust. Dealer wins.");else if(v===21)standBlackjack();else{b.message="Hit or stand?";save();render()}}
+function standBlackjack(){const b=state.blackjack;b.hidden=false;while(handValue(b.dealer)<17)b.dealer.push(card());const p=handValue(b.player),d=handValue(b.dealer);if(d>21)settleBlackjack(2,"Dealer busts. You win.");else if(p>d)settleBlackjack(2,"You win.");else if(p<d)settleBlackjack(0,"Dealer wins.");else settleBlackjack(1,"Push. Bet returned.")}
+function doubleBlackjack(){safe(()=>{const b=state.blackjack;spend(b.bet);b.bet*=2;b.player.push(card());if(handValue(b.player)>21)settleBlackjack(0,"Double-down bust.");else standBlackjack()})}
+
+/* Slots */
+const bankSymbols=["🪙","🪙","🧔","🔑","💰","🧴","✂️","🪙","🧔","💰"];
+const lumberSymbols=["🪓","🌲","🧔","🦌","🐻","🪵","🌲","🪓","🧔"];
+function createGrid(symbols,reels){return Array.from({length:reels},()=>Array.from({length:3},()=>symbols[randomInt(symbols.length)]))}
+function gridHtml(grid){return grid.map(col=>`<div class="reel">${col.map(s=>`<div class="symbol ${s==="🪙"?"coin":s==="🧔"?"wild":""}">${s}</div>`).join("")}</div>`).join("")}
+function count(grid,s){return grid.flat().filter(x=>x===s).length}
+function renderBeardBank(){const b=state.beardBank;$("beardBankReels").innerHTML=gridHtml(b.lastGrid.length?b.lastGrid:createGrid(bankSymbols,5));$("vaultProgress").textContent=`${b.progress} / 6`;$("vaultMeter").style.width=`${Math.min(100,b.progress/6*100)}%`}
+function spinBeardBank(){safe(()=>{const bet=Number($("beardBankBet").value);spend(bet);const b=state.beardBank;b.spins++;b.wagered+=bet;const grid=createGrid(bankSymbols,5);b.lastGrid=grid;const coins=count(grid,"🪙");const wilds=count(grid,"🧔");let payout=0;if(coins>=3)payout+=bet*(coins-1);if(wilds>=2)payout+=bet*3;b.progress=Math.min(6,b.progress+Math.min(2,coins));let msg=`${coins} beard coins collected.`;if(b.progress>=6){const bonus=bet*(8+randomInt(13));payout+=bonus;b.progress=0;msg=`BEARD VAULT! Bonus pays ${money(bonus)}.`}if(payout)win(payout);$("beardBankMessage").textContent=msg+(payout?` Total return ${money(payout)}.`:"");save();render()})}
+function renderLumber(){const l=state.lumber;$("lumberReels").innerHTML=gridHtml(l.lastGrid.length?l.lastGrid:createGrid(lumberSymbols,l.level));$("forestLevel").textContent=`${l.level} reels`;$("forestMeter").style.width=`${(l.level-3)/2*100}%`}
+function spinLumber(){safe(()=>{const bet=Number($("lumberBet").value);spend(bet);const l=state.lumber;l.spins++;l.wagered+=bet;const grid=createGrid(lumberSymbols,l.level);l.lastGrid=grid;const axes=count(grid,"🪓"),wilds=count(grid,"🧔"),trees=count(grid,"🌲");let payout=0,msg=`${axes} axes landed.`;if(trees>=4)payout+=bet*(trees-2);if(wilds>=2)payout+=bet*4;if(axes>=2&&l.level<5){l.level++;msg=`The forest expanded to ${l.level} reels!`}else if(axes>=2&&l.level===5){const bonus=bet*(10+randomInt(16));payout+=bonus;l.level=3;msg=`TIMBER BEARD FEATURE! Paid ${money(bonus)} and the forest reset.`}if(payout)win(payout);$("lumberMessage").textContent=msg+(payout?` Total return ${money(payout)}.`:"");save();render()})}
+
+/* Modal content */
+function showATM(){const t=state.activeTrip;modal("Casino ATM",`<p class="muted">Each fictional withdrawal costs $7.99. Used ${t.atmCount} of 3 withdrawals.</p><div class="atm-grid">${[10000,20000,30000,50000].map(a=>`<button class="primary atm-choice" data-a="${a}">Withdraw ${money(a)}</button>`).join("")}</div>`);document.querySelectorAll(".atm-choice").forEach(b=>b.onclick=()=>safe(()=>{const a=Number(b.dataset.a);if(t.atmCount>=3)throw new Error("Maximum of three withdrawals.");if(state.bank<a+ATM_FEE)throw new Error("Not enough in the fictional bank.");state.bank-=a+ATM_FEE;state.wallet+=a;t.atmWithdrawals+=a;t.atmFees+=ATM_FEE;t.atmCount++;state.lifetime.atmFees+=ATM_FEE;save();closeModal();render()}))}
+function showTrip(){const t=state.activeTrip;modal("Current Casino Visit",`<div class="stat-row"><span>Starting cash</span><strong>${money(t.startingCash)}</strong></div><div class="stat-row"><span>Current wallet</span><strong>${money(state.wallet)}</strong></div><div class="stat-row"><span>Trip result</span><strong class="${tripNet()>=0?"win":"loss"}">${money(tripNet())}</strong></div><div class="stat-row"><span>ATM fees</span><strong>${money(t.atmFees)}</strong></div><div class="stat-row"><span>Total wagered</span><strong>${money(t.wagered)}</strong></div>`) }
+function showHistory(){modal("Trip History",state.trips.length?state.trips.map((t,i)=>`<div class="trip-card"><div class="stat-row"><strong>Visit #${state.trips.length-i}</strong><strong class="${t.net>=0?"win":"loss"}">${money(t.net)}</strong></div><small>${new Date(t.startedAt).toLocaleString()}</small><div class="stat-row"><span>Started</span><span>${money(t.startingCash)}</span></div><div class="stat-row"><span>Wagered</span><span>${money(t.wagered)}</span></div></div>`).join(""):`<p class="muted">No completed casino visits yet.</p>`)}
+function showSettings(){modal("Settings",`<label><input id="quickToggle" type="checkbox" ${state.settings.quick?"checked":""}> Quick spin animations</label><div class="divider"></div><p class="muted">Reset deletes all fictional balances and history in this browser.</p><input id="resetText" placeholder="Type RESET"><button id="resetAll" class="secondary">Reset Everything</button>`);$("quickToggle").onchange=e=>{state.settings.quick=e.target.checked;save()};$("resetAll").onclick=()=>{if($("resetText").value!=="RESET")return alert("Type RESET exactly.");state=defaultState();save();closeModal();showWelcome();render()}}
+function showBank(){modal("Beard Laws Bank",`<div class="stat-row"><span>Bank balance</span><strong>${money(state.bank)}</strong></div><div class="stat-row"><span>Casino wallet</span><strong>${money(state.wallet)}</strong></div><div class="stat-row"><span>Lifetime result</span><strong class="${state.lifetime.net>=0?"win":"loss"}">${money(state.lifetime.net)}</strong></div><div class="stat-row"><span>Total wagered</span><strong>${money(state.lifetime.wagered)}</strong></div>`)}
+
+/* Events */
+document.querySelectorAll(".trip-btn[data-amount]").forEach(b=>b.onclick=()=>{state.selectedTrip=Number(b.dataset.amount);save();render()});
+$("customTripBtn").onclick=()=>{modal("Custom Casino Cash",`<input id="customAmount" placeholder="200.00"><button id="useCustom" class="primary">Use Amount</button>`);$("useCustom").onclick=()=>{const n=Math.round(Number($("customAmount").value)*100);if(!Number.isFinite(n)||n<2000||n>50000)return alert("Choose between $20 and $500.");state.selectedTrip=n;save();closeModal();render()}};
+$("startTripBtn").onclick=()=>safe(()=>startTrip(state.selectedTrip));
+document.querySelectorAll(".game-card").forEach(b=>b.onclick=()=>showScreen(b.dataset.game));document.querySelectorAll(".back-lobby").forEach(b=>b.onclick=()=>showScreen("lobby"));
+$("lobbyBtn").onclick=()=>showScreen("lobby");$("atmBtn").onclick=showATM;$("currentTripBtn").onclick=showTrip;$("cashierBtn").onclick=()=>modal("Cashier",`<p>Return ${money(state.wallet)} to the fictional Beard Laws Bank and end this visit?</p><button id="confirmCash" class="primary">Cash Out and End Visit</button>`);$("modal").addEventListener("click",e=>{if(e.target.id==="confirmCash"){closeModal();cashOut()}});
+$("welcomeHistoryBtn").onclick=showHistory;$("welcomeSettingsBtn").onclick=showSettings;$("bankCard").onclick=showBank;$("modalClose").onclick=closeModal;$("modalX").onclick=closeModal;
+document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{state.selectedChip=Number(b.dataset.chip);document.querySelectorAll(".chip").forEach(x=>x.classList.toggle("selected",x===b));save()});
+$("rouletteClear").onclick=()=>{state.roulette.bets={};save();renderRoulette()};$("rouletteRepeat").onclick=()=>safe(()=>{const total=Object.values(state.roulette.previous).reduce((a,b)=>a+b,0);if(total>state.wallet)throw new Error("Not enough in the wallet.");state.roulette.bets=clone(state.roulette.previous);save();renderRoulette()});$("rouletteSpin").onclick=spinRoulette;
+$("dealBtn").onclick=dealBlackjack;$("hitBtn").onclick=hitBlackjack;$("standBtn").onclick=standBlackjack;$("doubleBtn").onclick=doubleBlackjack;
+$("beardBankSpin").onclick=spinBeardBank;$("lumberSpin").onclick=spinLumber;
+
+buildRoulette();if(state.activeTrip){showCasino();startClock()}else showWelcome();render();
