@@ -8,32 +8,45 @@ const LABELS={
 };
 const SYMBOLS=['oil','comb','razor','balm','key','crown'];
 
-/**
- * Presentation-only mirror of the existing evaluator.
- * It never awards credits, mutates state, or changes the resolved result.
- */
 export function describeWaysWins(grid,bet){
  const groups=[];
  for(const symbol of SYMBOLS){
-  const positions=[];
+  const positionsByReel=[];
   for(let reelIndex=0;reelIndex<grid.length;reelIndex++){
    const matches=[];
    grid[reelIndex].forEach((cell,rowIndex)=>{
     if(cell===symbol||cell==='vernon')matches.push({reel:reelIndex,row:rowIndex});
    });
    if(matches.length===0)break;
-   positions.push(matches);
+   positionsByReel.push(matches);
   }
-  const length=positions.length;
+
+  const length=positionsByReel.length;
   const multiplier=PAY[symbol]?.[length];
   if(length<3||multiplier===undefined)continue;
-  const ways=positions.reduce((product,reel)=>product*reel.length,1);
+
+  const ways=positionsByReel.reduce((product,reel)=>product*reel.length,1);
   const payout=round((multiplier*ways*bet)/243);
+
+  // One representative path is drawn at a time. All matching symbols still illuminate.
+  const path=positionsByReel.map(reelMatches=>reelMatches[0]);
+
   groups.push({
-   symbol,label:LABELS[symbol],length,ways,payout,
-   positions:positions.flat()
+   symbol,
+   label:LABELS[symbol],
+   length,
+   ways,
+   payout,
+   positions:positionsByReel.flat(),
+   path,
   });
  }
  return groups;
 }
+
+export function markerForGroup(group,index){
+ const rowSignature=group.path.reduce((sum,position)=>sum+position.row,0);
+ return ((rowSignature+index)%9)+1;
+}
+
 const round=value=>Math.round(value*100)/100;

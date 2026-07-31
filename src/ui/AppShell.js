@@ -5,7 +5,7 @@ export function createAppShell(){
  <header class="casino-topbar">
    <button class="brand-lockup" data-lobby aria-label="Return to casino lobby">
      <img src="./assets/beard-laws-crest.svg" alt="">
-     <div><small>BEARD LAWS CASINO 3.1</small><strong>PROJECT GOLD BEARD</strong></div>
+     <div><small>BEARD LAWS CASINO 3.2</small><strong>PROJECT GOLD BEARD</strong></div>
    </button>
    <div class="top-actions">
      <button data-lobby>CASINO FLOOR</button>
@@ -39,54 +39,91 @@ export function createAppShell(){
    <div class="machine-fit-stage" data-fit-stage>
      <div class="machine-fit-inner" data-fit-inner>
        <section class="flagship-cabinet" data-cabinet>
-         <div class="cabinet-side left"></div><div class="cabinet-side right"></div>
-         <section class="top-box">
+         <section class="jackpot-marquee">
            <div class="jackpot super"><span>SUPER</span><strong data-super>$10,000.02</strong><span>SUPER</span></div>
            <div class="jackpot-row">
              <div class="jackpot grand"><small>GRAND</small><strong data-grand>$5,000.02</strong></div>
              <div class="jackpot major"><small>MAJOR</small><strong data-major>$500.03</strong></div>
            </div>
-           <div class="mini-row">
+           <div class="minor-row">
              <div><small>MINOR BONUS</small><strong data-minor>$50.00</strong></div>
-             <img class="bank-wordmark" src="./assets/beard-bank-logo.svg" alt="Beard Bank">
+             <img src="./assets/beard-bank-logo.svg" alt="Beard Bank">
              <div><small>MINI BONUS</small><strong data-mini>$10.00</strong></div>
            </div>
          </section>
 
          <section class="feature-deck">
-           <img src="./assets/vault-fortune-wheel.svg" alt="Living Vault feature wheel" class="feature-wheel">
-           <div class="vault-charge-panel">
-             <span>LIVING VAULT LOCKS</span><strong data-charges>0 / 30</strong>
+           <div class="vernon-panel">
+             <img src="./assets/vernon-portrait-frame.svg" alt="Vaultmaster Vernon">
+           </div>
+           <div class="wheel-panel">
+             <img src="./assets/vault-fortune-wheel.svg" alt="Living Vault feature wheel">
+             <div class="wheel-pointer"></div>
+           </div>
+           <div class="lock-panel">
+             <small>LIVING VAULT</small>
+             <strong data-charges>0 / 30</strong>
+             <span>LOCKS COLLECTED</span>
+             <div class="lock-grid">
+               ${Array.from({length:30},(_,i)=>`<i style="--lock:${i}"></i>`).join('')}
+             </div>
              <div class="charge-track"><div data-charge-fill></div></div>
            </div>
-           <div class="vault-bolts">${Array.from({length:30},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
          </section>
 
-         <section class="game-screen">
-           <div class="status-ribbon" data-message>ENGINE READY</div>
-           <div class="reel-bezel">
-             <div class="bezel-leds"></div>
-             <div class="reel-host" data-reel-host></div>
-             <div class="reel-chrome-grid" aria-hidden="true">
-               <i></i><i></i><i></i><i></i>
+         <section class="reel-and-preview-layout">
+           <div class="reel-assembly">
+             <div class="status-ribbon" data-message>ENGINE READY</div>
+             <div class="reel-shell">
+               <div class="marker-column marker-left">
+                 ${[1,2,3,4,5,6,7,8,9].map(n=>`<b data-marker="${n}">${n}</b>`).join('')}
+               </div>
+               <div class="reel-bezel">
+                 <div class="reel-host" data-reel-host></div>
+                 <div class="reel-chrome-grid" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                 <svg class="win-line-overlay" data-win-lines viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true"></svg>
+                 <div class="glass-reflection"></div>
+                 <div class="bezel-leds"></div>
+               </div>
+               <div class="marker-column marker-right">
+                 ${[1,2,3,4,5,6,7,8,9].map(n=>`<b data-marker="${n}">${n}</b>`).join('')}
+               </div>
              </div>
-             <div class="glass-reflection"></div>
-             <div class="win-presentation" data-win-presentation aria-live="polite">
-               <strong data-win-kind>3 OF A KIND</strong>
-               <span data-win-symbol>BEARD OIL</span>
-               <b data-win-step>+$0.00</b>
+             <div class="ways-bar">
+               <span>243 WAYS</span>
+               <strong data-sequence-label>WIN PRESENTATION READY</strong>
+               <span>243 WAYS</span>
              </div>
            </div>
-           <div class="ways-bar"><span>243 WAYS</span><span>VERNON COLLECTS EVERY VISIBLE BEARD COIN</span><span>243 WAYS</span></div>
+
+           <aside class="win-drawer" data-win-drawer>
+             <div class="drawer-header">
+               <small>WIN REVIEW</small>
+               <strong data-win-count>NO ACTIVE WIN</strong>
+             </div>
+             <div class="win-card-stack" data-win-cards>
+               <div class="drawer-empty">
+                 <span>Winning groups appear here without covering the reels.</span>
+               </div>
+             </div>
+             <div class="drawer-total">
+               <small>TOTAL WIN</small>
+               <strong data-drawer-total>$0.00</strong>
+             </div>
+           </aside>
          </section>
 
          <section class="control-console">
-           <button class="floor-button" data-lobby>FLOOR</button>
+           <button class="deck-button floor-button" data-lobby>FLOOR</button>
+           <button class="deck-button paytable-button">PAY TABLE</button>
+           <button class="deck-button info-button" data-ledger-toggle>INFO</button>
            <div class="console-meter"><small>CASH</small><strong data-wallet>$0.00</strong></div>
-           <div class="console-meter"><small>BET</small><strong>$1.00</strong></div>
+           <div class="bet-control">
+             <button disabled>−</button><div><small>BET</small><strong>$1.00</strong></div><button disabled>+</button>
+           </div>
            <div class="console-meter win"><small>WIN</small><strong data-last-win>$0.00</strong></div>
-           <button class="collect-button" data-ledger-toggle>INFO</button>
-           <button class="spin-button" data-spin><span>SPIN</span><small>1 CREDIT</small></button>
+           <button class="deck-button max-bet-button" disabled>MAX BET</button>
+           <button class="spin-button" data-spin><span>SPIN</span><small>HOLD FOR AUTO</small></button>
          </section>
        </section>
      </div>
@@ -112,16 +149,21 @@ export function createAppShell(){
      <p><b>RNG:</b> <code>crypto.getRandomValues()</code></p>
      <p><b>Evaluation:</b> 243 Ways, adjacent reels left to right</p>
      <p><b>Living Vault:</b> +1 charge for each visible Beard Coin</p>
-     <p><b>Motion:</b> Full or reduced presentation modes</p>
-     <p class="warning">The legacy 94.20% target is not a verified Engine 3.0 RTP.</p>
+     <p><b>Win paths:</b> Presentation only; engine awards remain unchanged</p>
+     <p class="warning">The legacy 94.20% target is not a verified Engine 3.2 RTP.</p>
    </section>
  </aside>
+
  <footer>Free fictional entertainment only. No purchases, deposits, prizes, withdrawals, transfers, or redemption.</footer>`;
  return el;
 }
+
 function gameCard(id,title,feature,copy,status){
  return `<button class="machine-card ${status}" data-game="${id}">
-   <div class="card-lights"></div><span class="machine-status">${status==='playable'?'PLAY NOW':'IN DEVELOPMENT'}</span>
-   <div class="card-marquee">${title}</div><div class="card-feature">${feature}</div><p>${copy}</p>
+   <div class="card-lights"></div>
+   <span class="machine-status">${status==='playable'?'PLAY NOW':'IN DEVELOPMENT'}</span>
+   <div class="card-marquee">${title}</div>
+   <div class="card-feature">${feature}</div>
+   <p>${copy}</p>
  </button>`;
 }

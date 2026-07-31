@@ -1,6 +1,6 @@
-# Beard Laws Casino 3.1 — Commercial Cabinet Pass
+# Beard Laws Casino 3.2 — Playable Concept Match
 
-This milestone is presentation-only.
+This milestone rebuilds the visual container to match the approved Project Gold Beard concept hierarchy while preserving the existing engine.
 
 ## Protected systems
 
@@ -8,53 +8,76 @@ No changes were made to:
 
 - Crypto RNG
 - Reel strips
-- 243-Ways evaluator
-- Paytable
+- 243-Ways payout evaluator
+- Paytable values
 - Feature pipeline
 - Living Vault charge logic
-- Wallet deduction or payout logic
+- Wallet deductions
+- Wallet awards
 - Session accounting
 
-## Phase 1 — Cabinet architecture
+## Layered component architecture
 
-- The reel matrix now occupies approximately half of the natural cabinet height
-- Jackpot header reduced by approximately 15%
-- Living Vault feature deck reduced by approximately 20%
-- Reel viewport expanded to show the complete 5×3 matrix
-- Individual metallic reel separators
-- Recessed glass and drop-shadow depth
-- Larger cabinet natural width for stronger commercial proportions
+### Cabinet frame
 
-## Phase 2 — Sequential 243-Ways presentation
+- Gold outer bezel
+- Purple underglow
+- Jackpot marquee
+- Molded lower control deck
 
-A separate presentation-only analyzer reads the resolved grid after the engine completes.
+### Feature deck
 
-It:
+- Framed Vaultmaster Vernon portrait
+- Center Living Vault feature wheel
+- Right-side thirty-lock progress panel
 
-- identifies paying symbol groups
-- dims non-winning symbols to 35%
-- highlights one winning group at a time
-- displays 3 / 4 / 5 OF A KIND
-- displays the symbol name and number of ways
-- steps the visible WIN meter upward
-- finishes with TOTAL WIN
+### Reel assembly
 
-The analyzer cannot award credits or modify the engine result.
+- Five independent PixiJS reels
+- Chrome separators
+- Left and right sequence markers
+- Purple SVG win-path overlay
+- Glass and LED layers
 
-## Phase 3 — Cabinet life
+### Win drawer
 
-- Jackpot pennies increment every 800ms
-- Jackpot text receives periodic sheen
-- Glass reflection sweeps every 10 seconds
-- Spin button breathes gently
-- LED trim pulses softly
+Winning groups no longer block the main reels.
 
-## Phase 4 — Background
+Each group creates a card containing:
 
-- Decorative eye-pattern carpet removed
-- Dark radial floor shadow added
-- Subtle purple cabinet underglow added
-- Surroundings reduced so the machine remains the focal point
+- 3 / 4 / 5 OF A KIND
+- Symbol title
+- Number of ways
+- Mini symbol strip
+- Individual award
+
+The total is tallied separately beneath the card stack.
+
+## Asset binding preparation
+
+`src/graphics/AssetManifest.js` looks for:
+
+1. Transparent WebP
+2. Transparent PNG
+3. Existing SVG fallback
+
+Drop future painted assets into:
+
+`assets/symbols/`
+
+Exact filenames:
+
+- oil
+- comb
+- razor
+- balm
+- key
+- crown
+- coin
+- vault
+- vernon
+
+No engine change is required when the painted files arrive.
 
 ## Deployment
 
@@ -64,6 +87,6 @@ GitHub Pages:
 
 `Deploy from a branch → main → /(root)`
 
-Open with:
+Open after deployment:
 
-`https://beardlaws.github.io/beard-laws-casino/?v=310`
+`https://beardlaws.github.io/beard-laws-casino/?v=320`
