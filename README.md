@@ -1,40 +1,55 @@
-# Beard Laws Casino 2.1 — Gold Master Cabinet
+# Beard Laws Casino 3.0 — Project Gold Beard
 
-This direct GitHub Pages package rebuilds the Beard Bank presentation around an original tall-cabinet hierarchy:
+This is the first production-style presentation build.
 
-1. Jackpot top box
-2. Living Vault feature deck
-3. Large 5×3 reels
-4. Casino-style control console
+## Major changes
 
-## Research-led engineering decisions
+### Casino floor restored
 
-- PixiJS 8 `Assets.load()` for all textures
+The player can return to the lobby at any time.
+
+Machines displayed:
+
+- Beard Bank — playable
+- Lumber Beard — development preview
+- Beard Drop — development preview
+- American Roulette — development preview
+- Blackjack — development preview
+
+The current Beard Bank engine and wallet remain alive while moving between views.
+
+### Automatic machine fitting
+
+The complete Beard Bank cabinet automatically scales against both browser width and browser height.
+
+Players should no longer need to zoom the browser out to see the entire cabinet.
+
+### Gold Beard art pass
+
+- New original Living Vault fortune wheel
+- New detailed Vaultmaster Vernon portrait
+- Rebuilt high-detail Beard Bank symbols
+- Casino-floor scene
+- Deeper green reel glass and gold bezel
+- Larger visual hierarchy inspired by tall commercial cabinets without reproducing their protected characters or branding
+
+### Reel presentation
+
 - Independent reel containers
-- Per-reel BlurFilter
-- Acceleration, cruise, deceleration, staggered stopping, and recoil
-- Web Audio begins only after a player gesture
-- Reduced Motion control plus automatic `prefers-reduced-motion` support
-- Branch-root GitHub Pages deployment remains supported
+- Acceleration
+- Motion blur
+- Staggered stops
+- Mechanical overshoot and settle
+- No normal-spin cabinet shaking
 
-## Original design
+### Deployment
 
-The package does not reproduce the supplied commercial game's characters, names, wheel segments, symbols, or branding.
+Upload and overwrite all files in the repository root.
 
-Its original signature presentation is:
-
-- Beard Bank jackpot top box
-- Thirty-lock Living Vault door
-- Beard Laws purple, gold, and green cabinet
-- Vaultmaster Vernon collector rule
-- Original Beard Laws symbol art
-
-## Upload
-
-Extract the ZIP and upload all contents to the repository root.
-
-GitHub Pages:
+GitHub Pages setting:
 
 `Deploy from a branch → main → /(root)`
 
-Overwrite matching files. The repository does not need to be deleted again.
+Open after deployment with:
+
+`https://beardlaws.github.io/beard-laws-casino/?v=300`

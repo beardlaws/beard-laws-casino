@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520">
+<defs>
+ <radialGradient id="sky" cx="50%" cy="15%"><stop offset="0" stop-color="#3e7e9e"/><stop offset=".52" stop-color="#1d3455"/><stop offset="1" stop-color="#0a0711"/></radialGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff5ad"/><stop offset=".18" stop-color="#c68526"/><stop offset=".48" stop-color="#ffe27a"/><stop offset=".74" stop-color="#714216"/><stop offset="1" stop-color="#efc65d"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="900" height="520" rx="26" fill="url(#sky)"/>
+<path d="M0 320Q125 220 245 315Q360 210 465 305Q610 170 760 300Q830 250 900 290V520H0Z" fill="#173521"/>
+<g id="wheel" transform="translate(450 525)">
+ <circle r="320" fill="#121018" stroke="url(#gold)" stroke-width="18"/>
+ <g stroke="#f6d878" stroke-width="8">
+  <path d="M0 0L0-305A305 305 0 0 1 216-216Z" fill="#662378"/>
+  <path d="M0 0L216-216A305 305 0 0 1 305 0Z" fill="#135c81"/>
+  <path d="M0 0L305 0A305 305 0 0 1 216 216Z" fill="#a8641e"/>
+  <path d="M0 0L216 216A305 305 0 0 1 0 305Z" fill="#3f7f39"/>
+  <path d="M0 0L0 305A305 305 0 0 1-216 216Z" fill="#9a2734"/>
+  <path d="M0 0L-216 216A305 305 0 0 1-305 0Z" fill="#4d397d"/>
+  <path d="M0 0L-305 0A305 305 0 0 1-216-216Z" fill="#246d69"/>
+  <path d="M0 0L-216-216A305 305 0 0 1 0-305Z" fill="#8c4a1d"/>
+ </g>
+ <g font-family="Arial" font-size="28" font-weight="900" text-anchor="middle" fill="#fff1a2">
+  <text x="82" y="-235" transform="rotate(20 82 -235)">GRAND VAULT</text>
+  <text x="235" y="-80" transform="rotate(70 235 -80)">MAJOR</text>
+  <text x="240" y="95" transform="rotate(112 240 95)">COIN STORM</text>
+  <text x="88" y="245" transform="rotate(158 88 245)">2× CHARGE</text>
+  <text x="-92" y="245" transform="rotate(202 -92 245)">GOLD RUSH</text>
+  <text x="-240" y="92" transform="rotate(248 -240 92)">VERNON</text>
+  <text x="-235" y="-90" transform="rotate(292 -235 -90)">MINOR</text>
+  <text x="-82" y="-235" transform="rotate(338 -82 -235)">MINI</text>
+ </g>
+ <circle r="88" fill="url(#gold)" stroke="#fff0a3" stroke-width="10"/>
+ <circle r="48" fill="#30143b" stroke="#f7d46d" stroke-width="8"/>
+ <text y="14" text-anchor="middle" font-family="Georgia" font-size="42" font-weight="900" fill="#fff4a9">BL</text>
+</g>
+<path d="M450 17l-34 70h68z" fill="#ffdf61" stroke="#6d3c13" stroke-width="8" filter="url(#glow)"/>
+<text x="450" y="72" text-anchor="middle" font-family="Georgia" font-size="32" font-weight="900" fill="#fff0a0">THE LIVING VAULT</text>
+</svg>

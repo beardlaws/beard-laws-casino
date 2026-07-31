@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
-    <rect width="220" height="220" rx="32" fill="#2d1734"/>
-    <path d="M48 70h124v42H48z" fill="#d49c43" stroke="#f3d684" stroke-width="7"/><path d="M58 112v60M76 112v60M94 112v60M112 112v60M130 112v60M148 112v60M166 112v60" stroke="#f3d684" stroke-width="8"/>
-    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="w" x1="0" x2="1"><stop stop-color="#5d240b"/><stop offset=".3" stop-color="#d78c2e"/><stop offset=".55" stop-color="#6d2b0d"/><stop offset=".8" stop-color="#e7a94d"/><stop offset="1" stop-color="#49200c"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="18" stdDeviation="12" flood-opacity=".8"/></filter></defs><rect width="512" height="512" rx="64" fill="#170b1d"/><g filter="url(#s)" stroke="#ffe39a" stroke-width="9"><path d="M82 125h348v112H82z" rx="22" fill="url(#w)"/><path d="M103 237v165M139 237v165M175 237v165M211 237v165M247 237v165M283 237v165M319 237v165M355 237v165M391 237v165" stroke="url(#w)" stroke-width="24"/><path d="M105 170q150-72 302 0" fill="none" opacity=".42"/></g></svg>
