@@ -1,25 +1,30 @@
-export type Credits = number;
+/**
+ * Atomic fictional credit units.
+ *
+ * Convention: 100 units = 1.00 displayed casino credit.
+ * All engine accounting uses integers to avoid floating-point drift.
+ */
+export type CreditUnits = number;
+
+export const CREDIT_UNIT_SCALE = 100 as const;
 
 export interface MoneyPolicy {
-  readonly decimalPlaces: number;
-  readonly minimumWager: Credits;
-  readonly maximumWager: Credits;
+  readonly minimumWagerUnits: CreditUnits;
+  readonly maximumWagerUnits: CreditUnits;
 }
 
 export const DEFAULT_MONEY_POLICY: MoneyPolicy = {
-  decimalPlaces: 2,
-  minimumWager: 0.01,
-  maximumWager: 10_000,
+  minimumWagerUnits: 25,
+  maximumWagerUnits: 100_000,
 };
 
-export function roundCredits(value: Credits, decimalPlaces = 2): Credits {
-  if (!Number.isFinite(value)) throw new RangeError('Credit values must be finite.');
-  const factor = 10 ** decimalPlaces;
-  return Math.round((value + Number.EPSILON) * factor) / factor;
+export function assertCreditUnits(value: CreditUnits, label: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${label} must be a non-negative safe integer.`);
+  }
 }
 
-export function assertNonNegativeCredits(value: Credits, label: string): void {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new RangeError(`${label} must be a finite, non-negative credit value.`);
-  }
+export function formatCreditUnits(value: CreditUnits): string {
+  assertCreditUnits(value, 'Credit value');
+  return (value / CREDIT_UNIT_SCALE).toFixed(2);
 }

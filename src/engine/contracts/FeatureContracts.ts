@@ -1,7 +1,6 @@
-import type { Credits } from '../../types/Money';
+import type { CreditUnits } from '../../types/Money';
 
 export type FeatureStage =
-  | 'beforeBaseEvaluation'
   | 'afterBaseEvaluation'
   | 'beforeAward'
   | 'afterAward'
@@ -14,7 +13,7 @@ export interface ResolvedSymbolPosition {
 }
 
 export interface BaseEvaluationResult {
-  readonly award: Credits;
+  readonly awardUnits: CreditUnits;
   readonly winningPositions: readonly ResolvedSymbolPosition[];
   readonly metadata: Readonly<Record<string, string | number | boolean>>;
 }
@@ -22,7 +21,7 @@ export interface BaseEvaluationResult {
 export interface SpinResolutionContext<TGameState, TSpinMetadata> {
   readonly spinId: string;
   readonly gameId: string;
-  readonly wager: Credits;
+  readonly wagerUnits: CreditUnits;
   readonly grid: readonly (readonly string[])[];
   readonly baseEvaluation: BaseEvaluationResult;
   readonly gameState: TGameState;
@@ -34,22 +33,22 @@ export interface FeatureEvent {
   readonly eventType: string;
   readonly stage: FeatureStage;
   readonly message: string;
-  readonly amount?: Credits;
+  readonly amountUnits?: CreditUnits;
   readonly data: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface FeatureMutation<TGameState> {
   readonly gameState: TGameState;
-  readonly additionalAward: Credits;
+  readonly additionalAwardUnits: CreditUnits;
   readonly events: readonly FeatureEvent[];
   readonly metadata: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface FeatureExecutionResult<TGameState> {
   readonly finalGameState: TGameState;
-  readonly baseAward: Credits;
-  readonly featureAward: Credits;
-  readonly totalAward: Credits;
+  readonly baseAwardUnits: CreditUnits;
+  readonly featureAwardUnits: CreditUnits;
+  readonly totalAwardUnits: CreditUnits;
   readonly events: readonly FeatureEvent[];
   readonly featureMetadata: Readonly<
     Record<string, Readonly<Record<string, string | number | boolean>>>
@@ -60,6 +59,10 @@ export interface FeatureModule<TGameState, TSpinMetadata> {
   readonly id: string;
   readonly order: number;
   readonly stage: FeatureStage;
-  isEligible(context: SpinResolutionContext<TGameState, TSpinMetadata>): boolean;
-  execute(context: SpinResolutionContext<TGameState, TSpinMetadata>): FeatureMutation<TGameState>;
+  isEligible(
+    context: SpinResolutionContext<TGameState, TSpinMetadata>,
+  ): boolean;
+  execute(
+    context: SpinResolutionContext<TGameState, TSpinMetadata>,
+  ): FeatureMutation<TGameState>;
 }

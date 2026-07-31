@@ -1,7 +1,10 @@
 import type {
-  FeatureEvent, FeatureExecutionResult, FeatureModule, SpinResolutionContext,
+  FeatureEvent,
+  FeatureExecutionResult,
+  FeatureModule,
+  SpinResolutionContext,
 } from './contracts/FeatureContracts';
-import { roundCredits, type Credits } from '../types/Money';
+import { assertCreditUnits, type CreditUnits } from '../types/Money';
 
 export interface FeaturePipelineOptions {
   readonly failFast?: boolean;
@@ -26,7 +29,8 @@ export class FeaturePipeline<TGameState, TSpinMetadata> {
     this.assertContext(initialContext);
 
     let context = initialContext;
-    let featureAward: Credits = 0;
+    let featureAwardUnits: CreditUnits = 0;
+
     const events: FeatureEvent[] = [];
     const featureMetadata: Record<
       string,
@@ -34,40 +38,60 @@ export class FeaturePipeline<TGameState, TSpinMetadata> {
     > = {};
 
     for (const module of this.modules) {
-      if (!module.isEligible(context)) continue;
+      if (!module.isEligible(context)) {
+        continue;
+      }
 
       try {
         const mutation = module.execute(context);
-        this.assertAward(module.id, mutation.additionalAward);
-        featureAward = roundCredits(featureAward + mutation.additionalAward);
+        assertCreditUnits(
+          mutation.additionalAwardUnits,
+          `Feature "${module.id}" award`,
+        );
+
+        featureAwardUnits += mutation.additionalAwardUnits;
         events.push(...mutation.events);
         featureMetadata[module.id] = Object.freeze({ ...mutation.metadata });
-        context = Object.freeze({ ...context, gameState: mutation.gameState });
+
+        context = Object.freeze({
+          ...context,
+          gameState: mutation.gameState,
+        });
       } catch (error: unknown) {
         this.options.onFeatureError?.(module.id, error);
-        if (this.failFast) throw new FeaturePipelineExecutionError(module.id, error);
-        events.push(Object.freeze({
-          featureId: module.id,
-          eventType: 'featureError',
-          stage: module.stage,
-          message: `Feature "${module.id}" failed and was skipped.`,
-          data: Object.freeze({}),
-        }));
+
+        if (this.failFast) {
+          throw new FeaturePipelineExecutionError(module.id, error);
+        }
+
+        events.push(
+          Object.freeze({
+            featureId: module.id,
+            eventType: 'featureError',
+            stage: module.stage,
+            message: `Feature "${module.id}" failed and was skipped.`,
+            data: Object.freeze({}),
+          }),
+        );
       }
     }
 
-    const baseAward = roundCredits(initialContext.baseEvaluation.award);
+    const baseAwardUnits = initialContext.baseEvaluation.awardUnits;
+
     return Object.freeze({
       finalGameState: context.gameState,
-      baseAward,
-      featureAward,
-      totalAward: roundCredits(baseAward + featureAward),
+      baseAwardUnits,
+      featureAwardUnits,
+      totalAwardUnits: baseAwardUnits + featureAwardUnits,
       events: Object.freeze([...events]),
       featureMetadata: Object.freeze({ ...featureMetadata }),
     });
   }
 
-  public getRegisteredModules(): readonly FeatureModule<TGameState, TSpinMetadata>[] {
+  public getRegisteredModules(): readonly FeatureModule<
+    TGameState,
+    TSpinMetadata
+  >[] {
     return this.modules;
   }
 
@@ -75,35 +99,54 @@ export class FeaturePipeline<TGameState, TSpinMetadata> {
     modules: readonly FeatureModule<TGameState, TSpinMetadata>[],
   ): FeatureModule<TGameState, TSpinMetadata>[] {
     const ids = new Set<string>();
+
     for (const module of modules) {
-      if (module.id.trim().length === 0) throw new Error('Feature id is required.');
-      if (!Number.isInteger(module.order) || module.order < 0) {
-        throw new RangeError(`Feature "${module.id}" requires a non-negative order.`);
+      if (module.id.trim().length === 0) {
+        throw new Error('Feature id is required.');
       }
-      if (ids.has(module.id)) throw new Error(`Duplicate feature id: ${module.id}.`);
+
+      if (!Number.isInteger(module.order) || module.order < 0) {
+        throw new RangeError(
+          `Feature "${module.id}" requires a non-negative integer order.`,
+        );
+      }
+
+      if (ids.has(module.id)) {
+        throw new Error(`Duplicate feature id: "${module.id}".`);
+      }
+
       ids.add(module.id);
     }
 
-    return [...modules].sort((a, b) =>
-      STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage]
-      || a.order - b.order
-      || a.id.localeCompare(b.id),
+    return [...modules].sort(
+      (left, right) =>
+        STAGE_ORDER[left.stage] - STAGE_ORDER[right.stage]
+        || left.order - right.order
+        || left.id.localeCompare(right.id),
     );
   }
 
-  private assertContext(context: SpinResolutionContext<TGameState, TSpinMetadata>): void {
-    if (context.spinId.trim().length === 0) throw new Error('Spin id is required.');
-    if (context.gameId.trim().length === 0) throw new Error('Game id is required.');
-    if (!Number.isFinite(context.wager) || context.wager <= 0) {
-      throw new RangeError('Wager must be greater than zero.');
+  private assertContext(
+    context: SpinResolutionContext<TGameState, TSpinMetadata>,
+  ): void {
+    if (context.spinId.trim().length === 0) {
+      throw new Error('Spin id is required.');
     }
-    this.assertAward('baseEvaluation', context.baseEvaluation.award);
-  }
 
-  private assertAward(featureId: string, award: Credits): void {
-    if (!Number.isFinite(award) || award < 0) {
-      throw new RangeError(`Feature "${featureId}" returned an invalid award.`);
+    if (context.gameId.trim().length === 0) {
+      throw new Error('Game id is required.');
     }
+
+    assertCreditUnits(context.wagerUnits, 'Feature pipeline wager');
+
+    if (context.wagerUnits === 0) {
+      throw new RangeError('Feature pipeline wager must be greater than zero.');
+    }
+
+    assertCreditUnits(
+      context.baseEvaluation.awardUnits,
+      'Base evaluation award',
+    );
   }
 }
 
@@ -118,9 +161,8 @@ export class FeaturePipelineExecutionError extends Error {
 }
 
 const STAGE_ORDER = {
-  beforeBaseEvaluation: 0,
-  afterBaseEvaluation: 1,
-  beforeAward: 2,
-  afterAward: 3,
-  afterSpin: 4,
+  afterBaseEvaluation: 0,
+  beforeAward: 1,
+  afterAward: 2,
+  afterSpin: 3,
 } as const;

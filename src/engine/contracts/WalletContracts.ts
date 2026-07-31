@@ -1,12 +1,17 @@
-import type { Credits } from '../../types/Money';
+import type { CreditUnits } from '../../types/Money';
 
 export type WalletAccountId = 'bank' | 'casinoWallet';
+
 export type WalletTransactionKind =
-  | 'sessionDeposit' | 'sessionCashOut' | 'wager' | 'award' | 'adjustment';
+  | 'sessionDeposit'
+  | 'sessionCashOut'
+  | 'wager'
+  | 'award'
+  | 'adjustment';
 
 export interface WalletBalances {
-  readonly bank: Credits;
-  readonly casinoWallet: Credits;
+  readonly bankUnits: CreditUnits;
+  readonly casinoWalletUnits: CreditUnits;
 }
 
 export interface WalletTransaction {
@@ -14,7 +19,7 @@ export interface WalletTransaction {
   readonly sequence: number;
   readonly occurredAtIso: string;
   readonly kind: WalletTransactionKind;
-  readonly amount: Credits;
+  readonly amountUnits: CreditUnits;
   readonly source: WalletAccountId | 'engine';
   readonly destination: WalletAccountId | 'engine';
   readonly reason: string;
@@ -24,17 +29,17 @@ export interface WalletTransaction {
 
 export interface WalletSnapshot extends WalletBalances {
   readonly transactionSequence: number;
-  readonly lifetimeWagered: Credits;
-  readonly lifetimeAwarded: Credits;
-  readonly largestAward: Credits;
+  readonly lifetimeWageredUnits: CreditUnits;
+  readonly lifetimeAwardedUnits: CreditUnits;
+  readonly largestAwardUnits: CreditUnits;
 }
 
 export interface WalletInitialization {
-  readonly bank: Credits;
-  readonly casinoWallet: Credits;
-  readonly lifetimeWagered?: Credits;
-  readonly lifetimeAwarded?: Credits;
-  readonly largestAward?: Credits;
+  readonly bankUnits: CreditUnits;
+  readonly casinoWalletUnits: CreditUnits;
+  readonly lifetimeWageredUnits?: CreditUnits;
+  readonly lifetimeAwardedUnits?: CreditUnits;
+  readonly largestAwardUnits?: CreditUnits;
 }
 
 export interface WalletMutationOptions {
@@ -44,10 +49,19 @@ export interface WalletMutationOptions {
 
 export interface WalletPort {
   getSnapshot(): WalletSnapshot;
-  canAfford(wager: Credits): boolean;
-  placeWager(wager: Credits, options: WalletMutationOptions): WalletTransaction;
-  award(amount: Credits, options: WalletMutationOptions): WalletTransaction;
-  transferToCasinoWallet(amount: Credits, options: WalletMutationOptions): WalletTransaction;
+  canAfford(wagerUnits: CreditUnits): boolean;
+  placeWager(
+    wagerUnits: CreditUnits,
+    options: WalletMutationOptions,
+  ): WalletTransaction;
+  award(
+    amountUnits: CreditUnits,
+    options: WalletMutationOptions,
+  ): WalletTransaction;
+  transferToCasinoWallet(
+    amountUnits: CreditUnits,
+    options: WalletMutationOptions,
+  ): WalletTransaction;
   cashOutSession(options: WalletMutationOptions): WalletTransaction;
   getTransactions(): readonly WalletTransaction[];
 }
