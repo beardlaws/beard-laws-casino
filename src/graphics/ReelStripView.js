@@ -1,80 +1,182 @@
-import {Application,Assets,Container,Graphics,Sprite} from 'pixi.js';
+import {Application,Assets,BlurFilter,Container,Graphics,Sprite} from 'pixi.js';
+
 const ids=['oil','comb','razor','balm','key','crown','vernon','vault','coin'];
 
 export class ReelStripView{
- app=new Application();root=new Container();width=900;height=470;ready=false;
- textures={};reels=[];grid=null;
+ app=new Application();
+ root=new Container();
+ width=980;
+ height=570;
+ textures={};
+ reels=[];
+ grid=null;
+ reducedMotion=false;
+ onReelStop=null;
 
  async mount(host){
-  await this.app.init({width:this.width,height:this.height,antialias:true,backgroundAlpha:0,resolution:Math.min(devicePixelRatio||1,2),autoDensity:true});
-  this.app.canvas.classList.add('slot-canvas');host.replaceChildren(this.app.canvas);this.app.stage.addChild(this.root);
-  await Promise.all(ids.map(async id=>{this.textures[id]=await Assets.load(`./assets/${id}.svg?v=2.0.3`);}));
-  this.ready=true;
+  await this.app.init({
+   width:this.width,height:this.height,antialias:true,backgroundAlpha:0,
+   resolution:Math.min(window.devicePixelRatio||1,2),autoDensity:true
+  });
+  this.app.canvas.classList.add('slot-canvas');
+  host.replaceChildren(this.app.canvas);
+  this.app.stage.addChild(this.root);
+
+  await Promise.all(ids.map(async id=>{
+   this.textures[id]=await Assets.load(`./assets/${id}.svg?v=2.1.0`);
+  }));
+
   new ResizeObserver(()=>this.resize(host)).observe(host);
  }
 
+ setReducedMotion(value){this.reducedMotion=value;}
+
  renderGrid(grid){
-  this.grid=grid;this.root.removeChildren();this.reels=[];
-  const rw=this.width/grid.length,rows=grid[0]?.length||3,rh=this.height/rows;
-  this.root.addChild(new Graphics().roundRect(0,0,this.width,this.height,18).fill({color:0x071a36}).stroke({color:0x7650c9,width:5}));
-  grid.forEach((column,c)=>{
-   const reel=new Container();reel.x=c*rw;this.root.addChild(reel);this.reels.push(reel);
-   column.forEach((symbol,r)=>reel.addChild(this.makeSymbol(symbol,rw,rh,r)));
+  this.grid=grid;
+  this.root.removeChildren();
+  this.reels=[];
+
+  const columns=grid.length,rows=grid[0]?.length||3;
+  const reelWidth=this.width/columns,rowHeight=this.height/rows;
+
+  const background=new Graphics()
+   .roundRect(0,0,this.width,this.height,20)
+   .fill({color:0x06150d})
+   .stroke({color:0xe2bc5d,width:5});
+  this.root.addChild(background);
+
+  grid.forEach((column,columnIndex)=>{
+   const reel=new Container();
+   reel.x=columnIndex*reelWidth;
+   const mask=new Graphics().rect(0,0,reelWidth,this.height).fill(0xffffff);
+   reel.addChild(mask);
+   reel.mask=mask;
+
+   const strip=new Container();
+   reel.addChild(strip);
+   column.forEach((symbol,row)=>strip.addChild(this.makeSymbol(symbol,reelWidth,rowHeight,row)));
+   reel._strip=strip;
+   reel._blur=new BlurFilter({strength:0,quality:2});
+   strip.filters=[reel._blur];
+
+   this.root.addChild(reel);
+   this.reels.push(reel);
   });
  }
 
- makeSymbol(symbol,rw,rh,row){
-  const holder=new Container();holder.y=row*rh;
-  const frame=new Graphics().roundRect(7,7,rw-14,rh-14,16).fill({color:0x180f1d}).stroke({color:0xd2b160,width:2});
-  const sprite=new Sprite(this.textures[symbol]);sprite.anchor.set(.5);sprite.x=rw/2;sprite.y=rh/2;sprite.width=Math.min(rw-30,rh-28);sprite.height=sprite.width;
-  holder.addChild(frame,sprite);holder._symbol=symbol;return holder;
+ makeSymbol(symbol,reelWidth,rowHeight,row){
+  const holder=new Container();
+  holder.y=row*rowHeight;
+
+  const outer=new Graphics()
+   .roundRect(7,7,reelWidth-14,rowHeight-14,16)
+   .fill({color:0x06170e})
+   .stroke({color:0xb8e36c,width:3});
+  const inner=new Graphics()
+   .roundRect(14,14,reelWidth-28,rowHeight-28,13)
+   .fill({color:0x101613})
+   .stroke({color:0x29432e,width:2});
+
+  const sprite=new Sprite(this.textures[symbol]);
+  sprite.anchor.set(.5);
+  sprite.position.set(reelWidth/2,rowHeight/2);
+  const size=Math.min(reelWidth-42,rowHeight-30);
+  sprite.width=size;sprite.height=size;
+
+  holder.addChild(outer,inner,sprite);
+  return holder;
  }
 
  async spinTo(finalGrid){
   if(!this.grid){this.renderGrid(finalGrid);return;}
-  const rows=finalGrid[0].length,rw=this.width/finalGrid.length,rh=this.height/rows;
-  const durations=[800,980,1160,1340,1520];
-  const strips=this.reels.map((reel,c)=>this.spinReel(reel,c,finalGrid[c],rw,rh,durations[c]));
-  await Promise.all(strips);
-  this.renderGrid(finalGrid);
+  if(this.reducedMotion){
+    await new Promise(r=>setTimeout(r,240));
+    this.renderGrid(finalGrid);
+    return;
+  }
+
+  const reelWidth=this.width/finalGrid.length;
+  const rowHeight=this.height/(finalGrid[0]?.length||3);
+  const jobs=this.reels.map((reel,index)=>this.spinReel(reel,index,finalGrid[index],reelWidth,rowHeight));
+  await Promise.all(jobs);
+  this.grid=finalGrid;
  }
 
- async spinReel(reel,index,finalColumn,rw,rh,duration){
-  const buffer=[];
-  for(let i=0;i<rowsFor(finalColumn)+7;i++){
-   const id=ids[Math.floor(Math.random()*ids.length)];
-   const symbol=this.makeSymbol(id,rw,rh,i-4);
-   reel.addChild(symbol);buffer.push(symbol);
+ async spinReel(reel,index,finalColumn,reelWidth,rowHeight){
+  const strip=reel._strip;
+  strip.removeChildren();
+
+  const symbolCount=11;
+  const holders=[];
+  for(let i=0;i<symbolCount;i++){
+    const symbol=ids[Math.floor(Math.random()*ids.length)];
+    const holder=this.makeSymbol(symbol,reelWidth,rowHeight,i-3);
+    holders.push(holder);
+    strip.addChild(holder);
   }
+
+  const delay=index*135;
+  const duration=920+index*190;
+  await new Promise(resolve=>setTimeout(resolve,delay));
   const start=performance.now();
+  let previous=0;
+
   await new Promise(resolve=>{
-   const tick=now=>{
-    const p=Math.min(1,(now-start)/duration);
-    const eased=p<.72?p/.72:1-Math.pow(1-(p-.72)/.28,3)*.16;
-    const travel=(7*rh)*eased;
-    reel.children.forEach(child=>{if(child!==reel.children[0]){}});
-    for(const child of buffer)child.y+=travel-(child._lastTravel||0),child._lastTravel=travel;
-    if(p<1)requestAnimationFrame(tick);else resolve();
-   };requestAnimationFrame(tick);
+   const frame=now=>{
+    const t=Math.min(1,(now-start)/duration);
+    const velocity=t<.18
+      ? easeInCubic(t/.18)
+      : t<.72
+        ? 1
+        : 1-easeOutCubic((t-.72)/.28)*.86;
+
+    const travel=(previous+velocity*34);
+    previous=travel;
+    for(const holder of holders){
+      holder.y+=velocity*34;
+      const totalHeight=symbolCount*rowHeight;
+      while(holder.y>this.height+rowHeight)holder.y-=totalHeight;
+    }
+    reel._blur.strength=velocity*12;
+
+    if(t<1)requestAnimationFrame(frame);
+    else resolve();
+   };
+   requestAnimationFrame(frame);
   });
-  reel.removeChildren();
-  finalColumn.forEach((symbol,r)=>reel.addChild(this.makeSymbol(symbol,rw,rh,r)));
-  reel.y=-14;
+
+  reel._blur.strength=0;
+  strip.removeChildren();
+  finalColumn.forEach((symbol,row)=>strip.addChild(this.makeSymbol(symbol,reelWidth,rowHeight,row)));
+
+  strip.y=-22;
   const settleStart=performance.now();
   await new Promise(resolve=>{
-   const tick=now=>{
-    const p=Math.min(1,(now-settleStart)/160);
-    reel.y=-14*(1-p)+Math.sin(p*Math.PI)*5;
-    if(p<1)requestAnimationFrame(tick);else{reel.y=0;resolve();}
-   };requestAnimationFrame(tick);
+   const frame=now=>{
+    const t=Math.min(1,(now-settleStart)/190);
+    strip.y=-22*(1-easeOutBack(t));
+    if(t<1)requestAnimationFrame(frame);
+    else{strip.y=0;resolve();}
+   };
+   requestAnimationFrame(frame);
   });
+
+  if(typeof this.onReelStop==='function')this.onReelStop(index);
  }
 
  resize(host){
-  const w=Math.max(500,Math.floor(host.clientWidth)),h=Math.max(320,Math.floor(w*.52));
-  if(w===this.width&&h===this.height)return;
-  this.width=w;this.height=h;this.app.renderer.resize(w,h);
+  const nextWidth=Math.max(540,Math.floor(host.clientWidth));
+  const nextHeight=Math.max(355,Math.floor(nextWidth*.58));
+  if(nextWidth===this.width&&nextHeight===this.height)return;
+  this.width=nextWidth;this.height=nextHeight;
+  this.app.renderer.resize(this.width,this.height);
   if(this.grid)this.renderGrid(this.grid);
  }
 }
-const rowsFor=column=>column?.length||3;
+
+const easeInCubic=t=>t*t*t;
+const easeOutCubic=t=>1-Math.pow(1-t,3);
+const easeOutBack=t=>{
+ const c1=1.70158,c3=c1+1;
+ return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);
+};
