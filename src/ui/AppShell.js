@@ -5,7 +5,7 @@ export function createAppShell(){
  <header class="casino-topbar">
    <button class="brand-lockup" data-lobby aria-label="Return to casino lobby">
      <img src="./assets/beard-laws-crest.svg" alt="">
-     <div><small>BEARD LAWS CASINO 3.0</small><strong>PROJECT GOLD BEARD</strong></div>
+     <div><small>BEARD LAWS CASINO 3.1</small><strong>PROJECT GOLD BEARD</strong></div>
    </button>
    <div class="top-actions">
      <button data-lobby>CASINO FLOOR</button>
@@ -67,7 +67,15 @@ export function createAppShell(){
            <div class="reel-bezel">
              <div class="bezel-leds"></div>
              <div class="reel-host" data-reel-host></div>
+             <div class="reel-chrome-grid" aria-hidden="true">
+               <i></i><i></i><i></i><i></i>
+             </div>
              <div class="glass-reflection"></div>
+             <div class="win-presentation" data-win-presentation aria-live="polite">
+               <strong data-win-kind>3 OF A KIND</strong>
+               <span data-win-symbol>BEARD OIL</span>
+               <b data-win-step>+$0.00</b>
+             </div>
            </div>
            <div class="ways-bar"><span>243 WAYS</span><span>VERNON COLLECTS EVERY VISIBLE BEARD COIN</span><span>243 WAYS</span></div>
          </section>

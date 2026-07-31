@@ -6,6 +6,7 @@ import {ReelStripView} from './graphics/ReelStripView.js';
 import {CabinetRenderer} from './graphics/CabinetRenderer.js';
 import {AudioDirector} from './graphics/AudioDirector.js';
 import {createAppShell} from './ui/AppShell.js';
+import {describeWaysWins} from './graphics/WaysPresentation.js';
 
 const mount=document.querySelector('#app');
 try{
@@ -54,27 +55,76 @@ try{
  motionButton.addEventListener('click',()=>{reducedMotion=!reducedMotion;reels.setReducedMotion(reducedMotion);shell.classList.toggle('reduced-motion',reducedMotion);syncMotion()});
  shell.querySelectorAll('[data-ledger-toggle]').forEach(b=>b.addEventListener('click',()=>store.patch({ledgerOpen:!store.state.ledgerOpen})));
 
+
+ async function presentWaysWin(result){
+  const overlay=shell.querySelector('[data-win-presentation]');
+  const kind=shell.querySelector('[data-win-kind]');
+  const symbol=shell.querySelector('[data-win-symbol]');
+  const step=shell.querySelector('[data-win-step]');
+  const groups=describeWaysWins(result.grid,result.wager);
+
+  renderer.setPresentedWin(0);
+  reels.clearWinPresentation();
+
+  if(groups.length===0){
+   renderer.setPresentedWin(result.totalWin);
+   return;
+  }
+
+  let tally=0;
+  overlay.classList.add('active');
+
+  for(const group of groups){
+   reels.showWinningPositions(group.positions);
+   kind.textContent=`${group.length} OF A KIND`;
+   symbol.textContent=`${group.label} • ${group.ways} WAY${group.ways===1?'':'S'}`;
+   step.textContent=`+${currency(group.payout)}`;
+   tally=roundMoney(tally+group.payout);
+   renderer.setPresentedWin(tally);
+   await wait(reducedMotion?260:950);
+  }
+
+  reels.clearWinPresentation();
+  kind.textContent='TOTAL WIN';
+  symbol.textContent='243 WAYS PAY';
+  step.textContent=currency(result.totalWin);
+  renderer.setPresentedWin(result.totalWin);
+  await wait(reducedMotion?300:1200);
+  overlay.classList.remove('active');
+ }
+
  shell.querySelector('[data-spin]').addEventListener('click',async()=>{
   if(store.state.spinning)return;
   try{
    audio.ensure();audio.spin();store.patch({spinning:true,message:'REELS IN MOTION'});
    const result=engine.spin(1);await reels.spinTo(result.grid);
+   if(result.baseWin>0)await presentWaysWin(result);
+   else renderer.setPresentedWin(result.totalWin);
    if(result.coinsLanded){audio.coin(result.coinsLanded);pulse('coin-impact')}
    if(result.totalWin>0)audio.win(result.totalWin);
    const message=result.livingVaultTriggered?'THE LIVING VAULT IS READY TO BURST':
     result.totalWin>0?`WIN ${currency(result.totalWin)}`:
     result.coinsLanded?`${result.coinsLanded} VAULT LOCK${result.coinsLanded===1?'':'S'} CHARGED`:
     'NO WIN — EVERY SPIN IS INDEPENDENT';
-   store.patch({engine:engine.snapshot,message});updateJackpots(engine.snapshot.spins);
+   store.patch({engine:engine.snapshot,message});updateJackpots();
   }catch(error){console.error(error);alert(error instanceof Error?error.message:'Spin error')}
   finally{store.patch({spinning:false})}
  });
 
  function pulse(cls){const c=shell.querySelector('[data-cabinet]');c.classList.remove(cls);void c.offsetWidth;c.classList.add(cls);setTimeout(()=>c.classList.remove(cls),700)}
- function updateJackpots(spins){
-  const vals={super:10000.02+spins*.01,grand:5000.02+spins*.007,major:500.03+spins*.003,minor:50,mini:10};
-  Object.entries(vals).forEach(([k,v])=>{const n=shell.querySelector(`[data-${k}]`);if(n)n.textContent=currency(v)})
+ const jackpotValues={super:10000.02,grand:5000.02,major:500.03,minor:50,mini:10};
+ function updateJackpots(){
+  Object.entries(jackpotValues).forEach(([key,value])=>{
+   const node=shell.querySelector(`[data-${key}]`);
+   if(node)node.textContent=currency(value);
+  });
  }
+ setInterval(()=>{
+  jackpotValues.super=roundMoney(jackpotValues.super+.01);
+  jackpotValues.grand=roundMoney(jackpotValues.grand+.01);
+  jackpotValues.major=roundMoney(jackpotValues.major+.01);
+  updateJackpots();
+ },800);
  function fitMachine(){
   const stage=shell.querySelector('[data-fit-stage]'),inner=shell.querySelector('[data-fit-inner]');
   if(!stage||!inner)return;
@@ -87,9 +137,11 @@ try{
   stage.style.width=`${Math.ceil(naturalW*scale)}px`;
  }
  addEventListener('resize',()=>requestAnimationFrame(fitMachine));
- updateJackpots(0);showView('lobby');
+ updateJackpots();showView('lobby');
 }catch(error){
  console.error(error);mount.innerHTML=`<div class="fatal-error"><h1>Engine initialization failed</h1><p>${escapeHtml(error instanceof Error?error.message:String(error))}</p><p>Confirm the complete assets and src folders were uploaded.</p></div>`;
 }
 function currency(v){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(v)}
+function roundMoney(v){return Math.round(v*100)/100}
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
 function escapeHtml(v){return v.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;")}

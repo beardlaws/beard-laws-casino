@@ -1,55 +1,69 @@
-# Beard Laws Casino 3.0 — Project Gold Beard
+# Beard Laws Casino 3.1 — Commercial Cabinet Pass
 
-This is the first production-style presentation build.
+This milestone is presentation-only.
 
-## Major changes
+## Protected systems
 
-### Casino floor restored
+No changes were made to:
 
-The player can return to the lobby at any time.
+- Crypto RNG
+- Reel strips
+- 243-Ways evaluator
+- Paytable
+- Feature pipeline
+- Living Vault charge logic
+- Wallet deduction or payout logic
+- Session accounting
 
-Machines displayed:
+## Phase 1 — Cabinet architecture
 
-- Beard Bank — playable
-- Lumber Beard — development preview
-- Beard Drop — development preview
-- American Roulette — development preview
-- Blackjack — development preview
+- The reel matrix now occupies approximately half of the natural cabinet height
+- Jackpot header reduced by approximately 15%
+- Living Vault feature deck reduced by approximately 20%
+- Reel viewport expanded to show the complete 5×3 matrix
+- Individual metallic reel separators
+- Recessed glass and drop-shadow depth
+- Larger cabinet natural width for stronger commercial proportions
 
-The current Beard Bank engine and wallet remain alive while moving between views.
+## Phase 2 — Sequential 243-Ways presentation
 
-### Automatic machine fitting
+A separate presentation-only analyzer reads the resolved grid after the engine completes.
 
-The complete Beard Bank cabinet automatically scales against both browser width and browser height.
+It:
 
-Players should no longer need to zoom the browser out to see the entire cabinet.
+- identifies paying symbol groups
+- dims non-winning symbols to 35%
+- highlights one winning group at a time
+- displays 3 / 4 / 5 OF A KIND
+- displays the symbol name and number of ways
+- steps the visible WIN meter upward
+- finishes with TOTAL WIN
 
-### Gold Beard art pass
+The analyzer cannot award credits or modify the engine result.
 
-- New original Living Vault fortune wheel
-- New detailed Vaultmaster Vernon portrait
-- Rebuilt high-detail Beard Bank symbols
-- Casino-floor scene
-- Deeper green reel glass and gold bezel
-- Larger visual hierarchy inspired by tall commercial cabinets without reproducing their protected characters or branding
+## Phase 3 — Cabinet life
 
-### Reel presentation
+- Jackpot pennies increment every 800ms
+- Jackpot text receives periodic sheen
+- Glass reflection sweeps every 10 seconds
+- Spin button breathes gently
+- LED trim pulses softly
 
-- Independent reel containers
-- Acceleration
-- Motion blur
-- Staggered stops
-- Mechanical overshoot and settle
-- No normal-spin cabinet shaking
+## Phase 4 — Background
 
-### Deployment
+- Decorative eye-pattern carpet removed
+- Dark radial floor shadow added
+- Subtle purple cabinet underglow added
+- Surroundings reduced so the machine remains the focal point
 
-Upload and overwrite all files in the repository root.
+## Deployment
 
-GitHub Pages setting:
+Upload and overwrite the complete package at the repository root.
+
+GitHub Pages:
 
 `Deploy from a branch → main → /(root)`
 
-Open after deployment with:
+Open with:
 
-`https://beardlaws.github.io/beard-laws-casino/?v=300`
+`https://beardlaws.github.io/beard-laws-casino/?v=310`
