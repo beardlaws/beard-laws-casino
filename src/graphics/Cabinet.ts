@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from "pixi.js";
+import type { WayWin } from "../engine/WaysEvaluator";
 import { ReelSet } from "./ReelSet";
 import { LivingVault } from "./LivingVault";
 
@@ -84,7 +85,15 @@ export class Cabinet extends Container {
   }
 
   public spinTo(matrix: readonly (readonly string[])[]): Promise<void> {
+    this.reelSet.resetWinPresentation();
     return this.reelSet.spinTo(matrix);
+  }
+
+  public presentWins(
+    wayWins: readonly WayWin[],
+    onAwardPresented?: (presentedAwardUnits: number) => void,
+  ): Promise<void> {
+    return this.reelSet.presentWins(wayWins, onAwardPresented);
   }
 
   private build(): void {

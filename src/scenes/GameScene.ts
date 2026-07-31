@@ -66,8 +66,16 @@ export class GameScene {
 
       await this.cabinet.spinTo(result.grid.matrix);
 
-      this.cabinet.setWin(`$${formatCreditUnits(result.totalAwardUnits)}`);
-      this.cabinet.setStatus(result.totalAwardUnits > 0 ? "WINNER" : "READY");
+      if (result.totalAwardUnits > 0) {
+        this.cabinet.setStatus(`${result.wayWins.length} WIN${result.wayWins.length === 1 ? "" : "S"}`);
+        await this.cabinet.presentWins(result.wayWins, (presentedAwardUnits) => {
+          this.cabinet.setWin(`$${formatCreditUnits(presentedAwardUnits)}`);
+        });
+        this.cabinet.setWin(`$${formatCreditUnits(result.totalAwardUnits)}`);
+        this.cabinet.setStatus("WINNER");
+      } else {
+        this.cabinet.setStatus("READY");
+      }
       this.refreshWalletDisplay();
     } catch (error: unknown) {
       console.error("Spin failed", error);

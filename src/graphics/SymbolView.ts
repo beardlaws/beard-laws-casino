@@ -27,6 +27,8 @@ const SYMBOL_THEMES: Record<BeardBankSymbolId, SymbolTheme> = {
 };
 
 export class SymbolView extends Container {
+  private winGlow?: Graphics;
+
   public constructor(
     symbolId: BeardBankSymbolId,
     private readonly symbolWidth: number,
@@ -62,6 +64,30 @@ export class SymbolView extends Container {
     label.anchor.set(0.5);
     label.position.set((width - 10) / 2, height * 0.82);
 
-    this.addChild(shadow, background, innerFrame, medallion, glyph, label);
+    this.winGlow = new Graphics()
+      .roundRect(1, 1, width - 12, height - 12, 14)
+      .fill({ color: theme.primary, alpha: 0.12 })
+      .stroke({ color: 0xffef9a, width: 6, alpha: 0.95 });
+    this.winGlow.alpha = 0;
+
+    this.addChild(shadow, background, innerFrame, medallion, glyph, label, this.winGlow);
+    this.resetWinState();
+  }
+
+  public setDimmed(dimmed: boolean): void {
+    this.alpha = dimmed ? 0.28 : 1;
+    if (dimmed && this.winGlow) this.winGlow.alpha = 0;
+  }
+
+  public setWinGlow(intensity: number): void {
+    this.alpha = 1;
+    if (this.winGlow) {
+      this.winGlow.alpha = Math.max(0, Math.min(1, intensity));
+    }
+  }
+
+  public resetWinState(): void {
+    this.alpha = 1;
+    if (this.winGlow) this.winGlow.alpha = 0;
   }
 }
