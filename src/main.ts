@@ -1,15 +1,9 @@
-import './style.css';
+import "./style.css";
+import { Application } from "./app/Application";
 
-const app = document.querySelector<HTMLElement>('#app');
-
-if (!app) {
-  throw new Error('Application root was not found.');
+async function main(): Promise<void> {
+  const app = new Application();
+  await app.initialize();
 }
 
-app.innerHTML = `
-  <section class="status-card">
-    <p class="eyebrow">Beard Laws Casino</p>
-    <h1>Project Gold Beard</h1>
-    <p>Phase 1 engine foundation compiled successfully.</p>
-  </section>
-`;
+main();
