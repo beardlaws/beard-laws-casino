@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Rectangle, Text } from "pixi.js";
 import type { WayWin } from "../engine/WaysEvaluator";
 import { ReelSet } from "./ReelSet";
 import { LivingVault } from "./LivingVault";
@@ -31,7 +31,7 @@ const COLORS = {
 
 export class Cabinet extends Container {
   private reelSet!: ReelSet;
-  private spinButton!: Graphics;
+  private spinButton!: Container;
   private creditValue!: Text;
   private winValue!: Text;
   private statusValue!: Text;
@@ -63,7 +63,10 @@ export class Cabinet extends Container {
   public onSpin(handler: () => void): void {
     this.spinButton.eventMode = "static";
     this.spinButton.cursor = "pointer";
-    this.spinButton.removeAllListeners("pointertap");
+    this.spinButton.removeAllListeners();
+    this.spinButton.on("pointerdown", () => this.spinButton.scale.set(0.97));
+    this.spinButton.on("pointerup", () => this.spinButton.scale.set(1));
+    this.spinButton.on("pointerupoutside", () => this.spinButton.scale.set(1));
     this.spinButton.on("pointertap", handler);
   }
 
@@ -319,7 +322,7 @@ export class Cabinet extends Container {
   private createVaultPanel(): Container {
     const vault = new LivingVault();
 
-    vault.position.set(345, 157);
+    vault.position.set(345, 155);
 
     return vault;
   }
@@ -436,10 +439,7 @@ export class Cabinet extends Container {
     const deck = new Graphics()
       .roundRect(70, 610, 960, 58, 18)
       .fill(COLORS.deepBlack)
-      .stroke({
-        color: COLORS.darkGold,
-        width: 3,
-      });
+      .stroke({ color: COLORS.darkGold, width: 3 });
 
     this.addChild(deck);
 
@@ -450,41 +450,36 @@ export class Cabinet extends Container {
     this.winValue = winReadout.valueText;
     this.addChild(creditReadout.container, betReadout.container, winReadout.container);
 
-    const autoButton = new Graphics()
+    const statusPanel = new Graphics()
       .roundRect(695, 620, 115, 38, 12)
       .fill(COLORS.panelPurple)
-      .stroke({
-        color: COLORS.brightPurple,
-        width: 2,
-      });
+      .stroke({ color: COLORS.brightPurple, width: 2 });
 
-    const autoText = new Text({
-      text: "AUTO",
+    this.statusValue = new Text({
+      text: "READY",
       style: {
         fontFamily: "Arial Black, Arial",
-        fontSize: 16,
+        fontSize: 13,
         fontWeight: "bold",
         fill: COLORS.cream,
+        letterSpacing: 0.5,
       },
     });
-
-    autoText.anchor.set(0.5);
-    autoText.position.set(752, 639);
+    this.statusValue.anchor.set(0.5);
+    this.statusValue.position.set(752.5, 639);
 
     const spinGlow = new Graphics()
       .roundRect(823, 615, 186, 48, 16)
-      .fill({
-        color: COLORS.gold,
-        alpha: 0.18,
-      });
+      .fill({ color: COLORS.gold, alpha: 0.18 });
 
-    this.spinButton = new Graphics()
-      .roundRect(830, 620, 172, 38, 13)
+    this.spinButton = new Container();
+    this.spinButton.position.set(830, 620);
+    this.spinButton.hitArea = new Rectangle(0, 0, 172, 38);
+
+    const spinFace = new Graphics()
+      .roundRect(0, 0, 172, 38, 13)
       .fill(COLORS.gold)
-      .stroke({
-        color: COLORS.brightGold,
-        width: 3,
-      });
+      .stroke({ color: COLORS.brightGold, width: 3 });
 
     const spinText = new Text({
       text: "SPIN",
@@ -496,25 +491,13 @@ export class Cabinet extends Container {
         letterSpacing: 2,
       },
     });
-
     spinText.anchor.set(0.5);
-    spinText.position.set(916, 639);
+    spinText.position.set(86, 19);
+    spinText.eventMode = "none";
+    spinFace.eventMode = "none";
+    this.spinButton.addChild(spinFace, spinText);
 
-    this.statusValue = new Text({
-      text: "READY",
-      style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: COLORS.gold },
-    });
-    this.statusValue.anchor.set(1, 0.5);
-    this.statusValue.position.set(815, 639);
-
-    this.addChild(
-      autoButton,
-      autoText,
-      this.statusValue,
-      spinGlow,
-      this.spinButton,
-      spinText,
-    );
+    this.addChild(statusPanel, this.statusValue, spinGlow, this.spinButton);
   }
 
   private createReadout(
