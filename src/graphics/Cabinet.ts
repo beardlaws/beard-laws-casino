@@ -1,4 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
+import { ReelSet } from "./ReelSet";
+import { LivingVault } from "./LivingVault";
 
 export interface CabinetReelBounds {
   readonly x: number;
@@ -24,9 +26,15 @@ const COLORS = {
   blue: 0x2582ce,
   green: 0x23a568,
   pink: 0xc63ca6,
-};
+} as const;
 
 export class Cabinet extends Container {
+  private reelSet!: ReelSet;
+  private spinButton!: Graphics;
+  private creditValue!: Text;
+  private winValue!: Text;
+  private statusValue!: Text;
+
   private readonly reelBounds: CabinetReelBounds = {
     x: 95,
     y: 276,
@@ -34,7 +42,7 @@ export class Cabinet extends Container {
     height: 310,
   };
 
-  constructor() {
+  public constructor() {
     super();
     this.build();
   }
@@ -49,6 +57,34 @@ export class Cabinet extends Container {
 
   public getReelBounds(): CabinetReelBounds {
     return this.reelBounds;
+  }
+
+  public onSpin(handler: () => void): void {
+    this.spinButton.eventMode = "static";
+    this.spinButton.cursor = "pointer";
+    this.spinButton.removeAllListeners("pointertap");
+    this.spinButton.on("pointertap", handler);
+  }
+
+  public setSpinEnabled(enabled: boolean): void {
+    this.spinButton.eventMode = enabled ? "static" : "none";
+    this.spinButton.alpha = enabled ? 1 : 0.55;
+  }
+
+  public setCredit(value: string): void {
+    this.creditValue.text = value;
+  }
+
+  public setWin(value: string): void {
+    this.winValue.text = value;
+  }
+
+  public setStatus(value: string): void {
+    this.statusValue.text = value;
+  }
+
+  public spinTo(matrix: readonly (readonly string[])[]): Promise<void> {
+    return this.reelSet.spinTo(matrix);
   }
 
   private build(): void {
@@ -110,7 +146,12 @@ export class Cabinet extends Container {
         width: 3,
       });
 
-    this.addChild(shadow, outerFrame, outerHighlight, innerShell);
+    this.addChild(
+      shadow,
+      outerFrame,
+      outerHighlight,
+      innerShell,
+    );
   }
 
   private buildJackpotTopper(): void {
@@ -170,14 +211,14 @@ export class Cabinet extends Container {
   }
 
   private createJackpotPanel(options: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    label: string;
-    amount: string;
-    color: number;
-    amountSize: number;
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+    readonly label: string;
+    readonly amount: string;
+    readonly color: number;
+    readonly amountSize: number;
   }): Container {
     const panel = new Container();
 
@@ -255,60 +296,23 @@ export class Cabinet extends Container {
       options.y + options.height - 28,
     );
 
-    panel.addChild(shadow, frame, innerGlow, label, amount);
+    panel.addChild(
+      shadow,
+      frame,
+      innerGlow,
+      label,
+      amount,
+    );
 
     return panel;
   }
 
   private createVaultPanel(): Container {
-    const panel = new Container();
+    const vault = new LivingVault();
 
-    const frame = new Graphics()
-      .roundRect(345, 157, 410, 96, 18)
-      .fill(COLORS.panelPurple)
-      .stroke({
-        color: COLORS.brightGold,
-        width: 5,
-      });
+    vault.position.set(345, 157);
 
-    const innerFrame = new Graphics()
-      .roundRect(354, 166, 392, 78, 13)
-      .stroke({
-        color: COLORS.brightPurple,
-        width: 3,
-      });
-
-    const title = new Text({
-      text: "THE LIVING VAULT",
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 29,
-        fontWeight: "bold",
-        fill: COLORS.brightGold,
-        letterSpacing: 3,
-      },
-    });
-
-    title.anchor.set(0.5);
-    title.position.set(550, 192);
-
-    const subtitle = new Text({
-      text: "COLLECT BEARD COINS • AWAKEN THE VAULT",
-      style: {
-        fontFamily: "Arial",
-        fontSize: 13,
-        fontWeight: "bold",
-        fill: COLORS.cream,
-        letterSpacing: 1,
-      },
-    });
-
-    subtitle.anchor.set(0.5);
-    subtitle.position.set(550, 224);
-
-    panel.addChild(frame, innerFrame, title, subtitle);
-
-    return panel;
+    return vault;
   }
 
   private buildMarquee(): void {
@@ -379,110 +383,27 @@ export class Cabinet extends Container {
         alpha: 0.65,
       });
 
-    this.addChild(reelShadow, reelFrame, innerFrame);
-    this.buildReelPlaceholders();
+    this.addChild(
+      reelShadow,
+      reelFrame,
+      innerFrame,
+    );
+
+    const reelPadding = 18;
+
+    this.reelSet = new ReelSet(
+      this.reelBounds.width - reelPadding * 2,
+      this.reelBounds.height - reelPadding * 2,
+    );
+
+    this.reelSet.position.set(
+      this.reelBounds.x + reelPadding,
+      this.reelBounds.y + reelPadding,
+    );
+
+    this.addChild(this.reelSet);
+
     this.buildGlassReflection();
-  }
-
-  private buildReelPlaceholders(): void {
-    const columns = 5;
-    const rows = 3;
-    const gap = 7;
-    const padding = 18;
-
-    const symbolWidth =
-      (this.reelBounds.width - padding * 2 - gap * (columns - 1)) /
-      columns;
-
-    const symbolHeight =
-      (this.reelBounds.height - padding * 2 - gap * (rows - 1)) /
-      rows;
-
-    const symbolNames = [
-      "COIN",
-      "OIL",
-      "CROWN",
-      "VAULT",
-      "COMB",
-      "VERNON",
-      "COIN",
-      "CROWN",
-      "OIL",
-      "VAULT",
-      "COMB",
-      "COIN",
-      "VERNON",
-      "CROWN",
-      "OIL",
-    ];
-
-    const symbolColors = [
-      COLORS.gold,
-      0x55b8ff,
-      0xff674d,
-      0xa952d1,
-      0x50d79d,
-    ];
-
-    let symbolIndex = 0;
-
-    for (let column = 0; column < columns; column += 1) {
-      for (let row = 0; row < rows; row += 1) {
-        const x =
-          this.reelBounds.x +
-          padding +
-          column * (symbolWidth + gap);
-
-        const y =
-          this.reelBounds.y +
-          padding +
-          row * (symbolHeight + gap);
-
-        const color = symbolColors[column] ?? COLORS.gold;
-
-        const cell = new Graphics()
-          .roundRect(x, y, symbolWidth, symbolHeight, 10)
-          .fill(column % 2 === 0 ? 0x26113a : 0x170b27)
-          .stroke({
-            color,
-            width: 2,
-            alpha: 0.75,
-          });
-
-        const innerGlow = new Graphics()
-          .roundRect(
-            x + 5,
-            y + 5,
-            symbolWidth - 10,
-            symbolHeight - 10,
-            7,
-          )
-          .stroke({
-            color,
-            width: 1,
-            alpha: 0.35,
-          });
-
-        const symbolText = new Text({
-          text: symbolNames[symbolIndex] ?? "GOLD",
-          style: {
-            fontFamily: "Arial Black, Arial",
-            fontSize: symbolNames[symbolIndex] === "VERNON" ? 16 : 19,
-            fontWeight: "bold",
-            fill: color,
-          },
-        });
-
-        symbolText.anchor.set(0.5);
-        symbolText.position.set(
-          x + symbolWidth / 2,
-          y + symbolHeight / 2,
-        );
-
-        this.addChild(cell, innerGlow, symbolText);
-        symbolIndex += 1;
-      }
-    }
   }
 
   private buildGlassReflection(): void {
@@ -513,11 +434,12 @@ export class Cabinet extends Container {
 
     this.addChild(deck);
 
-    this.addChild(
-      this.createReadout("CREDIT", "$100.00", 88, 620, 210),
-      this.createReadout("BET", "$1.00", 310, 620, 170),
-      this.createReadout("WIN", "$0.00", 492, 620, 190),
-    );
+    const creditReadout = this.createReadout("CREDIT", "$100.00", 88, 620, 210);
+    const betReadout = this.createReadout("BET", "$1.00", 310, 620, 170);
+    const winReadout = this.createReadout("WIN", "$0.00", 492, 620, 190);
+    this.creditValue = creditReadout.valueText;
+    this.winValue = winReadout.valueText;
+    this.addChild(creditReadout.container, betReadout.container, winReadout.container);
 
     const autoButton = new Graphics()
       .roundRect(695, 620, 115, 38, 12)
@@ -547,7 +469,7 @@ export class Cabinet extends Container {
         alpha: 0.18,
       });
 
-    const spinButton = new Graphics()
+    this.spinButton = new Graphics()
       .roundRect(830, 620, 172, 38, 13)
       .fill(COLORS.gold)
       .stroke({
@@ -569,11 +491,19 @@ export class Cabinet extends Container {
     spinText.anchor.set(0.5);
     spinText.position.set(916, 639);
 
+    this.statusValue = new Text({
+      text: "READY",
+      style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: COLORS.gold },
+    });
+    this.statusValue.anchor.set(1, 0.5);
+    this.statusValue.position.set(815, 639);
+
     this.addChild(
       autoButton,
       autoText,
+      this.statusValue,
       spinGlow,
-      spinButton,
+      this.spinButton,
       spinText,
     );
   }
@@ -584,7 +514,7 @@ export class Cabinet extends Container {
     x: number,
     y: number,
     width: number,
-  ): Container {
+  ): { readonly container: Container; readonly valueText: Text } {
     const container = new Container();
 
     const box = new Graphics()
@@ -605,7 +535,10 @@ export class Cabinet extends Container {
       },
     });
 
-    labelText.position.set(x + 14, y + 5);
+    labelText.position.set(
+      x + 14,
+      y + 5,
+    );
 
     const valueText = new Text({
       text: value,
@@ -617,10 +550,17 @@ export class Cabinet extends Container {
       },
     });
 
-    valueText.position.set(x + 14, y + 17);
+    valueText.position.set(
+      x + 14,
+      y + 17,
+    );
 
-    container.addChild(box, labelText, valueText);
+    container.addChild(
+      box,
+      labelText,
+      valueText,
+    );
 
-    return container;
+    return { container, valueText };
   }
 }
