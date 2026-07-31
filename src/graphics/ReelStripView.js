@@ -1,4 +1,4 @@
-import {Application,Container,Graphics,Sprite,Texture} from 'pixi.js';
+import {Application,Assets,Container,Graphics,Sprite} from 'pixi.js';
 const ids=['oil','comb','razor','balm','key','crown','vernon','vault','coin'];
 
 export class ReelStripView{
@@ -8,7 +8,7 @@ export class ReelStripView{
  async mount(host){
   await this.app.init({width:this.width,height:this.height,antialias:true,backgroundAlpha:0,resolution:Math.min(devicePixelRatio||1,2),autoDensity:true});
   this.app.canvas.classList.add('slot-canvas');host.replaceChildren(this.app.canvas);this.app.stage.addChild(this.root);
-  await Promise.all(ids.map(async id=>{this.textures[id]=await Texture.fromURL(`./assets/${id}.svg`);}));
+  await Promise.all(ids.map(async id=>{this.textures[id]=await Assets.load(`./assets/${id}.svg?v=2.0.3`);}));
   this.ready=true;
   new ResizeObserver(()=>this.resize(host)).observe(host);
  }
