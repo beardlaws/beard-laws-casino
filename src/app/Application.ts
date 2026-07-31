@@ -1,5 +1,26 @@
-import { Application as PixiApplication, Color } from "pixi.js";
+import { Application as PixiApplication, Assets, Color } from "pixi.js";
 import { GameScene } from "../scenes/GameScene";
+
+const cabinetAssetUrl = new URL(
+  "../../assets/beard-bank-2040-cabinet.png",
+  import.meta.url,
+).href;
+
+const symbolAssetUrls = [
+  "beard-coin",
+  "oil",
+  "crown",
+  "comb",
+  "vernon",
+  "vault-door",
+  "gold-crest",
+].map(
+  (name) =>
+    new URL(
+      `../../assets/concept-symbols/${name}.png`,
+      import.meta.url,
+    ).href,
+);
 
 export class Application {
   private readonly pixi: PixiApplication;
@@ -9,11 +30,14 @@ export class Application {
   }
 
   public async initialize(): Promise<void> {
-    await this.pixi.init({
-      resizeTo: window,
-      background: new Color(0x12081f),
-      antialias: true,
-    });
+    await Promise.all([
+      this.pixi.init({
+        resizeTo: window,
+        background: new Color(0x12081f),
+        antialias: true,
+      }),
+      Assets.load([cabinetAssetUrl, ...symbolAssetUrls]),
+    ]);
 
     document.getElementById("app")?.appendChild(this.pixi.canvas);
 
