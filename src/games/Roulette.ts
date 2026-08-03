@@ -1,5 +1,5 @@
 type PocketColor = "green" | "red" | "black";
-type BetKind = "straight" | "red" | "black" | "odd" | "even" | "low" | "high" | "dozen1" | "dozen2" | "dozen3" | "column1" | "column2" | "column3";
+type BetKind = "straight" | "split" | "street" | "corner" | "firstfive" | "sixline" | "red" | "black" | "odd" | "even" | "low" | "high" | "dozen1" | "dozen2" | "dozen3" | "column1" | "column2" | "column3";
 
 type Bet = { kind: BetKind; label: string; units: number; pocket?: string };
 
@@ -9,8 +9,10 @@ export const ROULETTE_POCKETS = ["0","28","9","26","30","11","7","20","32","17",
 const POCKET_ARC_DEGREES = 360 / ROULETTE_POCKETS.length;
 export const ROYAL_LANDING_ANGLE = 0;
 export const BEARDFALL_LANDING_ANGLE = 180;
-export const ROYAL_SPIN_DURATION_MS = 9_600;
-export const BEARDFALL_SPIN_DURATION_MS = 12_800;
+export const ROYAL_SPIN_DURATION_MS = 13_400;
+export const BEARDFALL_SPIN_DURATION_MS = 15_600;
+export const ROYAL_BALL_LANDING_INSET_PERCENT = 3.5;
+export const ROYAL_BALL_FINAL_ROTATION_DEGREES = -3240;
 
 /**
  * Returns the wheel's final clockwise rotation for a result pocket.
@@ -60,6 +62,22 @@ export class RouletteGame {
   private totalBet(): number { return this.bets.reduce((sum, bet) => sum + bet.units, 0); }
   private colorOf(pocket: string): PocketColor { return pocket === "0" || pocket === "00" ? "green" : RED.has(Number(pocket)) ? "red" : "black"; }
 
+  private coveredPockets(bet: Bet): string[] {
+    if (bet.pocket) return bet.pocket.split("|");
+    return ROULETTE_POCKETS.filter((pocket) => {
+      if (pocket === "0" || pocket === "00") return false;
+      const number = Number(pocket);
+      if (bet.kind === "red" || bet.kind === "black") return this.colorOf(pocket) === bet.kind;
+      if (bet.kind === "odd") return number % 2 === 1;
+      if (bet.kind === "even") return number % 2 === 0;
+      if (bet.kind === "low") return number >= 1 && number <= 18;
+      if (bet.kind === "high") return number >= 19 && number <= 36;
+      if (bet.kind.startsWith("dozen")) return Math.ceil(number / 12) === Number(bet.kind.at(-1));
+      if (bet.kind.startsWith("column")) return ((number - 1) % 3) + 1 === Number(bet.kind.at(-1));
+      return false;
+    });
+  }
+
   private randomPocket(): string {
     const max = Math.floor(0x100000000 / ROULETTE_POCKETS.length) * ROULETTE_POCKETS.length;
     const random = new Uint32Array(1);
@@ -70,6 +88,11 @@ export class RouletteGame {
   private returnMultiplier(bet: Bet, result: string): number {
     const number = Number(result);
     if (bet.kind === "straight") return bet.pocket === result ? 36 : 0;
+    if (["split", "street", "corner", "firstfive", "sixline"].includes(bet.kind)) {
+      const covered = bet.pocket?.split("|") ?? [];
+      const returns: Record<string, number> = { split: 18, street: 12, corner: 9, firstfive: 7, sixline: 6 };
+      return covered.includes(result) ? returns[bet.kind]! : 0;
+    }
     if (result === "0" || result === "00") return 0;
     if (bet.kind === "red" || bet.kind === "black") return this.colorOf(result) === bet.kind ? 2 : 0;
     if (bet.kind === "odd") return number % 2 ? 2 : 0;
@@ -100,22 +123,46 @@ export class RouletteGame {
       const units = betCount(kind, pocket);
       return `<button class="roulette-bet ${classes} ${units ? "has-bet" : ""}" data-kind="${kind}" data-label="${label}" ${pocket ? `data-pocket="${pocket}"` : ""}><span>${label}</span>${units ? `<b>${this.money(units)}</b>` : ""}</button>`;
     };
+    const insideHotspot = (kind: BetKind, label: string, pockets: string[], style: string, mark: string) => {
+      const key = pockets.join("|");
+      const units = betCount(kind, key);
+      return `<button class="inside-hotspot ${units ? "has-bet" : ""}" style="${style}" data-kind="${kind}" data-label="${label}" data-pocket="${key}" title="${label}"><span>${mark}</span>${units ? `<b>${this.money(units)}</b>` : ""}</button>`;
+    };
+    const spots: string[] = [];
+    // Horizontal table splits: 1/2 and 2/3 inside each three-number street.
+    for (let c=0;c<12;c++) for (let r=0;r<2;r++) {
+      const low=c*3+r+1, high=low+1;
+      spots.push(insideHotspot("split",`${low}/${high}`,[String(low),String(high)],`--x:${(c+.5)/12*100}%;--y:${(2-r)/3*100}%`,"2"));
+    }
+    // Vertical splits between neighboring streets, plus corners where four numbers meet.
+    for (let c=0;c<11;c++) for (let r=0;r<3;r++) {
+      const left=c*3+r+1, right=left+3;
+      spots.push(insideHotspot("split",`${left}/${right}`,[String(left),String(right)],`--x:${(c+1)/12*100}%;--y:${(2.5-r)/3*100}%`,"2"));
+    }
+    for (let c=0;c<11;c++) for (let r=0;r<2;r++) {
+      const a=c*3+r+1;
+      spots.push(insideHotspot("corner",`${a}/${a+1}/${a+3}/${a+4}`,[a,a+1,a+3,a+4].map(String),`--x:${(c+1)/12*100}%;--y:${(2-r)/3*100}%`,"4"));
+    }
+    for (let c=0;c<12;c++) spots.push(insideHotspot("street",`${c*3+1}-${c*3+3}`,[1,2,3].map(n=>String(c*3+n)),`--x:${(c+.5)/12*100}%;--y:100%`,"3"));
+    for (let c=0;c<11;c++) spots.push(insideHotspot("sixline",`${c*3+1}-${c*3+6}`,Array.from({length:6},(_,i)=>String(c*3+i+1)),`--x:${(c+1)/12*100}%;--y:100%`,"6"));
     return `<div class="roulette-board">
       <div class="green-stack">${button("straight","0","0","green")}${button("straight","00","00","green")}</div>
-      <div class="number-matrix">${Array.from({length:12},(_,row)=>[3,2,1].map((column)=>{const n=row*3+column;return button("straight",String(n),String(n),RED.has(n)?"red":"black")}).join("")).join("")}</div>
+      <div class="number-field"><div class="number-matrix">${Array.from({length:12},(_,row)=>[3,2,1].map((column)=>{const n=row*3+column;return button("straight",String(n),String(n),RED.has(n)?"red":"black")}).join("")).join("")}</div><div class="inside-layer">${spots.join("")}</div></div>
       <div class="column-stack">${button("column3","2 TO 1")}${button("column2","2 TO 1")}${button("column1","2 TO 1")}</div>
       <div class="dozens">${button("dozen1","1ST 12")}${button("dozen2","2ND 12")}${button("dozen3","3RD 12")}</div>
       <div class="outside-row">${button("low","1–18")}${button("even","EVEN")}${button("red","RED","","red")}${button("black","BLACK","","black")}${button("odd","ODD")}${button("high","19–36")}</div>
+      ${insideHotspot("firstfive","FIRST FIVE • 0/00/1/2/3",["0","00","1","2","3"],"","5")}
     </div>`;
   }
 
   private wheel(): string {
-    const straightSelections = new Set(this.bets.filter((bet) => bet.kind === "straight").map((bet) => bet.pocket));
-    return `<div class="roulette-wheel-shell"><div class="wheel-pointer ${this.freeFall ? "bottom-pointer" : ""}">${this.freeFall ? "▲" : "▼"}</div><div class="roulette-wheel" data-wheel>${ROULETTE_POCKETS.map((pocket,index)=>`<div class="wheel-pocket ${this.colorOf(pocket)} ${straightSelections.has(pocket)?"picked":""} ${this.landedResult===pocket?"landed":""}" data-wheel-pocket="${pocket}" style="--i:${index};--count:${ROULETTE_POCKETS.length}"><span>${pocket}</span></div>`).join("")}<div class="wheel-rim"></div><div class="wheel-center"><span class="beard-mark">B</span><small>${this.freeFall ? "BEARDFALL" : "ROYAL"}</small></div></div>${this.freeFall ? "" : `<div class="roulette-ball-orbit" data-ball><i></i></div>`}${this.landedResult ? `<div class="landed-ball ${this.freeFall ? "landed-bottom" : "landed-top"}" data-landed-ball></div>` : ""}<div class="landing-flash">${this.landedResult ? `<small>WINNING POCKET</small><strong>${this.landedResult}</strong>` : ""}</div></div>`;
+    const selectedPockets = new Set(this.bets.flatMap((bet) => this.coveredPockets(bet)));
+    const heldRotation = this.landedResult ? wheelLandingRotation(this.landedResult, this.freeFall, 0) : 0;
+    return `<div class="roulette-wheel-shell"><div class="wheel-pointer ${this.freeFall ? "bottom-pointer" : ""}">${this.freeFall ? "▲" : "▼"}</div><div class="roulette-wheel" data-wheel style="transform:rotate(${heldRotation}deg)">${ROULETTE_POCKETS.map((pocket,index)=>`<div class="wheel-pocket ${this.colorOf(pocket)} ${selectedPockets.has(pocket)?"picked":""} ${this.landedResult===pocket?"landed":""}" data-wheel-pocket="${pocket}" style="--i:${index};--count:${ROULETTE_POCKETS.length}"><span>${pocket}</span></div>`).join("")}<div class="wheel-rim"></div><div class="wheel-center"><span class="beard-mark">B</span><small>${this.freeFall ? "BEARDFALL" : "ROYAL"}</small></div></div>${!this.freeFall && !this.landedResult ? `<div class="roulette-ball-orbit" data-ball><i></i></div>` : ""}${this.landedResult ? `<div class="landed-ball ${this.freeFall ? "landed-bottom" : "landed-top"}" data-landed-ball data-landed-pocket="${this.landedResult}"></div>` : ""}<div class="landing-flash">${this.landedResult ? `<small>WINNING POCKET</small><strong>${this.landedResult}</strong>` : ""}</div></div>`;
   }
 
   private dropTower(): string {
-    return `<div class="drop-tower"><div class="drop-launch"><small>BEARD LAWS</small><strong>BEARDFALL</strong><span>ROULETTE</span></div><div class="drop-field" data-drop-field><div class="drop-ball" data-drop-ball></div>${Array.from({length:42},(_,i)=>`<i style="--peg-x:${12+(i%7)*12.7}%;--peg-y:${8+Math.floor(i/7)*13}%"></i>`).join("")}</div>${this.wheel()}</div>`;
+    return `<div class="drop-tower"><div class="drop-launch"><small>BEARD LAWS</small><strong>BEARDFALL</strong><span>ROULETTE</span></div>${this.wheel()}<div class="drop-field" data-drop-field><div class="drop-ball" data-drop-ball></div>${Array.from({length:42},(_,i)=>`<i style="--peg-x:${12+(i%7)*12.7}%;--peg-y:${8+Math.floor(i/7)*13}%"></i>`).join("")}</div></div>`;
   }
 
   private render(): void {
@@ -140,7 +187,7 @@ export class RouletteGame {
     this.root.querySelector("[data-clear]")?.addEventListener("click",()=>{this.bets=[];this.message="Bets cleared.";this.render();});
     this.root.querySelector("[data-repeat]")?.addEventListener("click",()=>this.repeatBet());
     this.root.querySelector("[data-spin]")?.addEventListener("click",()=>void this.spin());
-    this.root.querySelector("[data-rules]")?.addEventListener("click",()=>alert("AMERICAN ROULETTE\n\nStraight number returns 36× total stake (35:1 profit)\nRed/Black, Odd/Even, 1–18/19–36 return 2× (1:1 profit)\nDozens and columns return 3× (2:1 profit)\n0 and 00 lose on all outside bets\n\nPlace multiple chips on any available bets. Beardfall uses the same wheel, odds, and settlements as Royal Roulette."));
+    this.root.querySelector("[data-rules]")?.addEventListener("click",()=>alert("AMERICAN DOUBLE-ZERO ROULETTE\n\nStraight 35:1 • Split 17:1 • Street 11:1\nCorner 8:1 • First Five 6:1 • Six Line 5:1\nDozens/Columns 2:1 • Even-money bets 1:1\n0 and 00 lose on all outside bets\n\nPlace chips directly on numbers, connecting lines, or intersections. Highlighted wheel pockets show every number covered by your active inside bets."));
   }
 
   private repeatBet(): void {
@@ -182,37 +229,53 @@ export class RouletteGame {
   private async animate(result: string): Promise<void> {
     const wheel=this.root.querySelector<HTMLElement>("[data-wheel]");
     const duration=this.freeFall?BEARDFALL_SPIN_DURATION_MS:ROYAL_SPIN_DURATION_MS;
-    const randomExtraSpins = 2 + Math.floor(Math.random() * 5);
-    const fullSpins=(this.freeFall?10:9)+randomExtraSpins;
+    const randomExtraSpins = 2 + Math.floor(Math.random() * 3);
+    const fullSpins=(this.freeFall?12:10)+randomExtraSpins;
     const finalWheelRotation=wheelLandingRotation(result,this.freeFall,fullSpins);
-    wheel?.animate([
-      {transform:"rotate(0deg)",offset:0},
-      {transform:`rotate(${fullSpins*198}deg)`,offset:.18,easing:"cubic-bezier(.15,.7,.28,1)"},
-      {transform:`rotate(${fullSpins*322}deg)`,offset:.64,easing:"linear"},
-      {transform:`rotate(${finalWheelRotation}deg)`,offset:1,easing:"cubic-bezier(.18,.62,.2,1)"},
-    ],{duration,easing:"linear",fill:"forwards"});
+    const wheelAnimation=wheel?.animate([
+      {transform:"rotate(0deg)"},
+      {transform:`rotate(${finalWheelRotation}deg)`},
+    ],{duration,easing:"cubic-bezier(.12,.58,.18,1)",fill:"forwards"});
     if(this.freeFall){
       const ball=this.root.querySelector<HTMLElement>("[data-drop-ball]");
-      ball?.animate([
+      const ballAnimation=ball?.animate([
         {left:"calc(50% - 8px)",top:"1%",transform:"scale(1)",offset:0},
-        {left:"24%",top:"19%",transform:"scale(1)",offset:.25},
-        {left:"68%",top:"37%",transform:"scale(1)",offset:.39},
-        {left:"29%",top:"55%",transform:"scale(.97)",offset:.53},
-        {left:"64%",top:"70%",transform:"scale(.94)",offset:.67},
-        {left:"43%",top:"84%",transform:"scale(.88)",offset:.76},
-        {left:"58%",top:"91%",transform:"scale(.82)",offset:.86},
-        {left:"44%",top:"94%",transform:"scale(.79)",offset:.93},
-        {left:"calc(50% - 8px)",top:"96%",transform:"scale(.76)",offset:1},
-      ],{duration,easing:"cubic-bezier(.3,.02,.42,1)",fill:"forwards"});
+        {left:"38%",top:"10%",transform:"scale(1)",offset:.12},
+        {left:"62%",top:"20%",transform:"scale(.99)",offset:.23},
+        {left:"31%",top:"31%",transform:"scale(.98)",offset:.34},
+        {left:"67%",top:"43%",transform:"scale(.96)",offset:.45},
+        {left:"35%",top:"55%",transform:"scale(.94)",offset:.56},
+        {left:"61%",top:"67%",transform:"scale(.92)",offset:.67},
+        {left:"42%",top:"78%",transform:"scale(.89)",offset:.76},
+        {left:"56%",top:"86%",transform:"scale(.86)",offset:.83},
+        {left:"45%",top:"91%",transform:"scale(.82)",offset:.88},
+        {left:"53%",top:"94%",transform:"scale(.79)",offset:.92},
+        {left:"47%",top:"96%",transform:"scale(.76)",offset:.955},
+        {left:"calc(50% - 8px)",top:"98%",transform:"scale(.72)",offset:1},
+      ],{duration:duration*.78,delay:duration*.08,easing:"cubic-bezier(.24,.02,.38,1)",fill:"forwards"});
+      await Promise.allSettled([wheelAnimation?.finished ?? Promise.resolve(),ballAnimation?.finished ?? Promise.resolve()]);
     } else {
       const ball=this.root.querySelector<HTMLElement>("[data-ball]");
-      ball?.animate([
-        {transform:"rotate(0deg)",offset:0},
-        {transform:"rotate(-2160deg)",offset:.62},
-        {transform:"rotate(-2880deg) scale(.88)",offset:.88},
-        {transform:"rotate(-3240deg) scale(.76)",offset:1},
-      ],{duration,easing:"cubic-bezier(.12,.58,.2,1)",fill:"forwards"});
+      const orbitAnimation=ball?.animate([
+        {transform:"rotate(0deg)",inset:"1%",offset:0},
+        {transform:"rotate(-2520deg)",inset:"1%",offset:.66},
+        {transform:"rotate(-2890deg)",inset:"4%",offset:.82},
+        {transform:"rotate(-3020deg)",inset:"8%",offset:.91},
+        {transform:"rotate(-3160deg)",inset:"8%",offset:.96},
+        {transform:`rotate(${ROYAL_BALL_FINAL_ROTATION_DEGREES}deg)`,inset:`${ROYAL_BALL_LANDING_INSET_PERCENT}%`,offset:1},
+      ],{duration,easing:"cubic-bezier(.12,.55,.2,1)",fill:"forwards"});
+      const pill=ball?.querySelector<HTMLElement>("i");
+      const rattleAnimation=pill?.animate([
+        {transform:"translateX(0) scale(1)",offset:0},
+        {transform:"translateX(0) scale(1)",offset:.82},
+        {transform:"translateX(9px) scale(.96)",offset:.87},
+        {transform:"translateX(-7px) scale(.92)",offset:.91},
+        {transform:"translateX(5px) scale(.88)",offset:.945},
+        {transform:"translateX(-3px) scale(.84)",offset:.975},
+        {transform:"translateX(0) scale(.8)",offset:1},
+      ],{duration,easing:"linear",fill:"forwards"});
+      await Promise.allSettled([wheelAnimation?.finished ?? Promise.resolve(),orbitAnimation?.finished ?? Promise.resolve(),rattleAnimation?.finished ?? Promise.resolve()]);
     }
-    await new Promise((resolve)=>window.setTimeout(resolve,duration+180));
+    await new Promise((resolve)=>window.setTimeout(resolve,240));
   }
 }

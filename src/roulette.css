@@ -35,3 +35,63 @@
 @keyframes pocketWinner{to{box-shadow:0 0 20px #fff,0 0 42px #fff16d}}
 @media(max-width:1100px){.roulette-wheel-shell{--wheel-size:min(70vw,470px)}}
 @media(max-width:720px){.roulette-wheel-shell{--wheel-size:min(92vw,420px)}}
+
+/* V16: authentic inside-bet geometry and full-circle Beardfall cabinet */
+.roulette-main{width:min(1660px,100%);grid-template-columns:minmax(520px,1fr) minmax(610px,1.18fr)}
+.roulette-wheel-shell{--wheel-size:min(43vw,590px)}
+.roulette-wheel-shell .wheel-pocket span{font-size:clamp(12px,1.25vw,17px);font-variant-numeric:tabular-nums;text-shadow:0 2px 4px #000,0 0 4px #000}
+.roulette-wheel-shell .wheel-pocket.picked{filter:brightness(2) saturate(1.25);box-shadow:inset 0 12px 22px #fff7,0 0 20px #67efff;z-index:5}
+.roulette-wheel-shell .wheel-pocket.picked span:after{content:"";display:block;width:5px;height:5px;margin:2px auto;border-radius:50%;background:#fff4a3;box-shadow:0 0 10px #fff,0 0 18px #41efff}
+.number-field{position:relative;grid-column:2;grid-row:1;min-width:420px}
+.inside-layer{position:absolute;inset:0;z-index:6;pointer-events:none}
+.inside-hotspot{position:absolute;left:var(--x);top:var(--y);width:25px;height:25px;transform:translate(-50%,-50%);padding:0;border:0;border-radius:50%;background:transparent;color:transparent;pointer-events:auto;z-index:7}
+.inside-hotspot:hover,.inside-hotspot:focus-visible{background:#6fefffbb;color:#06101d;box-shadow:0 0 16px #fff;outline:2px solid #fff}
+.inside-hotspot span{font:900 9px 'Barlow Condensed'}
+.inside-hotspot.has-bet{background:radial-gradient(circle,#fff 0 18%,#ffd746 20% 45%,#7a3e00 47% 55%,#ffd746 58%);color:#1a0c00;box-shadow:0 0 12px #fff5a2;outline:2px dashed #fff}
+.inside-hotspot b{position:absolute;left:50%;top:100%;transform:translateX(-50%);padding:2px 4px;border-radius:4px;background:#050814;color:#fff;font-size:7px;white-space:nowrap}
+.roulette-board>.inside-hotspot{left:55px;top:50%;width:26px;height:26px;transform:translate(-50%,-50%);background:#0b7564;color:#fff;border:1px dashed #fff;z-index:8}
+.roulette-board>.inside-hotspot.has-bet{background:#ffd746;color:#201000;box-shadow:0 0 14px #fff}
+
+.freefall .drop-tower{width:min(45vw,620px);height:min(49vw,670px);padding-top:54px}
+.freefall .roulette-wheel-shell{--wheel-size:min(45vw,620px);position:absolute;left:50%;top:54px;transform:translateX(-50%);margin:0}
+.freefall .drop-field{left:22%;right:22%;top:22%;height:57%;border-radius:50%;background:radial-gradient(circle at 50% 38%,#183d79ee,#071329f2 72%);z-index:12}
+.freefall .drop-field:after{display:none}
+.freefall .drop-launch{width:62%;padding:7px 16px;z-index:25}
+.freefall .wheel-center{opacity:.22;inset:28%}
+.freefall .wheel-rim{inset:18%;border-width:3px}
+.freefall .landing-flash{top:auto;bottom:38%;z-index:26}
+.freefall .landed-ball.landed-bottom{bottom:2%;z-index:28}
+.freefall .bottom-pointer{bottom:-24px;z-index:27;color:#67edff;text-shadow:0 0 14px #fff}
+
+/* V17: the drop finishes inside the numbered pocket ring and the settled
+   wheel stays physically aligned with the result after the DOM refresh. */
+.freefall .drop-field{left:24%;right:24%;top:17%;height:76%;border-radius:48% 48% 18% 18%;clip-path:polygon(8% 0,92% 0,100% 84%,66% 100%,34% 100%,0 84%);overflow:visible;background:radial-gradient(circle at 50% 34%,#1b4688ee,#071329f5 70%,#061020 86%,transparent 87%);box-shadow:inset 0 0 42px #31ddff30,0 0 22px #22cfff44}
+.freefall .drop-field:before{content:"";position:absolute;left:40%;right:40%;bottom:-2%;height:15%;border-left:3px solid #5feaff;border-right:3px solid #5feaff;filter:drop-shadow(0 0 8px #34dcff);pointer-events:none}
+.freefall .drop-ball{z-index:30}
+.freefall .landed-ball.landed-bottom{bottom:1.2%;width:20px;height:20px;left:calc(50% - 10px);box-shadow:0 0 12px #fff,0 0 30px #5feaff,0 0 44px #ffe66d}
+.freefall .wheel-pointer.bottom-pointer{display:none}
+.freefall .wheel-pocket.landed{animation:pocketWinner .4s ease-in-out infinite alternate;filter:brightness(2.8) saturate(1.5)}
+.freefall .wheel-pocket.picked{filter:brightness(2.15) saturate(1.35);box-shadow:inset 0 0 24px #fff9,0 0 25px #4deaff}
+.classic .roulette-wheel-shell{--wheel-size:min(46vw,640px)}
+.classic .roulette-wheel-shell .wheel-pocket span{font-size:clamp(13px,1.3vw,18px);font-weight:1000;color:#fff;text-shadow:0 2px 4px #000,0 0 6px #000}
+
+@media(max-width:1100px){.roulette-main{grid-template-columns:1fr}.roulette-wheel-shell{--wheel-size:min(76vw,590px)}.freefall .drop-tower{width:min(76vw,620px);height:min(82vw,680px)}.freefall .roulette-wheel-shell{--wheel-size:min(76vw,620px)}}
+@media(max-width:720px){.roulette-wheel-shell{--wheel-size:min(94vw,500px)}.freefall .drop-tower{width:min(94vw,520px);height:min(102vw,570px)}.freefall .roulette-wheel-shell{--wheel-size:min(94vw,520px)}.number-field{min-width:384px}.inside-hotspot{width:30px;height:30px}}
+
+/* V18: continuous physical spin presentation. */
+.roulette-wheel-shell:before{content:"";position:absolute;z-index:14;inset:8%;border-radius:50%;background:repeating-conic-gradient(from 2deg,transparent 0 42deg,#e8f7ff 43deg 45deg);mask:radial-gradient(transparent 0 82%,#000 83% 88%,transparent 89%);filter:drop-shadow(0 0 4px #fff);pointer-events:none}
+.classic .roulette-wheel-shell:before{opacity:.85}
+.classic .roulette-ball-orbit{inset:1%;border:2px solid #c6d5df44;box-shadow:inset 0 0 12px #000,0 0 8px #fff2}
+.classic .roulette-wheel-shell .wheel-pocket span{font-size:clamp(15px,1.45vw,20px);font-weight:1000;background:#02050a99;border-radius:4px;line-height:1.05}
+.freefall .drop-field i:nth-of-type(3n){width:10px;height:6px;border-radius:50%;transform:rotate(45deg);background:#f5fbff;box-shadow:0 0 10px #fff,0 0 16px #4deaff}
+.freefall .drop-field i:nth-of-type(5n){transform:rotate(-45deg)}
+.freefall .drop-field:before{bottom:-5%;height:19%;background:linear-gradient(90deg,transparent 0 39%,#09162b 40% 45%,transparent 46% 54%,#09162b 55% 60%,transparent 61%);border-color:#d9faff}
+.freefall .drop-ball{transition:filter .2s;filter:drop-shadow(0 0 5px #fff)}
+.roulette-wheel-shell .wheel-pocket.picked{animation:targetPulse .85s ease-in-out infinite alternate}
+@keyframes targetPulse{to{filter:brightness(2.55) saturate(1.5);box-shadow:inset 0 12px 28px #fff9,0 0 28px #69efff}}
+
+/* V19: one authoritative Royal landing point. The moving ball ends at the
+   top pocket and is replaced only by a ball carrying that exact result. */
+.classic .landed-ball.landed-top{top:3.5%;width:20px;height:20px;left:calc(50% - 10px);z-index:28}
+.classic .wheel-pocket.landed span{background:#fff3a8;color:#170b04;text-shadow:none;box-shadow:0 0 13px #fff,0 0 25px #ffd84c}
+.classic .roulette-wheel-shell:has(.landed-ball) .roulette-ball-orbit{display:none}

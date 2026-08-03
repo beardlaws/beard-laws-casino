@@ -200,15 +200,16 @@ export class PapasBlackjack {
     this.root.innerHTML = `<section class="table-room papa-room ${reaction}">
       <div class="sports-lounge" aria-hidden="true"><div class="lounge-tv tv-blue">BIG BLUE<br><b>4TH & 1</b></div><div class="lounge-tv tv-orange">ORANGE COUNTRY<br><b>GAME NIGHT</b></div><div class="lounge-sign">PAPA'S • COLD ONES • CARDS • HOUSE HOUNDS</div></div>
       <button class="back" data-back>← CASINO FLOOR</button>
-      <header class="papa-header"><small>PAPA'S SPORTS LOUNGE</small><h1>PAPA'S BLACKJACK</h1><p>Six decks • Dealer stands soft 17 • Blackjack pays 3:2</p></header>
-      <div class="papa-scoreboard"><span>BIG BLUE FOOTBALL</span><b>21</b><span>ORANGE COUNTRY</span></div>
+      <header class="papa-header"><small>BEARD LAWS CASINO • TABLE 21</small><h1>PAPA'S HOUSE</h1><p>Blackjack, cold ones, and absolutely no shaving at the table.</p></header>
+      <div class="papa-scoreboard"><span>BIG BLUE</span><b>21</b><span>ORANGE</span></div>
       <div class="papa-hud"><div><small>CASINO WALLET</small><strong>${this.money(this.getWalletUnits())}</strong></div><div><small>NEXT BET</small><strong>${this.money(this.selectedBetUnits)}</strong></div><div class="result-cell"><small>LAST HAND</small><strong>${this.lastReturnedUnits ? `${this.lastProfitUnits >= 0 ? "+" : ""}${this.money(this.lastProfitUnits)}` : "READY"}</strong></div></div>
       <div class="felt papa-felt">
+        <div class="table-rail"><span>BLACKJACK PAYS 3 TO 2</span><b>PAPA'S HOUSE • EST. 2026</b><span>DEALER STANDS ON 17</span></div>
         <div class="papa-corner"><div class="papa-chair"><span class="papa-head"><i class="papa-hair"></i><i class="papa-face"></i><i class="papa-beard"></i><i class="papa-smile"></i></span><b>PAPA'S GOOD CHAIR</b><em>PAPA</em></div><div class="cold-one" title="Papa's frosty table drink"><i></i>PAPA'S<br><b>COLD ONE</b></div></div>
         <div class="hound biggie"><i class="dog-head"><u></u><s></s></i><b>BIGGIE</b><span>HOUSE SECURITY</span></div>
         <div class="hound vern"><i class="dog-head"><u></u><s></s></i><b>VERN</b><span>TABLE MANAGEMENT</span></div>
-        <div class="dealer-zone dealer-${this.dealerResult}"><small>DEALER</small><div class="cards">${dealerCards}</div><strong>${hideHole ? this.value(this.dealer.slice(0, 1)).total || "" : this.value(this.dealer).total || ""}</strong>${this.dealerResult ? `<em>${this.dealerResult === "bust" ? "DEALER BUST" : this.dealerResult === "push" ? "ALL PUSH" : "DEALER WINS"}</em>` : ""}</div>
-        <div class="message">${this.message}</div>
+        <div class="dealer-zone dealer-${this.dealerResult}"><small>PAPA'S DEALER</small><div class="cards">${dealerCards}</div><strong>${hideHole ? this.value(this.dealer.slice(0, 1)).total || "" : this.value(this.dealer).total || ""}</strong>${this.dealerResult ? `<em>${this.dealerResult === "bust" ? "DEALER BUST" : this.dealerResult === "push" ? "ALL PUSH" : "DEALER WINS"}</em>` : ""}</div>
+        <div class="message"><span class="live-dot"></span>${this.message}</div>
         <div class="player-hands">${this.hands.length ? this.hands.map((hand, index) => `<article class="blackjack-hand ${this.roundActive && index === this.activeHand ? "active" : ""} ${this.handResultClass(hand)}"><small>HAND ${index + 1} • BET ${this.money(hand.betUnits)}</small><div class="cards">${hand.cards.map((card) => this.cardMarkup(card)).join("")}</div><strong>${this.value(hand.cards).total}</strong>${hand.result ? `<em>${hand.result}</em>${this.handPayoutMarkup(hand)}` : ""}</article>`).join("") : `<div class="empty-seat">PAPA GETS THE GOOD CHAIR</div>`}</div>
       </div>
       <div class="chip-rack">${[500, 1000, 2500, 5000, 10000].map((units) => `<button data-chip="${units}" class="chip chip-${units} ${this.selectedBetUnits === units ? "selected" : ""}" ${this.roundActive || units > this.getWalletUnits() ? "disabled" : ""}>${this.money(units)}</button>`).join("")}</div>
