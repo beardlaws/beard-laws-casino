@@ -1,4 +1,4 @@
-import { BlurFilter, Container, Graphics, Ticker } from "pixi.js";
+import { BlurFilter, Container, Graphics } from "pixi.js";
 import type { WayWin } from "../engine/WaysEvaluator";
 import { SymbolView, type BeardBankSymbolId } from "./SymbolView";
 
@@ -16,8 +16,8 @@ const REEL_COUNT = 5;
 const ROW_COUNT = 3;
 const BUFFER_ROWS = 2;
 const TOTAL_SYMBOLS = ROW_COUNT + BUFFER_ROWS;
-const REEL_GAP = 5;
-const SYMBOL_GAP = 5;
+const REEL_GAP = 3;
+const SYMBOL_GAP = 3;
 
 const ACCELERATION_MS = 340;
 const CRUISE_SPEED = 0.92;
@@ -39,9 +39,6 @@ export class ReelSet extends Container {
   private readonly reels: ReelRuntime[] = [];
   private symbolPitch = 0;
   private symbolHeight = 0;
-  private readonly glassSweep = new Graphics();
-  private readonly chamberGlow = new Graphics();
-  private elapsedSeconds = 0;
 
   public constructor(
     private readonly viewportWidth: number,
@@ -49,12 +46,6 @@ export class ReelSet extends Container {
   ) {
     super();
     this.build();
-    Ticker.shared.add(this.update);
-  }
-
-  public override destroy(options?: Parameters<Container["destroy"]>[0]): void {
-    Ticker.shared.remove(this.update);
-    super.destroy(options);
   }
 
   public async spinTo(matrix: readonly (readonly string[])[]): Promise<void> {
@@ -183,35 +174,17 @@ export class ReelSet extends Container {
     this.symbolHeight = (this.viewportHeight - SYMBOL_GAP * (ROW_COUNT - 1)) / ROW_COUNT;
     this.symbolPitch = this.symbolHeight + SYMBOL_GAP;
 
-    const chamber = new Graphics()
-      .roundRect(0, 0, this.viewportWidth, this.viewportHeight, 18)
-      .fill({ color: 0x030108, alpha: 0.98 })
-      .stroke({ color: 0x2c1745, width: 2, alpha: 0.95 });
-
-    this.chamberGlow
-      .roundRect(3, 3, this.viewportWidth - 6, this.viewportHeight - 6, 16)
-      .stroke({ color: 0x8d4bdf, width: 3, alpha: 0.2 });
-
-    this.addChild(chamber, this.chamberGlow);
-
     for (let reelIndex = 0; reelIndex < REEL_COUNT; reelIndex += 1) {
       const viewport = new Container();
       viewport.x = reelIndex * (reelWidth + REEL_GAP);
 
-      const columnGlow = new Graphics()
-        .roundRect(0, 0, reelWidth, this.viewportHeight, 12)
-        .fill({ color: reelIndex % 2 === 0 ? 0x140b20 : 0x0c0816, alpha: 0.9 });
-
-      const centerLight = new Graphics()
-        .ellipse(reelWidth / 2, this.viewportHeight / 2, reelWidth * 0.43, this.viewportHeight * 0.47)
-        .fill({ color: 0x7b31bd, alpha: 0.055 });
-
-      const edgeShade = new Graphics()
-        .roundRect(0, 0, reelWidth, this.viewportHeight, 12)
-        .stroke({ color: 0xb26fff, width: 1, alpha: 0.2 });
+      const background = new Graphics()
+        .roundRect(0, 0, reelWidth, this.viewportHeight, 8)
+        .fill(0x08030d)
+        .stroke({ color: 0x4d2268, width: 1.5, alpha: 0.75 });
 
       const mask = new Graphics()
-        .roundRect(0, 0, reelWidth, this.viewportHeight, 12)
+        .roundRect(0, 0, reelWidth, this.viewportHeight, 8)
         .fill(0xffffff);
 
       const symbolLayer = new Container();
@@ -228,7 +201,7 @@ export class ReelSet extends Container {
         symbolLayer.addChild(symbolView);
       }
 
-      viewport.addChild(columnGlow, centerLight, edgeShade, symbolLayer, mask);
+      viewport.addChild(background, symbolLayer, mask);
       this.reels.push({
         viewport,
         symbolLayer,
@@ -239,36 +212,7 @@ export class ReelSet extends Container {
       });
       this.addChild(viewport);
     }
-
-    for (let row = 1; row < ROW_COUNT; row += 1) {
-      const y = row * this.symbolPitch - SYMBOL_GAP / 2;
-      const separator = new Graphics()
-        .rect(8, y, this.viewportWidth - 16, 1)
-        .fill({ color: 0xd9b8ff, alpha: 0.08 });
-      this.addChild(separator);
-    }
-
-    this.glassSweep
-      .moveTo(-140, 0)
-      .lineTo(-35, 0)
-      .lineTo(100, this.viewportHeight)
-      .lineTo(-5, this.viewportHeight)
-      .closePath()
-      .fill({ color: 0xffffff, alpha: 0.055 });
-
-    const topGlass = new Graphics()
-      .roundRect(8, 7, this.viewportWidth - 16, this.viewportHeight * 0.24, 12)
-      .fill({ color: 0xffffff, alpha: 0.025 });
-
-    this.addChild(this.glassSweep, topGlass);
   }
-
-  private readonly update = (ticker: Ticker): void => {
-    this.elapsedSeconds += ticker.deltaMS / 1000;
-    const travel = this.viewportWidth + 280;
-    this.glassSweep.x = (this.elapsedSeconds * 46) % travel;
-    this.chamberGlow.alpha = 0.55 + Math.sin(this.elapsedSeconds * 1.4) * 0.18;
-  };
 
   private advanceReel(reel: ReelRuntime, distance: number): void {
     for (const symbol of reel.symbols) {

@@ -1,0 +1,21 @@
+.player-cluster {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.player-name {
+  color: #d9b9e8;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 800px) {
+  .player-cluster {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+}

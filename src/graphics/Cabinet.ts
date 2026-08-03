@@ -1,7 +1,6 @@
-import { Container, Graphics, Rectangle, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text, Ticker } from "pixi.js";
 import type { WayWin } from "../engine/WaysEvaluator";
 import { ReelSet } from "./ReelSet";
-import { LivingVault } from "./LivingVault";
 
 export interface CabinetReelBounds {
   readonly x: number;
@@ -10,82 +9,427 @@ export interface CabinetReelBounds {
   readonly height: number;
 }
 
-const CABINET_WIDTH = 1100;
-const CABINET_HEIGHT = 720;
+export interface VernonFreeSpinResult {
+  readonly awardUnits: number;
+  readonly retriggerDoors: number;
+  readonly vernonCount: number;
+}
 
-const COLORS = {
-  deepBlack: 0x07040d,
-  backgroundPurple: 0x130720,
-  cabinetPurple: 0x241039,
-  panelPurple: 0x351653,
-  brightPurple: 0x7d35b5,
-  darkGold: 0x815713,
-  gold: 0xe5b93f,
-  brightGold: 0xffe58a,
-  cream: 0xffefbd,
-  red: 0xb72e3d,
-  blue: 0x2582ce,
-  green: 0x23a568,
-  pink: 0xc63ca6,
-} as const;
+const CABINET_WIDTH = 1672;
+const CABINET_HEIGHT = 941;
+const GOLD = 0xffd86b;
+const PURPLE = 0xa943ff;
 
 export class Cabinet extends Container {
   private reelSet!: ReelSet;
-  private spinButton!: Container;
+  private spinButton!: Graphics;
   private creditValue!: Text;
   private winValue!: Text;
   private statusValue!: Text;
+  private chargeValue!: Text;
+  private chargeFill!: Graphics;
+  private homeButton!: Graphics;
+  private infoButton!: Graphics;
+  private betMinusButton!: Graphics;
+  private betPlusButton!: Graphics;
+  private betValue!: Text;
+  private rulesOverlay: Container | undefined;
+  private readonly energy = new Graphics();
+  private elapsed = 0;
 
   private readonly reelBounds: CabinetReelBounds = {
-    x: 95,
-    y: 276,
-    width: 910,
-    height: 310,
+    x: 132,
+    y: 430,
+    width: 1408,
+    height: 426,
   };
 
   public constructor() {
     super();
     this.build();
+    Ticker.shared.add(this.animate);
   }
 
-  public get cabinetWidth(): number {
-    return CABINET_WIDTH;
+  public override destroy(options?: Parameters<Container["destroy"]>[0]): void {
+    Ticker.shared.remove(this.animate);
+    super.destroy(options);
   }
 
-  public get cabinetHeight(): number {
-    return CABINET_HEIGHT;
-  }
-
-  public getReelBounds(): CabinetReelBounds {
-    return this.reelBounds;
-  }
+  public get cabinetWidth(): number { return CABINET_WIDTH; }
+  public get cabinetHeight(): number { return CABINET_HEIGHT; }
+  public getReelBounds(): CabinetReelBounds { return this.reelBounds; }
 
   public onSpin(handler: () => void): void {
     this.spinButton.eventMode = "static";
     this.spinButton.cursor = "pointer";
-    this.spinButton.removeAllListeners();
-    this.spinButton.on("pointerdown", () => this.spinButton.scale.set(0.97));
-    this.spinButton.on("pointerup", () => this.spinButton.scale.set(1));
-    this.spinButton.on("pointerupoutside", () => this.spinButton.scale.set(1));
+    this.spinButton.removeAllListeners("pointertap");
     this.spinButton.on("pointertap", handler);
+  }
+
+  public onHome(handler: () => void): void {
+    this.homeButton.eventMode = "static";
+    this.homeButton.cursor = "pointer";
+    this.homeButton.removeAllListeners("pointertap");
+    this.homeButton.on("pointertap", handler);
+  }
+
+  public onInfo(handler: () => void): void {
+    this.infoButton.eventMode = "static";
+    this.infoButton.cursor = "pointer";
+    this.infoButton.removeAllListeners("pointertap");
+    this.infoButton.on("pointertap", handler);
+  }
+
+  public onBetMinus(handler: () => void): void {
+    this.betMinusButton.eventMode = "static";
+    this.betMinusButton.cursor = "pointer";
+    this.betMinusButton.removeAllListeners("pointertap");
+    this.betMinusButton.on("pointertap", handler);
+  }
+
+  public onBetPlus(handler: () => void): void {
+    this.betPlusButton.eventMode = "static";
+    this.betPlusButton.cursor = "pointer";
+    this.betPlusButton.removeAllListeners("pointertap");
+    this.betPlusButton.on("pointertap", handler);
+  }
+
+  public toggleRules(): void {
+    if (this.rulesOverlay) {
+      this.rulesOverlay.destroy({ children: true });
+      this.rulesOverlay = undefined;
+      return;
+    }
+
+    const overlay = new Container();
+    const shade = new Graphics().rect(0, 0, CABINET_WIDTH, CABINET_HEIGHT)
+      .fill({ color: 0x020104, alpha: 0.92 });
+    const panel = new Graphics().roundRect(205, 72, 1262, 785, 30)
+      .fill({ color: 0x13051f, alpha: 0.99 })
+      .stroke({ color: GOLD, width: 7 });
+    const title = new Text({ text: "BEARD BANK • PAYTABLE & FEATURES", style: { fontFamily: "Arial Black, Arial", fontSize: 47, fontWeight: "bold", fill: GOLD, letterSpacing: 2 } });
+    title.anchor.set(0.5); title.position.set(836, 126);
+    const intro = new Text({ text: "5 REELS • 3 ROWS • 243 WAYS • ADJUSTABLE BET", style: { fontFamily: "Arial", fontSize: 23, fontWeight: "bold", fill: 0xe8c9f7, letterSpacing: 2 } });
+    intro.anchor.set(0.5); intro.position.set(836, 178);
+
+    const rules = new Text({
+      text: [
+        "SYMBOL                         3 REELS       4 REELS       5 REELS",
+        "VAULTMASTER VERNON             0.20×          0.60×          1.50×",
+        "CROWN                          0.15×          0.40×          1.00×",
+        "BEARD COIN                     0.10×          0.30×          0.80×",
+        "BEARD OIL                      0.075×         0.15×          0.35×",
+        "COMB                           0.05×          0.10×          0.20×",
+        "",
+        "GOLD CREST • WILD: substitutes for all paying symbols.",
+        "WAYS WINS: matching symbols on 3+ adjacent reels, starting on reel 1.",
+        "Multiple matching positions create multiple ways; awards are added together.",
+      ].join("\n"),
+      style: { fontFamily: "Courier New, monospace", fontSize: 23, fontWeight: "bold", fill: 0xffeabd, lineHeight: 39 },
+    });
+    rules.position.set(285, 222);
+
+    const bonusBox = new Graphics().roundRect(276, 633, 1120, 137, 18)
+      .fill({ color: 0x321345, alpha: 1 }).stroke({ color: 0xd26aff, width: 4 });
+    const bonus = new Text({
+      text: "THREE WAYS INTO THE VAULT\n3+ BEARD COINS: Vault Heist  •  3+ VAULT DOORS: Vernon's Free Spins\nCollect 30 coins: Living Vault Hold & Respin • MINI 10× • MINOR 25× • MAJOR 100× • GRAND 500×.",
+      style: { fontFamily: "Arial Black, Arial", fontSize: 23, fontWeight: "bold", fill: 0xffe694, align: "center", lineHeight: 34 },
+    });
+    bonus.anchor.set(0.5); bonus.position.set(836, 701);
+    const close = new Graphics().roundRect(678, 790, 316, 48, 12)
+      .fill({ color: 0xefbd4d, alpha: 1 }).stroke({ color: 0xfff0a0, width: 3 });
+    close.eventMode = "static"; close.cursor = "pointer";
+    const closeText = new Text({ text: "RETURN TO GAME", style: { fontFamily: "Arial Black, Arial", fontSize: 20, fontWeight: "bold", fill: 0x241000 } });
+    closeText.anchor.set(0.5); closeText.position.set(836, 814);
+    close.on("pointertap", () => this.toggleRules());
+    shade.eventMode = "static";
+    overlay.addChild(shade, panel, title, intro, rules, bonusBox, bonus, close, closeText);
+    this.rulesOverlay = overlay;
+    this.addChild(overlay);
   }
 
   public setSpinEnabled(enabled: boolean): void {
     this.spinButton.eventMode = enabled ? "static" : "none";
-    this.spinButton.alpha = enabled ? 1 : 0.55;
+    this.spinButton.alpha = enabled ? 1 : 0.45;
   }
 
-  public setCredit(value: string): void {
-    this.creditValue.text = value;
+  public setBetEnabled(minusEnabled: boolean, plusEnabled: boolean): void {
+    this.betMinusButton.eventMode = minusEnabled ? "static" : "none";
+    this.betMinusButton.alpha = minusEnabled ? 1 : 0.38;
+    this.betPlusButton.eventMode = plusEnabled ? "static" : "none";
+    this.betPlusButton.alpha = plusEnabled ? 1 : 0.38;
   }
 
-  public setWin(value: string): void {
-    this.winValue.text = value;
+  public setCredit(value: string): void { this.creditValue.text = value; }
+  public setWin(value: string): void { this.winValue.text = value; }
+  public setStatus(value: string): void { this.statusValue.text = value; }
+  public setBet(value: string): void { this.betValue.text = value; }
+  public setVaultCharge(value: number): void {
+    const charge = Math.max(0, Math.min(30, value));
+    this.chargeValue.text = `${charge} / 30`;
+    this.chargeFill.clear().roundRect(704, 352, 264 * (charge / 30), 9, 5)
+      .fill({ color: 0xd86bff, alpha: 0.95 });
   }
 
-  public setStatus(value: string): void {
-    this.statusValue.text = value;
+  public async playVaultHeist(wagerUnits: number, triggerCoins: number): Promise<number> {
+    const overlay = new Container();
+    const shade = new Graphics().rect(0, 0, CABINET_WIDTH, CABINET_HEIGHT)
+      .fill({ color: 0x030106, alpha: 0.9 });
+    const panel = new Graphics().roundRect(286, 92, 1100, 750, 34)
+      .fill({ color: 0x13051f, alpha: 0.99 })
+      .stroke({ color: GOLD, width: 8, alpha: 1 });
+    const title = new Text({ text: "VAULT HEIST", style: { fontFamily: "Arial Black, Arial", fontSize: 76, fontWeight: "bold", fill: GOLD, stroke: { color: 0x4b126d, width: 10 }, letterSpacing: 5 } });
+    title.anchor.set(0.5); title.position.set(836, 174);
+    const coinTier = Math.max(3, Math.min(5, triggerCoins));
+    const maxPicks = coinTier === 3 ? 5 : coinTier === 4 ? 6 : 7;
+    const startingMultiplier = coinTier >= 4 ? 2 : 1;
+    const tierName = coinTier === 3 ? "STANDARD HEIST" : coinTier === 4 ? "DOUBLE-VAULT HEIST" : "GOLDEN HEIST";
+    const subtitle = new Text({ text: `${tierName} • ${coinTier}${triggerCoins > 5 ? "+" : ""} BEARD COINS\n${maxPicks} PICKS • ${startingMultiplier}× START • FIND THE GOLDEN KEY • DODGE 3 ALARMS`, style: { fontFamily: "Arial", fontSize: 25, fontWeight: "bold", fill: 0xf2d9ff, align: "center", lineHeight: 38, letterSpacing: 1 } });
+    subtitle.anchor.set(0.5); subtitle.position.set(836, 260);
+    const totalText = new Text({ text: "BONUS WIN  $0.00", style: { fontFamily: "Arial Black, Arial", fontSize: 34, fontWeight: "bold", fill: 0xffe4a0 } });
+    totalText.anchor.set(0.5); totalText.position.set(836, 768);
+    overlay.addChild(shade, panel, title, subtitle, totalText);
+    this.addChild(overlay);
+
+    // Values are assigned before the first choice. We reveal every unopened
+    // box at the end so the player's choice is visibly genuine.
+    const prizes = [1, 2, 3, 5, 8, 10, 2, 4, 6, -1, -1, -1, 12, 15, 20];
+    for (let i = prizes.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [prizes[i], prizes[j]] = [prizes[j]!, prizes[i]!];
+    }
+    let alarms = 0;
+    let total = 0;
+    let picks = 0;
+    let finished = false;
+    const boxes: Graphics[] = [];
+    const labels: Text[] = [];
+
+    return await new Promise<number>((resolve) => {
+      const revealLabel = (label: Text, prize: number, chosen: boolean): void => {
+        label.text = prize === -1 ? "ALARM" : prize === 20 ? "KEY" : `${prize}×`;
+        label.style.fill = prize === -1 ? 0xff5f67 : 0x9dffb0;
+        if (!chosen) label.alpha = 0.5;
+      };
+
+      const finish = (reason: "alarm" | "key" | "picks"): void => {
+        if (finished) return;
+        finished = true;
+        boxes.forEach((box) => { box.eventMode = "none"; });
+        prizes.forEach((prize, index) => {
+          if (labels[index]!.text.match(/^\d{2}$/)) revealLabel(labels[index]!, prize!, false);
+        });
+        if (reason === "alarm") subtitle.text = "THE ALARM SOUNDED — YOU KEEP EVERY CREDIT COLLECTED";
+        if (reason === "key") { subtitle.text = "GOLDEN KEY! VERNON DOUBLES THE HEIST"; total *= 2; }
+        if (reason === "picks") subtitle.text = "HEIST COMPLETE — ALL UNOPENED BOXES REVEALED";
+        total *= startingMultiplier;
+        totalText.text = `BONUS WIN  $${(total / 100).toFixed(2)}`;
+        const collect = new Graphics().roundRect(682, 792, 308, 58, 14)
+          .fill({ color: 0xefbd4d, alpha: 1 }).stroke({ color: 0xfff0a0, width: 4 });
+        const collectText = new Text({ text: "COLLECT BONUS", style: { fontFamily: "Arial Black, Arial", fontSize: 22, fontWeight: "bold", fill: 0x241000 } });
+        collectText.anchor.set(0.5); collectText.position.set(836, 821);
+        collect.eventMode = "static"; collect.cursor = "pointer";
+        collect.on("pointertap", () => { overlay.destroy({ children: true }); resolve(total); });
+        overlay.addChild(collect, collectText);
+      };
+
+      prizes.forEach((prize, index) => {
+        const col = index % 5; const row = Math.floor(index / 5);
+        const x = 382 + col * 184; const y = 336 + row * 130;
+        const box = new Graphics().roundRect(x, y, 154, 98, 14)
+          .fill({ color: 0x321345, alpha: 1 }).stroke({ color: 0xc88cff, width: 4 });
+        box.eventMode = "static"; box.cursor = "pointer";
+        const label = new Text({ text: String(index + 1).padStart(2, "0"), style: { fontFamily: "Arial Black, Arial", fontSize: 29, fill: GOLD } });
+        label.anchor.set(0.5); label.position.set(x + 77, y + 49);
+        box.on("pointertap", () => {
+          if (finished || box.eventMode === "none") return;
+          box.eventMode = "none";
+          picks += 1;
+          revealLabel(label, prize, true);
+          if (prize === -1) alarms += 1;
+          else if (prize !== 20) total += wagerUnits * prize;
+          totalText.text = `BONUS WIN  $${((total * startingMultiplier) / 100).toFixed(2)}   •   PICKS ${picks}/${maxPicks}   •   ALARMS ${alarms}/3`;
+          if (prize === 20) finish("key");
+          else if (alarms >= 3) finish("alarm");
+          else if (picks >= maxPicks) finish("picks");
+        });
+        boxes.push(box); labels.push(label); overlay.addChild(box, label);
+      });
+    });
   }
+
+  public async playVernonsFreeSpins(
+    triggerDoors: number,
+    runSpin: (multiplier: number) => Promise<VernonFreeSpinResult>,
+  ): Promise<number> {
+    const intro = this.featureShell("VERNON'S FREE SPINS", "REAL REELS • REAL 243-WAY WINS • NO WAGER DEDUCTED");
+    const initialSpins = 8 + Math.max(0, triggerDoors - 3) * 2;
+    intro.addChild(this.centerText(`${initialSpins} FREE SPINS`, 44, 0xbdf7ff, 330));
+    intro.addChild(this.centerText("VAULT DOORS CAN RETRIGGER • VERNON SYMBOLS GROW THE MULTIPLIER", 22, GOLD, 405));
+    this.addChild(intro);
+
+    await new Promise<void>((resolve) => {
+      const start = this.featureButton("START THE REELS", 650);
+      intro.addChild(start.button, start.label);
+      start.button.on("pointertap", () => { intro.destroy({ children: true }); resolve(); });
+    });
+
+    // The HUD leaves the reel window uncovered. The actual cabinet reels remain
+    // visible and animate for every awarded free spin.
+    const hud = new Container();
+    const hudBar = new Graphics().roundRect(294, 360, 1084, 62, 18)
+      .fill({ color: 0x09020f, alpha: 0.96 }).stroke({ color: 0xd26aff, width: 4 });
+    const spinsText = this.centerText("", 24, 0xbdf7ff, 390); spinsText.position.x = 500;
+    const multiplierText = this.centerText("", 25, GOLD, 390);
+    const winText = this.centerText("", 24, 0x9dffb0, 390); winText.position.x = 1170;
+    hud.addChild(hudBar, spinsText, multiplierText, winText); this.addChild(hud);
+
+    let remaining = initialSpins;
+    let played = 0;
+    let multiplier = 1;
+    let total = 0;
+    while (remaining > 0) {
+      remaining -= 1;
+      played += 1;
+      spinsText.text = `SPIN ${played} • ${remaining} LEFT`;
+      multiplierText.text = `VERNON ${multiplier}×`;
+      const result = await runSpin(multiplier);
+      total += result.awardUnits;
+      if (result.retriggerDoors >= 3) {
+        const added = result.retriggerDoors >= 5 ? 5 : 3;
+        remaining += added;
+        spinsText.text = `RETRIGGER +${added} • ${remaining} LEFT`;
+        await this.delay(900);
+      }
+      if (result.vernonCount >= 2) multiplier = Math.min(10, multiplier + 1);
+      multiplierText.text = `VERNON ${multiplier}×`;
+      winText.text = `FEATURE $${(total / 100).toFixed(2)}`;
+      await this.delay(350);
+    }
+    hud.destroy({ children: true });
+
+    const summary = this.featureShell("FREE SPINS COMPLETE", multiplier >= 5 ? "VERNON WENT FULL VAULTMASTER" : "THE VAULTMASTER HAS SPOKEN");
+    summary.addChild(this.centerText(`${played} ACTUAL REEL SPINS`, 30, 0xbdf7ff, 330));
+    summary.addChild(this.centerText(`FINAL MULTIPLIER  ${multiplier}×`, 30, GOLD, 405));
+    summary.addChild(this.centerText(`FEATURE WIN  $${(total / 100).toFixed(2)}`, 48, 0x9dffb0, 520));
+    this.addChild(summary);
+    return await new Promise<number>((resolve) => {
+      const collect = this.featureButton("COLLECT FREE SPINS", 650);
+      collect.button.on("pointertap", () => { summary.destroy({ children: true }); resolve(total); });
+      summary.addChild(collect.button, collect.label);
+    });
+  }
+
+  public async playLivingVaultRespin(wagerUnits: number, forced: { jackpot?: "mini"|"minor"|"major"|"grand"; fullGrid?: boolean } = {}): Promise<number> {
+    const overlay = this.featureShell("LIVING VAULT", "HOLD & RESPIN • THREE LIVES");
+    const livesText = this.centerText("RESPINS  ● ● ●", 30, 0x9dffdb, 268);
+    const actionText = this.centerText("PRESS START TO CRACK THE CHAMBERS", 19, 0xbdf7ff, 310);
+    const winText = this.centerText("LOCKED VALUE  $0.00", 37, GOLD, 705);
+    type VaultPrize = { label: string; multiple: number; color: number; textColor: number; jackpot: boolean };
+    const cells: { coin: Graphics; label: Text; locked: boolean; value: number; prize?: VaultPrize }[] = [];
+    for (let i = 0; i < 15; i += 1) {
+      const x = 464 + (i % 5) * 150; const y = 350 + Math.floor(i / 5) * 105;
+      const coin = new Graphics().circle(x, y, 39).fill({ color: 0x13091b }).stroke({ color: 0x613777, width: 4 });
+      const label = this.centerText("?", 22, 0x6e4a7d, y); label.position.x = x;
+      cells.push({ coin, label, locked: false, value: 0 }); overlay.addChild(coin, label);
+    }
+    overlay.addChild(livesText, actionText, winText); this.addChild(overlay);
+    return await new Promise<number>((resolve) => {
+      const start = this.featureButton("CRACK THE LIVING VAULT", 770); overlay.addChild(start.button, start.label);
+      start.button.on("pointertap", async () => {
+        start.button.eventMode = "none"; start.button.alpha = 0; start.label.alpha = 0;
+        let lives = 3; let total = 0; let first = true; let respin = 0;
+        while (lives > 0 && cells.some((cell) => !cell.locked)) {
+          respin += 1;
+          actionText.text = `RESPIN ${respin} • CHAMBERS SEARCHING…`;
+          const openCells = cells.filter((cell) => !cell.locked);
+          for (let pulse = 0; pulse < 6; pulse += 1) {
+            for (const cell of openCells) {
+              cell.label.text = ["◆", "?", "✦"][this.randomInt(3)]!;
+              cell.label.style.fill = pulse % 2 ? 0x9dffdb : 0xd26aff;
+              cell.coin.alpha = pulse % 2 ? 0.62 : 1;
+            }
+            await this.delay(110 + pulse * 18);
+          }
+          const hits = forced.fullGrid ? openCells : openCells.filter(() => this.randomInt(100) < (first ? 42 : 18));
+          for (const cell of openCells) {
+            if (hits.includes(cell)) continue;
+            cell.label.text = "?"; cell.label.style.fill = 0x6e4a7d; cell.coin.alpha = 1;
+          }
+          for (const [hitIndex, cell] of hits.entries()) {
+            cell.locked = true;
+            const roll = this.randomInt(10_000);
+            const forcedMultiple = first && hitIndex === 0 && forced.jackpot ? ({ mini: 10, minor: 25, major: 100, grand: 500 } as const)[forced.jackpot] : undefined;
+            const forcedLabel = forced.jackpot?.toUpperCase();
+            const prize: VaultPrize = forcedMultiple
+              ? { label: forcedLabel!, multiple: forcedMultiple, color: forced.jackpot === "grand" ? 0xfff2a0 : forced.jackpot === "major" ? 0xff4f63 : forced.jackpot === "minor" ? 0x38dcff : 0xb56cff, textColor: forced.jackpot === "grand" ? 0x5a1800 : forced.jackpot === "minor" ? 0x031b32 : 0xffffff, jackpot: true }
+              : roll < 8
+              ? { label: "GRAND", multiple: 500, color: 0xfff2a0, textColor: 0x5a1800, jackpot: true }
+              : roll < 48
+                ? { label: "MAJOR", multiple: 100, color: 0xff4f63, textColor: 0xffffff, jackpot: true }
+                : roll < 168
+                  ? { label: "MINOR", multiple: 25, color: 0x38dcff, textColor: 0x031b32, jackpot: true }
+                  : roll < 468
+                    ? { label: "MINI", multiple: 10, color: 0xb56cff, textColor: 0xffffff, jackpot: true }
+                    : roll < 5_500
+                      ? { label: "1×", multiple: 1, color: 0xffce52, textColor: 0x241000, jackpot: false }
+                      : roll < 8_100
+                        ? { label: "2×", multiple: 2, color: 0xffce52, textColor: 0x241000, jackpot: false }
+                        : roll < 9_550
+                          ? { label: "5×", multiple: 5, color: 0xffce52, textColor: 0x241000, jackpot: false }
+                          : { label: "10×", multiple: 10, color: 0xffce52, textColor: 0x241000, jackpot: false };
+            cell.prize = prize;
+            cell.value = wagerUnits * prize.multiple; total += cell.value; cell.label.text = prize.label; cell.label.style.fill = prize.textColor;
+            cell.label.style.fontSize = prize.jackpot ? 15 : 22;
+            cell.coin.clear().circle(cell.label.x, cell.label.y, 39).fill({ color: prize.color }).stroke({ color: prize.jackpot ? 0xffffff : 0xffffb0, width: prize.jackpot ? 7 : 5 });
+            cell.coin.alpha = 0.45; cell.label.alpha = 0.45;
+            actionText.text = prize.jackpot ? `${prize.label} JACKPOT COIN! • ${prize.multiple}× BET` : `${prize.multiple}× LOCKED • RESPINS RESET TO THREE!`;
+            winText.text = `LOCKED VALUE  $${(total / 100).toFixed(2)}`;
+            if (prize.jackpot) {
+              livesText.text = `${prize.label} JACKPOT • $${(cell.value / 100).toFixed(2)}`;
+              for (let flash = 0; flash < 6; flash += 1) {
+                cell.coin.alpha = flash % 2 ? 0.45 : 1;
+                cell.label.alpha = flash % 2 ? 0.55 : 1;
+                cell.coin.scale.set(flash % 2 ? 1.14 : 1);
+                await this.delay(145);
+              }
+              cell.coin.scale.set(1);
+            } else await this.delay(330);
+            cell.coin.alpha = 1; cell.label.alpha = 1;
+          }
+          first = false; lives = hits.length ? 3 : lives - 1;
+          livesText.text = `RESPINS  ${"● ".repeat(lives)}${"○ ".repeat(3 - lives)}`; winText.text = `LOCKED VALUE  $${(total / 100).toFixed(2)}`;
+          actionText.text = hits.length ? `${hits.length} NEW COIN${hits.length === 1 ? "" : "S"} • THREE LIVES RESTORED` : lives ? `NO COIN • ${lives} RESPIN${lives === 1 ? "" : "S"} REMAIN` : "FINAL RESPIN MISSED • VAULT SEALING";
+          await this.delay(hits.length ? 850 : 1050);
+        }
+        if (cells.every((cell) => cell.locked)) { total += wagerUnits * 500; livesText.text = "GRAND VAULT FILLED • +500×"; actionText.text = "EVERY CHAMBER LOCKED • GRAND VAULT JACKPOT"; }
+        else { livesText.text = "VAULT SEALED • EVERY LOCKED COIN PAYS"; actionText.text = `${cells.filter((cell) => cell.locked).length} OF 15 CHAMBERS LOCKED`; }
+        winText.text = `LIVING VAULT WIN  $${(total / 100).toFixed(2)}`;
+        const collect = this.featureButton("COLLECT VAULT WIN", 770); collect.button.on("pointertap", () => { overlay.destroy({ children: true }); resolve(total); }); overlay.addChild(collect.button, collect.label);
+      });
+    });
+  }
+
+  private featureShell(titleText: string, subtitleText: string): Container {
+    const overlay = new Container();
+    const shade = new Graphics().rect(0, 0, CABINET_WIDTH, CABINET_HEIGHT).fill({ color: 0x020104, alpha: 0.94 });
+    const panel = new Graphics().roundRect(286, 72, 1100, 798, 36).fill({ color: 0x14051f }).stroke({ color: GOLD, width: 8 });
+    const title = this.centerText(titleText, 66, GOLD, 150); title.style.stroke = { color: 0x4b126d, width: 9 };
+    const subtitle = this.centerText(subtitleText, 23, 0xe7c9f7, 214);
+    overlay.addChild(shade, panel, title, subtitle); return overlay;
+  }
+
+  private centerText(text: string, size: number, fill: number, y: number): Text {
+    const label = new Text({ text, style: { fontFamily: "Arial Black, Arial", fontSize: size, fontWeight: "bold", fill, align: "center", letterSpacing: 2 } }); label.anchor.set(0.5); label.position.set(836, y); return label;
+  }
+
+  private featureButton(text: string, y: number): { button: Graphics; label: Text } {
+    const button = new Graphics().roundRect(636, y, 400, 62, 15).fill({ color: 0xefbd4d }).stroke({ color: 0xfff0a0, width: 4 }); button.eventMode = "static"; button.cursor = "pointer";
+    const label = this.centerText(text, 22, 0x241000, y + 31); return { button, label };
+  }
+
+  private randomInt(max: number): number { const values = new Uint32Array(1); crypto.getRandomValues(values); return values[0]! % max; }
+  private delay(ms: number): Promise<void> { return new Promise((resolve) => window.setTimeout(resolve, ms)); }
 
   public spinTo(matrix: readonly (readonly string[])[]): Promise<void> {
     this.reelSet.resetWinPresentation();
@@ -100,459 +444,164 @@ export class Cabinet extends Container {
   }
 
   private build(): void {
-    this.buildAmbientGlow();
-    this.buildOuterCabinet();
-    this.buildJackpotTopper();
-    this.buildMarquee();
-    this.buildReelWindow();
-    this.buildControlDeck();
+    const cabinet = Sprite.from(
+      new URL("../../assets/beard-bank-2040-cabinet.png", import.meta.url).href,
+    );
+    cabinet.width = CABINET_WIDTH;
+    cabinet.height = CABINET_HEIGHT;
+    this.addChild(cabinet);
+
+    this.buildReels();
+    this.buildLivingEnergy();
+    this.buildControls();
   }
 
-  private buildAmbientGlow(): void {
-    const glowLarge = new Graphics()
-      .ellipse(550, 360, 560, 330)
-      .fill({
-        color: COLORS.brightPurple,
-        alpha: 0.16,
-      });
+  private buildReels(): void {
+    const blackout = new Graphics()
+      .roundRect(this.reelBounds.x - 5, this.reelBounds.y - 5, this.reelBounds.width + 10, this.reelBounds.height + 10, 16)
+      .fill({ color: 0x050209, alpha: 0.99 })
+      .stroke({ color: GOLD, width: 5, alpha: 0.9 });
 
-    const glowGold = new Graphics()
-      .ellipse(550, 320, 470, 250)
-      .fill({
-        color: COLORS.gold,
-        alpha: 0.07,
-      });
+    const purpleWell = new Graphics()
+      .roundRect(this.reelBounds.x + 4, this.reelBounds.y + 4, this.reelBounds.width - 8, this.reelBounds.height - 8, 12)
+      .fill({ color: 0x10051a, alpha: 1 })
+      .stroke({ color: PURPLE, width: 3, alpha: 0.7 });
 
-    this.addChild(glowLarge, glowGold);
-  }
-
-  private buildOuterCabinet(): void {
-    const shadow = new Graphics()
-      .roundRect(28, 32, 1044, 670, 44)
-      .fill({
-        color: 0x000000,
-        alpha: 0.65,
-      });
-
-    const outerFrame = new Graphics()
-      .roundRect(20, 20, 1060, 670, 44)
-      .fill(COLORS.cabinetPurple)
-      .stroke({
-        color: COLORS.gold,
-        width: 8,
-      });
-
-    const outerHighlight = new Graphics()
-      .roundRect(32, 32, 1036, 646, 35)
-      .stroke({
-        color: COLORS.brightGold,
-        width: 2,
-        alpha: 0.75,
-      });
-
-    const innerShell = new Graphics()
-      .roundRect(48, 48, 1004, 610, 28)
-      .fill(COLORS.backgroundPurple)
-      .stroke({
-        color: COLORS.darkGold,
-        width: 3,
-      });
-
-    this.addChild(
-      shadow,
-      outerFrame,
-      outerHighlight,
-      innerShell,
-    );
-  }
-
-  private buildJackpotTopper(): void {
-    const grandPanel = this.createJackpotPanel({
-      x: 70,
-      y: 65,
-      width: 450,
-      height: 82,
-      label: "GRAND",
-      amount: "$10,000.00",
-      color: COLORS.red,
-      amountSize: 38,
-    });
-
-    const majorPanel = this.createJackpotPanel({
-      x: 580,
-      y: 65,
-      width: 450,
-      height: 82,
-      label: "MAJOR",
-      amount: "$5,000.00",
-      color: COLORS.blue,
-      amountSize: 38,
-    });
-
-    const minorPanel = this.createJackpotPanel({
-      x: 70,
-      y: 157,
-      width: 255,
-      height: 68,
-      label: "MINOR",
-      amount: "$500.00",
-      color: COLORS.green,
-      amountSize: 27,
-    });
-
-    const vaultPanel = this.createVaultPanel();
-
-    const miniPanel = this.createJackpotPanel({
-      x: 775,
-      y: 157,
-      width: 255,
-      height: 68,
-      label: "MINI",
-      amount: "$50.00",
-      color: COLORS.pink,
-      amountSize: 27,
-    });
-
-    this.addChild(
-      grandPanel,
-      majorPanel,
-      minorPanel,
-      vaultPanel,
-      miniPanel,
-    );
-  }
-
-  private createJackpotPanel(options: {
-    readonly x: number;
-    readonly y: number;
-    readonly width: number;
-    readonly height: number;
-    readonly label: string;
-    readonly amount: string;
-    readonly color: number;
-    readonly amountSize: number;
-  }): Container {
-    const panel = new Container();
-
-    const shadow = new Graphics()
-      .roundRect(
-        options.x + 5,
-        options.y + 6,
-        options.width,
-        options.height,
-        14,
-      )
-      .fill({
-        color: 0x000000,
-        alpha: 0.7,
-      });
-
-    const frame = new Graphics()
-      .roundRect(
-        options.x,
-        options.y,
-        options.width,
-        options.height,
-        14,
-      )
-      .fill(COLORS.deepBlack)
-      .stroke({
-        color: COLORS.gold,
-        width: 4,
-      });
-
-    const innerGlow = new Graphics()
-      .roundRect(
-        options.x + 6,
-        options.y + 6,
-        options.width - 12,
-        options.height - 12,
-        10,
-      )
-      .stroke({
-        color: options.color,
-        width: 4,
-        alpha: 0.8,
-      });
-
-    const label = new Text({
-      text: options.label,
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 18,
-        fontWeight: "bold",
-        fill: options.color,
-        letterSpacing: 3,
-      },
-    });
-
-    label.anchor.set(0.5);
-    label.position.set(
-      options.x + options.width / 2,
-      options.y + 20,
-    );
-
-    const amount = new Text({
-      text: options.amount,
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: options.amountSize,
-        fontWeight: "bold",
-        fill: COLORS.brightGold,
-      },
-    });
-
-    amount.anchor.set(0.5);
-    amount.position.set(
-      options.x + options.width / 2,
-      options.y + options.height - 28,
-    );
-
-    panel.addChild(
-      shadow,
-      frame,
-      innerGlow,
-      label,
-      amount,
-    );
-
-    return panel;
-  }
-
-  private createVaultPanel(): Container {
-    const vault = new LivingVault();
-
-    vault.position.set(345, 155);
-
-    return vault;
-  }
-
-  private buildMarquee(): void {
-    const marquee = new Graphics()
-      .roundRect(95, 240, 910, 48, 13)
-      .fill(COLORS.panelPurple)
-      .stroke({
-        color: COLORS.darkGold,
-        width: 3,
-      });
-
-    const title = new Text({
-      text: "BEARD BANK",
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 25,
-        fontWeight: "bold",
-        fill: COLORS.brightGold,
-        letterSpacing: 8,
-      },
-    });
-
-    title.anchor.set(0.5);
-    title.position.set(550, 263);
-
-    this.addChild(marquee, title);
-  }
-
-  private buildReelWindow(): void {
-    const reelShadow = new Graphics()
-      .roundRect(
-        this.reelBounds.x + 7,
-        this.reelBounds.y + 9,
-        this.reelBounds.width,
-        this.reelBounds.height,
-        24,
-      )
-      .fill({
-        color: 0x000000,
-        alpha: 0.8,
-      });
-
-    const reelFrame = new Graphics()
-      .roundRect(
-        this.reelBounds.x,
-        this.reelBounds.y,
-        this.reelBounds.width,
-        this.reelBounds.height,
-        24,
-      )
-      .fill(COLORS.deepBlack)
-      .stroke({
-        color: COLORS.gold,
-        width: 6,
-      });
-
-    const innerFrame = new Graphics()
-      .roundRect(
-        this.reelBounds.x + 10,
-        this.reelBounds.y + 10,
-        this.reelBounds.width - 20,
-        this.reelBounds.height - 20,
-        18,
-      )
-      .stroke({
-        color: COLORS.brightGold,
-        width: 2,
-        alpha: 0.65,
-      });
-
-    this.addChild(
-      reelShadow,
-      reelFrame,
-      innerFrame,
-    );
-
-    const reelPadding = 18;
-
-    this.reelSet = new ReelSet(
-      this.reelBounds.width - reelPadding * 2,
-      this.reelBounds.height - reelPadding * 2,
-    );
-
-    this.reelSet.position.set(
-      this.reelBounds.x + reelPadding,
-      this.reelBounds.y + reelPadding,
-    );
-
+    this.addChild(blackout, purpleWell);
+    this.reelSet = new ReelSet(this.reelBounds.width - 16, this.reelBounds.height - 16);
+    this.reelSet.position.set(this.reelBounds.x + 8, this.reelBounds.y + 8);
     this.addChild(this.reelSet);
 
-    this.buildGlassReflection();
+    const glass = new Graphics()
+      .moveTo(this.reelBounds.x + 18, this.reelBounds.y + 12)
+      .lineTo(this.reelBounds.x + this.reelBounds.width * 0.72, this.reelBounds.y + 12)
+      .lineTo(this.reelBounds.x + this.reelBounds.width * 0.54, this.reelBounds.y + 82)
+      .lineTo(this.reelBounds.x + 18, this.reelBounds.y + 82)
+      .closePath()
+      .fill({ color: 0xffffff, alpha: 0.045 });
+    this.addChild(glass);
   }
 
-  private buildGlassReflection(): void {
-    const reflection = new Graphics()
-      .roundRect(
-        this.reelBounds.x + 15,
-        this.reelBounds.y + 14,
-        this.reelBounds.width - 30,
-        54,
-        12,
-      )
-      .fill({
-        color: 0xffffff,
-        alpha: 0.035,
-      });
+  private buildLivingEnergy(): void {
+    this.energy
+      .ellipse(836, 213, 170, 190)
+      .stroke({ color: PURPLE, width: 9, alpha: 0.34 });
+    this.addChild(this.energy);
 
-    this.addChild(reflection);
-  }
-
-  private buildControlDeck(): void {
-    const deck = new Graphics()
-      .roundRect(70, 610, 960, 58, 18)
-      .fill(COLORS.deepBlack)
-      .stroke({ color: COLORS.darkGold, width: 3 });
-
-    this.addChild(deck);
-
-    const creditReadout = this.createReadout("CREDIT", "$100.00", 88, 620, 210);
-    const betReadout = this.createReadout("BET", "$1.00", 310, 620, 170);
-    const winReadout = this.createReadout("WIN", "$0.00", 492, 620, 190);
-    this.creditValue = creditReadout.valueText;
-    this.winValue = winReadout.valueText;
-    this.addChild(creditReadout.container, betReadout.container, winReadout.container);
-
-    const statusPanel = new Graphics()
-      .roundRect(695, 620, 115, 38, 12)
-      .fill(COLORS.panelPurple)
-      .stroke({ color: COLORS.brightPurple, width: 2 });
-
-    this.statusValue = new Text({
-      text: "READY",
+    this.chargeValue = new Text({
+      text: "1 / 30",
       style: {
         fontFamily: "Arial Black, Arial",
-        fontSize: 13,
+        fontSize: 17,
         fontWeight: "bold",
-        fill: COLORS.cream,
-        letterSpacing: 0.5,
+        fill: 0xe89aff,
+        letterSpacing: 3,
+        stroke: { color: 0x16041f, width: 4 },
       },
     });
+    this.chargeValue.anchor.set(0.5);
+    this.chargeValue.position.set(836, 326);
+    const chargeBadge = new Graphics()
+      .roundRect(700, 304, 272, 64, 13)
+      .fill({ color: 0x16041f, alpha: 1 })
+      .stroke({ color: 0xb865e8, width: 2, alpha: 0.9 });
+    const track = new Graphics().roundRect(700, 348, 272, 17, 9).fill({ color: 0x08030d, alpha: 1 }).stroke({ color: 0xb865e8, width: 2 });
+    this.chargeFill = new Graphics();
+    this.addChild(chargeBadge, track, this.chargeFill, this.chargeValue);
+    this.setVaultCharge(0);
+  }
+
+  private buildControls(): void {
+    const deck = new Graphics()
+      .roundRect(148, 870, 1380, 58, 13)
+      .fill({ color: 0x08030d, alpha: 0.96 })
+      .stroke({ color: 0xc9942f, width: 3, alpha: 0.9 });
+    this.addChild(deck);
+
+    const credit = this.readout("CREDIT", "$100.00", 170, 878, 250);
+    const bet = this.readout("BET", "$1.00", 438, 878, 250);
+    const win = this.readout("WIN", "$0.00", 706, 878, 270);
+    this.creditValue = credit.value;
+    this.betValue = bet.value;
+    this.winValue = win.value;
+    this.addChild(credit.container, bet.container, win.container);
+
+    const statusBox = new Graphics()
+      .roundRect(994, 879, 150, 40, 10)
+      .fill({ color: 0x1e0b2d, alpha: 0.97 })
+      .stroke({ color: 0x8f4bc2, width: 2 });
+    this.statusValue = new Text({
+      text: "READY",
+      style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: 0xd8a5ff, letterSpacing: 1 },
+    });
     this.statusValue.anchor.set(0.5);
-    this.statusValue.position.set(752.5, 639);
+    this.statusValue.position.set(1069, 899);
 
-    const spinGlow = new Graphics()
-      .roundRect(823, 615, 186, 48, 16)
-      .fill({ color: COLORS.gold, alpha: 0.18 });
+    this.betMinusButton = new Graphics().roundRect(1158, 876, 54, 46, 11)
+      .fill({ color: 0x351044, alpha: 1 }).stroke({ color: 0xd898ff, width: 3 });
+    this.betPlusButton = new Graphics().roundRect(1222, 876, 54, 46, 11)
+      .fill({ color: 0x351044, alpha: 1 }).stroke({ color: 0xd898ff, width: 3 });
+    const betMinusText = new Text({ text: "−", style: { fontFamily: "Arial Black", fontSize: 29, fill: 0xffe7a0 } });
+    betMinusText.anchor.set(0.5); betMinusText.position.set(1185, 899);
+    const betPlusText = new Text({ text: "+", style: { fontFamily: "Arial Black", fontSize: 27, fill: 0xffe7a0 } });
+    betPlusText.anchor.set(0.5); betPlusText.position.set(1249, 899);
 
-    this.spinButton = new Container();
-    this.spinButton.position.set(830, 620);
-    this.spinButton.hitArea = new Rectangle(0, 0, 172, 38);
-
-    const spinFace = new Graphics()
-      .roundRect(0, 0, 172, 38, 13)
-      .fill(COLORS.gold)
-      .stroke({ color: COLORS.brightGold, width: 3 });
+    this.spinButton = new Graphics()
+      .roundRect(1292, 873, 350, 50, 13)
+      .fill({ color: 0xffc744, alpha: 0.88 })
+      .stroke({ color: 0xffef9d, width: 4, alpha: 0.95 });
 
     const spinText = new Text({
       text: "SPIN",
       style: {
         fontFamily: "Arial Black, Arial",
-        fontSize: 19,
+        fontSize: 34,
         fontWeight: "bold",
-        fill: COLORS.backgroundPurple,
-        letterSpacing: 2,
+        fill: 0x2b1300,
+        letterSpacing: 5,
+        stroke: { color: 0xffe793, width: 3 },
       },
     });
     spinText.anchor.set(0.5);
-    spinText.position.set(86, 19);
-    spinText.eventMode = "none";
-    spinFace.eventMode = "none";
-    this.spinButton.addChild(spinFace, spinText);
+    spinText.position.set(1467, 899);
+    this.addChild(statusBox, this.statusValue, this.betMinusButton, this.betPlusButton, betMinusText, betPlusText, this.spinButton, spinText);
 
-    this.addChild(statusPanel, this.statusValue, spinGlow, this.spinButton);
+    this.homeButton = new Graphics().roundRect(20, 20, 170, 48, 12).fill({ color: 0x13051f, alpha: 0.92 }).stroke({ color: GOLD, width: 3 });
+    const homeText = new Text({ text: "CASINO LOBBY", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: GOLD } });
+    homeText.anchor.set(0.5); homeText.position.set(105, 44);
+    this.infoButton = new Graphics().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f, alpha: 0.96 }).stroke({ color: GOLD, width: 3 });
+    const infoText = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
+    infoText.anchor.set(0.5); infoText.position.set(1542, 44);
+    this.addChild(this.homeButton, homeText, this.infoButton, infoText);
   }
 
-  private createReadout(
-    label: string,
-    value: string,
-    x: number,
-    y: number,
-    width: number,
-  ): { readonly container: Container; readonly valueText: Text } {
+  private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {
     const container = new Container();
-
     const box = new Graphics()
-      .roundRect(x, y, width, 38, 11)
-      .fill(0x100718)
-      .stroke({
-        color: 0x5e3b76,
-        width: 2,
-      });
-
+      .roundRect(x, y, width, 42, 9)
+      .fill({ color: 0x0b0511, alpha: 1 })
+      .stroke({ color: 0x5d316f, width: 2 });
     const labelText = new Text({
       text: label,
-      style: {
-        fontFamily: "Arial",
-        fontSize: 12,
-        fontWeight: "bold",
-        fill: COLORS.gold,
-      },
+      style: { fontFamily: "Arial", fontSize: 13, fontWeight: "bold", fill: 0xcdbb94, letterSpacing: 1 },
     });
-
-    labelText.position.set(
-      x + 14,
-      y + 5,
-    );
-
-    const valueText = new Text({
-      text: value,
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 17,
-        fontWeight: "bold",
-        fill: COLORS.cream,
-      },
+    labelText.position.set(x + 16, y + 5);
+    const value = new Text({
+      text: initial,
+      style: { fontFamily: "Arial Black, Arial", fontSize: 21, fontWeight: "bold", fill: 0xffe4a0 },
     });
-
-    valueText.position.set(
-      x + 14,
-      y + 17,
-    );
-
-    container.addChild(
-      box,
-      labelText,
-      valueText,
-    );
-
-    return { container, valueText };
+    value.position.set(x + width - 18, y + 10);
+    value.anchor.set(1, 0);
+    container.addChild(box, labelText, value);
+    return { container, value };
   }
+
+  private readonly animate = (ticker: Ticker): void => {
+    this.elapsed += ticker.deltaMS / 1000;
+    const pulse = (Math.sin(this.elapsed * 2.2) + 1) / 2;
+    this.energy.alpha = 0.45 + pulse * 0.55;
+    this.energy.scale.set(0.985 + pulse * 0.02);
+    this.energy.pivot.set(836, 213);
+    this.energy.position.set(836, 213);
+  };
 }
