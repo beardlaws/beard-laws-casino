@@ -1,0 +1,19 @@
+.math-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+.math-report-grid p {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #ffd86b52;
+  border-radius: 12px;
+  background: #10051bb8;
+}
+.math-report-grid span { color: #d9bce8; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.math-report-grid strong { color: #ffe49a; font-size: 22px; }
+@media (max-width: 620px) { .math-report-grid { grid-template-columns: 1fr; } }

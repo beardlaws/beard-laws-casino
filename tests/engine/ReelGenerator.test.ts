@@ -13,6 +13,6 @@ describe('ReelGenerator', () => {
 
     expect(result.stops).toEqual([0, 1, 2, 3, 4]);
     expect(result.matrix).toHaveLength(5);
-    expect(result.matrix[0]).toEqual(['comb', 'oil', 'comb']);
+    expect(result.matrix[0]).toEqual(['comb', 'razor', 'oil']);
   });
 });

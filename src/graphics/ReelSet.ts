@@ -5,11 +5,16 @@ import { SymbolView, type BeardBankSymbolId } from "./SymbolView";
 const SYMBOL_IDS: readonly BeardBankSymbolId[] = [
   "beard-coin",
   "oil",
+  "razor",
+  "balm",
   "crown",
+  "vault-crest",
+  "luxury-kit",
   "comb",
   "vernon",
   "vault-door",
   "gold-crest",
+  "jackpot-key",
 ];
 
 const REEL_COUNT = 5;
@@ -60,16 +65,38 @@ export class ReelSet extends Container {
       reel.blur.strengthY = 0;
     }
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       let previousTime = startedAt;
+      let settled = false;
+      const watchdog = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try {
+          this.forceLand(matrix);
+        } catch (landingError: unknown) {
+          console.error("Reel watchdog could not force-land every symbol", landingError);
+        } finally {
+          reject(new Error("Reel animation timed out. Please spin again."));
+        }
+      }, 8_000);
+
+      const finish = (error?: unknown): void => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(watchdog);
+        if (error) reject(error);
+        else resolve();
+      };
 
       const frame = (now: number): void => {
-        const elapsed = now - startedAt;
-        const delta = Math.min(32, now - previousTime);
-        previousTime = now;
-        let allStopped = true;
+        if (settled) return;
+        try {
+          const elapsed = now - startedAt;
+          const delta = Math.min(32, now - previousTime);
+          previousTime = now;
+          let allStopped = true;
 
-        for (let reelIndex = 0; reelIndex < this.reels.length; reelIndex += 1) {
+          for (let reelIndex = 0; reelIndex < this.reels.length; reelIndex += 1) {
           const reel = this.reels[reelIndex]!;
           const decelerationStart = reel.stopAt - DECELERATION_MS;
           const landingEnd = reel.stopAt + LANDING_MS;
@@ -109,18 +136,43 @@ export class ReelSet extends Container {
             reel.blur.strengthX = 0;
             reel.blur.strengthY = 0;
           }
-        }
+          }
 
-        if (allStopped) {
-          resolve();
-          return;
-        }
+          if (allStopped) {
+            finish();
+            return;
+          }
 
-        window.requestAnimationFrame(frame);
+          window.requestAnimationFrame(frame);
+        } catch (error: unknown) {
+          try {
+            this.forceLand(matrix);
+          } catch (landingError: unknown) {
+            console.error("Reel animation recovery could not force-land every symbol", landingError);
+          } finally {
+            finish(error);
+          }
+        }
       };
 
       window.requestAnimationFrame(frame);
     });
+  }
+
+  private forceLand(matrix: readonly (readonly string[])[]): void {
+    for (let reelIndex = 0; reelIndex < this.reels.length; reelIndex += 1) {
+      const reel = this.reels[reelIndex]!;
+      try {
+        this.landReel(reelIndex, matrix);
+      } catch (error: unknown) {
+        // Continue unlocking the remaining reels even if one symbol is bad.
+        console.error(`Could not force-land reel ${reelIndex + 1}`, error);
+      }
+      reel.stopped = true;
+      reel.symbolLayer.y = 0;
+      reel.blur.strengthX = 0;
+      reel.blur.strengthY = 0;
+    }
   }
 
 

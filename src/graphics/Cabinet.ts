@@ -23,11 +23,14 @@ const PURPLE = 0xa943ff;
 export class Cabinet extends Container {
   private reelSet!: ReelSet;
   private spinButton!: Graphics;
+  private spinText!: Text;
+  private autoButton!: Graphics;
+  private autoText!: Text;
+  private autoMenu: Container | undefined;
+  private autoActive = false;
   private creditValue!: Text;
   private winValue!: Text;
   private statusValue!: Text;
-  private chargeValue!: Text;
-  private chargeFill!: Graphics;
   private homeButton!: Graphics;
   private infoButton!: Graphics;
   private betMinusButton!: Graphics;
@@ -64,6 +67,26 @@ export class Cabinet extends Container {
     this.spinButton.cursor = "pointer";
     this.spinButton.removeAllListeners("pointertap");
     this.spinButton.on("pointertap", handler);
+  }
+
+  public onAutoSelect(handler: (spins: number | "infinite") => void): void {
+    this.autoButton.eventMode = "static";
+    this.autoButton.cursor = "pointer";
+    this.autoButton.removeAllListeners("pointertap");
+    this.autoButton.on("pointertap", () => {
+      if (this.autoActive) handler("infinite");
+      else this.toggleAutoMenu(handler);
+    });
+  }
+
+  public setAutoState(active: boolean, remaining?: number): void {
+    this.autoActive = active;
+    this.autoText.text = active
+      ? `STOP AUTO${remaining === undefined ? " ∞" : ` ${remaining}`}`
+      : "AUTO SPIN";
+    this.autoText.scale.set(1);
+    if (this.autoText.width > 102) this.autoText.scale.set(102 / this.autoText.width);
+    this.autoButton.tint = active ? 0xff755c : 0xffffff;
   }
 
   public onHome(handler: () => void): void {
@@ -115,14 +138,14 @@ export class Cabinet extends Container {
     const rules = new Text({
       text: [
         "SYMBOL                         3 REELS       4 REELS       5 REELS",
-        "VAULTMASTER VERNON             0.20×          0.60×          1.50×",
-        "CROWN                          0.15×          0.40×          1.00×",
-        "BEARD COIN                     0.10×          0.30×          0.80×",
-        "BEARD OIL                      0.075×         0.15×          0.35×",
-        "COMB                           0.05×          0.10×          0.20×",
+        "LUXURY KIT                     0.55×          4.76×         21.42×",
+        "VAULT CREST                    0.40×          3.332×        13.09×",
+        "CROWN                          0.30×          2.38×          8.925×",
+        "OIL / BALM / RAZOR / COMB      —              0.595×+         1.785×+",
         "",
-        "GOLD CREST • WILD: substitutes for all paying symbols.",
-        "WAYS WINS: matching symbols on 3+ adjacent reels, starting on reel 1.",
+        "GOLD CREST • WILD: substitutes for all ordinary paying symbols.",
+        "PREMIUMS PAY ON 3+ REELS • LOW SYMBOLS PAY ON 4+ REELS.",
+        "COINS, VERNON, DOORS & KEYS DO NOT CREATE ORDINARY WAYS WINS.",
         "Multiple matching positions create multiple ways; awards are added together.",
       ].join("\n"),
       style: { fontFamily: "Courier New, monospace", fontSize: 23, fontWeight: "bold", fill: 0xffeabd, lineHeight: 39 },
@@ -132,7 +155,7 @@ export class Cabinet extends Container {
     const bonusBox = new Graphics().roundRect(276, 633, 1120, 137, 18)
       .fill({ color: 0x321345, alpha: 1 }).stroke({ color: 0xd26aff, width: 4 });
     const bonus = new Text({
-      text: "THREE WAYS INTO THE VAULT\n3+ BEARD COINS: Vault Heist  •  3+ VAULT DOORS: Vernon's Free Spins\nCollect 30 coins: Living Vault Hold & Respin • MINI 10× • MINOR 25× • MAJOR 100× • GRAND 500×.",
+      text: "THREE WAYS INTO THE VAULT\n3+ BEARD COINS: Vault Heist  •  STACKED VAULT DOORS: Vernon's Free Spins\nBEARD COINS awaken the hidden Living Vault • MINI 10× • MINOR 25× • MAJOR 100× • GRAND 500×.",
       style: { fontFamily: "Arial Black, Arial", fontSize: 23, fontWeight: "bold", fill: 0xffe694, align: "center", lineHeight: 34 },
     });
     bonus.anchor.set(0.5); bonus.position.set(836, 701);
@@ -153,6 +176,39 @@ export class Cabinet extends Container {
     this.spinButton.alpha = enabled ? 1 : 0.45;
   }
 
+  private toggleAutoMenu(handler: (spins: number | "infinite") => void): void {
+    if (this.autoMenu) {
+      this.autoMenu.destroy({ children: true });
+      this.autoMenu = undefined;
+      return;
+    }
+
+    const menu = new Container();
+    const panel = new Graphics().roundRect(1060, 730, 468, 126, 17)
+      .fill({ color: 0x100619, alpha: 0.98 }).stroke({ color: GOLD, width: 4 });
+    const title = new Text({ text: "CHOOSE AUTO SPINS", style: { fontFamily: "Arial Black, Arial", fontSize: 18, fontWeight: "bold", fill: GOLD } });
+    title.anchor.set(0.5); title.position.set(1294, 757);
+    menu.addChild(panel, title);
+    const choices: readonly (number | "infinite")[] = [5, 10, 25, 50, "infinite"];
+    choices.forEach((choice, index) => {
+      const x = 1080 + index * 86;
+      const button = new Graphics().roundRect(x, 778, 70, 52, 10)
+        .fill({ color: choice === "infinite" ? 0x6d2c91 : 0x301041, alpha: 1 })
+        .stroke({ color: 0xe2adff, width: 2 });
+      button.eventMode = "static"; button.cursor = "pointer";
+      const label = new Text({ text: choice === "infinite" ? "∞" : String(choice), style: { fontFamily: "Arial Black, Arial", fontSize: 22, fontWeight: "bold", fill: 0xffe7a0 } });
+      label.anchor.set(0.5); label.position.set(x + 35, 804);
+      button.on("pointertap", () => {
+        menu.destroy({ children: true });
+        this.autoMenu = undefined;
+        handler(choice);
+      });
+      menu.addChild(button, label);
+    });
+    this.autoMenu = menu;
+    this.addChild(menu);
+  }
+
   public setBetEnabled(minusEnabled: boolean, plusEnabled: boolean): void {
     this.betMinusButton.eventMode = minusEnabled ? "static" : "none";
     this.betMinusButton.alpha = minusEnabled ? 1 : 0.38;
@@ -162,13 +218,54 @@ export class Cabinet extends Container {
 
   public setCredit(value: string): void { this.creditValue.text = value; }
   public setWin(value: string): void { this.winValue.text = value; }
-  public setStatus(value: string): void { this.statusValue.text = value; }
+  public setStatus(value: string): void {
+    this.statusValue.text = value;
+    this.statusValue.scale.set(1);
+    if (this.statusValue.width > 194) this.statusValue.scale.set(194 / this.statusValue.width);
+  }
   public setBet(value: string): void { this.betValue.text = value; }
   public setVaultCharge(value: number): void {
     const charge = Math.max(0, Math.min(30, value));
-    this.chargeValue.text = `${charge} / 30`;
-    this.chargeFill.clear().roundRect(704, 352, 264 * (charge / 30), 9, 5)
-      .fill({ color: 0xd86bff, alpha: 0.95 });
+    // Progress remains intentionally hidden. Only the vault's ambient pulse
+    // grows slightly so it feels alive without becoming a predictable meter.
+    this.energy.alpha = 0.22 + (charge / 30) * 0.22;
+  }
+
+  public async collectCoins(count: number): Promise<void> {
+    if (count <= 0) return;
+    const particles = new Container();
+    this.addChild(particles);
+    const flights = Array.from({ length: Math.min(count, 5) }, (_, index) => new Promise<void>((resolve) => {
+      const coin = new Graphics().circle(0, 0, 18).fill({ color: GOLD }).stroke({ color: 0xfff3ad, width: 4 });
+      coin.position.set(370 + index * 220, 648);
+      particles.addChild(coin);
+      const startX = coin.x; const startY = coin.y; const started = performance.now() + index * 90;
+      const fly = (): void => {
+        const t = Math.max(0, Math.min(1, (performance.now() - started) / 620));
+        const eased = 1 - Math.pow(1 - t, 3);
+        coin.position.set(startX + (836 - startX) * eased, startY + (235 - startY) * eased - Math.sin(t * Math.PI) * 100);
+        coin.scale.set(1 - eased * 0.55); coin.alpha = 1 - Math.max(0, (t - 0.76) / 0.24);
+        if (t < 1) requestAnimationFrame(fly); else resolve();
+      };
+      requestAnimationFrame(fly);
+    }));
+    await Promise.all(flights);
+    particles.destroy({ children: true });
+  }
+
+  public async celebrateWin(awardUnits: number, wagerUnits: number): Promise<void> {
+    const multiple = awardUnits / Math.max(1, wagerUnits);
+    if (multiple < 5) return;
+    const label = multiple >= 100 ? "MEGA WIN" : multiple >= 25 ? "BIG WIN" : "NICE WIN";
+    const overlay = new Container();
+    const glow = new Graphics().circle(836, 480, 260).fill({ color: multiple >= 25 ? 0x8b28ce : 0x4c176d, alpha: 0.7 });
+    const title = new Text({ text: label, style: { fontFamily: "Arial Black, Arial", fontSize: multiple >= 25 ? 92 : 68, fontWeight: "bold", fill: GOLD, stroke: { color: 0x35104d, width: 12 }, letterSpacing: 5 } });
+    title.anchor.set(0.5); title.position.set(836, 450);
+    const amount = new Text({ text: `$${(awardUnits / 100).toFixed(2)}`, style: { fontFamily: "Arial Black, Arial", fontSize: 54, fontWeight: "bold", fill: 0xffffff } });
+    amount.anchor.set(0.5); amount.position.set(836, 535);
+    overlay.addChild(glow, title, amount); this.addChild(overlay);
+    await new Promise<void>((resolve) => window.setTimeout(resolve, multiple >= 25 ? 1600 : 900));
+    overlay.destroy({ children: true });
   }
 
   public async playVaultHeist(wagerUnits: number, triggerCoins: number): Promise<number> {
@@ -181,7 +278,7 @@ export class Cabinet extends Container {
     const title = new Text({ text: "VAULT HEIST", style: { fontFamily: "Arial Black, Arial", fontSize: 76, fontWeight: "bold", fill: GOLD, stroke: { color: 0x4b126d, width: 10 }, letterSpacing: 5 } });
     title.anchor.set(0.5); title.position.set(836, 174);
     const coinTier = Math.max(3, Math.min(5, triggerCoins));
-    const maxPicks = coinTier === 3 ? 5 : coinTier === 4 ? 6 : 7;
+    const maxPicks = coinTier === 3 ? 4 : coinTier === 4 ? 5 : 6;
     const startingMultiplier = coinTier >= 4 ? 2 : 1;
     const tierName = coinTier === 3 ? "STANDARD HEIST" : coinTier === 4 ? "DOUBLE-VAULT HEIST" : "GOLDEN HEIST";
     const subtitle = new Text({ text: `${tierName} • ${coinTier}${triggerCoins > 5 ? "+" : ""} BEARD COINS\n${maxPicks} PICKS • ${startingMultiplier}× START • FIND THE GOLDEN KEY • DODGE 3 ALARMS`, style: { fontFamily: "Arial", fontSize: 25, fontWeight: "bold", fill: 0xf2d9ff, align: "center", lineHeight: 38, letterSpacing: 1 } });
@@ -193,7 +290,7 @@ export class Cabinet extends Container {
 
     // Values are assigned before the first choice. We reveal every unopened
     // box at the end so the player's choice is visibly genuine.
-    const prizes = [1, 2, 3, 5, 8, 10, 2, 4, 6, -1, -1, -1, 12, 15, 20];
+    const prizes = [1, 2, 2, 3, 5, 6, 2, 3, 5, -1, -1, -1, 8, 9, 20];
     for (let i = prizes.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
       [prizes[i], prizes[j]] = [prizes[j]!, prizes[i]!];
@@ -323,13 +420,13 @@ export class Cabinet extends Container {
   public async playLivingVaultRespin(wagerUnits: number, forced: { jackpot?: "mini"|"minor"|"major"|"grand"; fullGrid?: boolean } = {}): Promise<number> {
     const overlay = this.featureShell("LIVING VAULT", "HOLD & RESPIN • THREE LIVES");
     const livesText = this.centerText("RESPINS  ● ● ●", 30, 0x9dffdb, 268);
-    const actionText = this.centerText("PRESS START TO CRACK THE CHAMBERS", 19, 0xbdf7ff, 310);
+    const actionText = this.centerText("PRESS START • NEW COINS RESET THREE RESPINS", 19, 0xbdf7ff, 310);
     const winText = this.centerText("LOCKED VALUE  $0.00", 37, GOLD, 705);
     type VaultPrize = { label: string; multiple: number; color: number; textColor: number; jackpot: boolean };
     const cells: { coin: Graphics; label: Text; locked: boolean; value: number; prize?: VaultPrize }[] = [];
     for (let i = 0; i < 15; i += 1) {
-      const x = 464 + (i % 5) * 150; const y = 350 + Math.floor(i / 5) * 105;
-      const coin = new Graphics().circle(x, y, 39).fill({ color: 0x13091b }).stroke({ color: 0x613777, width: 4 });
+      const x = 456 + (i % 5) * 190; const y = 370 + Math.floor(i / 5) * 112;
+      const coin = new Graphics().roundRect(x - 76, y - 45, 152, 90, 18).fill({ color: 0x13091b }).stroke({ color: 0x613777, width: 4 });
       const label = this.centerText("?", 22, 0x6e4a7d, y); label.position.x = x;
       cells.push({ coin, label, locked: false, value: 0 }); overlay.addChild(coin, label);
     }
@@ -351,7 +448,9 @@ export class Cabinet extends Container {
             }
             await this.delay(110 + pulse * 18);
           }
-          const hits = forced.fullGrid ? openCells : openCells.filter(() => this.randomInt(100) < (first ? 42 : 18));
+          // A restrained hold-and-respin curve: a readable opening drop without
+          // the old runaway loop that filled most of the board almost every time.
+          const hits = forced.fullGrid ? openCells : openCells.filter(() => this.randomInt(10_000) < (first ? 1_200 : 400));
           for (const cell of openCells) {
             if (hits.includes(cell)) continue;
             cell.label.text = "?"; cell.label.style.fill = 0x6e4a7d; cell.coin.alpha = 1;
@@ -363,25 +462,25 @@ export class Cabinet extends Container {
             const forcedLabel = forced.jackpot?.toUpperCase();
             const prize: VaultPrize = forcedMultiple
               ? { label: forcedLabel!, multiple: forcedMultiple, color: forced.jackpot === "grand" ? 0xfff2a0 : forced.jackpot === "major" ? 0xff4f63 : forced.jackpot === "minor" ? 0x38dcff : 0xb56cff, textColor: forced.jackpot === "grand" ? 0x5a1800 : forced.jackpot === "minor" ? 0x031b32 : 0xffffff, jackpot: true }
-              : roll < 8
+              : roll < 0
               ? { label: "GRAND", multiple: 500, color: 0xfff2a0, textColor: 0x5a1800, jackpot: true }
-              : roll < 48
+              : roll < 1
                 ? { label: "MAJOR", multiple: 100, color: 0xff4f63, textColor: 0xffffff, jackpot: true }
-                : roll < 168
+                : roll < 11
                   ? { label: "MINOR", multiple: 25, color: 0x38dcff, textColor: 0x031b32, jackpot: true }
-                  : roll < 468
+                  : roll < 61
                     ? { label: "MINI", multiple: 10, color: 0xb56cff, textColor: 0xffffff, jackpot: true }
-                    : roll < 5_500
+                    : roll < 8_061
                       ? { label: "1×", multiple: 1, color: 0xffce52, textColor: 0x241000, jackpot: false }
-                      : roll < 8_100
+                      : roll < 9_561
                         ? { label: "2×", multiple: 2, color: 0xffce52, textColor: 0x241000, jackpot: false }
-                        : roll < 9_550
+                        : roll < 9_937
                           ? { label: "5×", multiple: 5, color: 0xffce52, textColor: 0x241000, jackpot: false }
                           : { label: "10×", multiple: 10, color: 0xffce52, textColor: 0x241000, jackpot: false };
             cell.prize = prize;
             cell.value = wagerUnits * prize.multiple; total += cell.value; cell.label.text = prize.label; cell.label.style.fill = prize.textColor;
             cell.label.style.fontSize = prize.jackpot ? 15 : 22;
-            cell.coin.clear().circle(cell.label.x, cell.label.y, 39).fill({ color: prize.color }).stroke({ color: prize.jackpot ? 0xffffff : 0xffffb0, width: prize.jackpot ? 7 : 5 });
+            cell.coin.clear().roundRect(cell.label.x - 76, cell.label.y - 45, 152, 90, 18).fill({ color: prize.color }).stroke({ color: prize.jackpot ? 0xffffff : 0xffffb0, width: prize.jackpot ? 7 : 5 });
             cell.coin.alpha = 0.45; cell.label.alpha = 0.45;
             actionText.text = prize.jackpot ? `${prize.label} JACKPOT COIN! • ${prize.multiple}× BET` : `${prize.multiple}× LOCKED • RESPINS RESET TO THREE!`;
             winText.text = `LOCKED VALUE  $${(total / 100).toFixed(2)}`;
@@ -487,27 +586,6 @@ export class Cabinet extends Container {
       .ellipse(836, 213, 170, 190)
       .stroke({ color: PURPLE, width: 9, alpha: 0.34 });
     this.addChild(this.energy);
-
-    this.chargeValue = new Text({
-      text: "1 / 30",
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 17,
-        fontWeight: "bold",
-        fill: 0xe89aff,
-        letterSpacing: 3,
-        stroke: { color: 0x16041f, width: 4 },
-      },
-    });
-    this.chargeValue.anchor.set(0.5);
-    this.chargeValue.position.set(836, 326);
-    const chargeBadge = new Graphics()
-      .roundRect(700, 304, 272, 64, 13)
-      .fill({ color: 0x16041f, alpha: 1 })
-      .stroke({ color: 0xb865e8, width: 2, alpha: 0.9 });
-    const track = new Graphics().roundRect(700, 348, 272, 17, 9).fill({ color: 0x08030d, alpha: 1 }).stroke({ color: 0xb865e8, width: 2 });
-    this.chargeFill = new Graphics();
-    this.addChild(chargeBadge, track, this.chargeFill, this.chargeValue);
     this.setVaultCharge(0);
   }
 
@@ -527,7 +605,7 @@ export class Cabinet extends Container {
     this.addChild(credit.container, bet.container, win.container);
 
     const statusBox = new Graphics()
-      .roundRect(994, 879, 150, 40, 10)
+      .roundRect(984, 879, 216, 40, 10)
       .fill({ color: 0x1e0b2d, alpha: 0.97 })
       .stroke({ color: 0x8f4bc2, width: 2 });
     this.statusValue = new Text({
@@ -535,36 +613,41 @@ export class Cabinet extends Container {
       style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: 0xd8a5ff, letterSpacing: 1 },
     });
     this.statusValue.anchor.set(0.5);
-    this.statusValue.position.set(1069, 899);
+    this.statusValue.position.set(1092, 899);
 
-    this.betMinusButton = new Graphics().roundRect(1158, 876, 54, 46, 11)
+    this.betMinusButton = new Graphics().roundRect(1208, 876, 42, 46, 11)
       .fill({ color: 0x351044, alpha: 1 }).stroke({ color: 0xd898ff, width: 3 });
-    this.betPlusButton = new Graphics().roundRect(1222, 876, 54, 46, 11)
+    this.betPlusButton = new Graphics().roundRect(1256, 876, 42, 46, 11)
       .fill({ color: 0x351044, alpha: 1 }).stroke({ color: 0xd898ff, width: 3 });
     const betMinusText = new Text({ text: "−", style: { fontFamily: "Arial Black", fontSize: 29, fill: 0xffe7a0 } });
-    betMinusText.anchor.set(0.5); betMinusText.position.set(1185, 899);
+    betMinusText.anchor.set(0.5); betMinusText.position.set(1229, 899);
     const betPlusText = new Text({ text: "+", style: { fontFamily: "Arial Black", fontSize: 27, fill: 0xffe7a0 } });
-    betPlusText.anchor.set(0.5); betPlusText.position.set(1249, 899);
+    betPlusText.anchor.set(0.5); betPlusText.position.set(1277, 899);
 
     this.spinButton = new Graphics()
-      .roundRect(1292, 873, 350, 50, 13)
+      .roundRect(1432, 873, 88, 50, 13)
       .fill({ color: 0xffc744, alpha: 0.88 })
       .stroke({ color: 0xffef9d, width: 4, alpha: 0.95 });
 
-    const spinText = new Text({
+    this.spinText = new Text({
       text: "SPIN",
       style: {
         fontFamily: "Arial Black, Arial",
-        fontSize: 34,
+        fontSize: 22,
         fontWeight: "bold",
         fill: 0x2b1300,
         letterSpacing: 5,
         stroke: { color: 0xffe793, width: 3 },
       },
     });
-    spinText.anchor.set(0.5);
-    spinText.position.set(1467, 899);
-    this.addChild(statusBox, this.statusValue, this.betMinusButton, this.betPlusButton, betMinusText, betPlusText, this.spinButton, spinText);
+    this.spinText.anchor.set(0.5);
+    this.spinText.position.set(1476, 899);
+
+    this.autoButton = new Graphics().roundRect(1306, 873, 118, 50, 13)
+      .fill({ color: 0x301041, alpha: 0.96 }).stroke({ color: 0xd898ff, width: 3 });
+    this.autoText = new Text({ text: "AUTO", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: 0xffe7a0, align: "center" } });
+    this.autoText.anchor.set(0.5); this.autoText.position.set(1365, 899);
+    this.addChild(statusBox, this.statusValue, this.betMinusButton, this.betPlusButton, betMinusText, betPlusText, this.spinButton, this.spinText, this.autoButton, this.autoText);
 
     this.homeButton = new Graphics().roundRect(20, 20, 170, 48, 12).fill({ color: 0x13051f, alpha: 0.92 }).stroke({ color: GOLD, width: 3 });
     const homeText = new Text({ text: "CASINO LOBBY", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: GOLD } });
@@ -573,6 +656,8 @@ export class Cabinet extends Container {
     const infoText = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     infoText.anchor.set(0.5); infoText.position.set(1542, 44);
     this.addChild(this.homeButton, homeText, this.infoButton, infoText);
+    const buildBadge = new Text({ text: "BEARD BANK V31", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    buildBadge.anchor.set(0.5); buildBadge.position.set(836, 382); this.addChild(buildBadge);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

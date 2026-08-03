@@ -28,6 +28,8 @@ export class GameScene {
   private gameState = initialBeardBankGameState;
   private isSpinning = false;
   private betIndex = 1;
+  private autoSpinsRemaining: number | "infinite" | null = null;
+  private autoStopRequested = false;
 
   public constructor(
     private readonly app: PixiApplication,
@@ -57,6 +59,7 @@ export class GameScene {
     this.root.addChild(this.cabinet);
     this.app.stage.addChild(this.root);
     this.cabinet.onSpin(() => { void this.handleSpin(); });
+    this.cabinet.onAutoSelect((spins) => this.handleAutoSelection(spins));
     this.cabinet.onHome(() => this.exitToLobby());
     this.cabinet.onInfo(() => this.cabinet.toggleRules());
     this.cabinet.onBetMinus(() => this.changeBet(-1));
@@ -104,8 +107,10 @@ export class GameScene {
     });
   }
 
-  private async handleSpin(): Promise<void> {
-    if (this.isSpinning) return;
+  private async handleSpin(fromAuto = false): Promise<boolean> {
+    if (this.isSpinning) return false;
+
+    let featureTriggered = false;
 
     try {
       this.isSpinning = true;
@@ -118,6 +123,7 @@ export class GameScene {
       this.gameState = result.featureResolution.finalGameState;
       const coins = result.grid.matrix.flat().filter((symbol) => symbol === "beard-coin").length;
       const vaultDoors = result.grid.matrix.flat().filter((symbol) => symbol === "vault-door").length;
+      const stackedVaultDoors = result.grid.matrix.some((column) => column.every((symbol) => symbol === "vault-door"));
       const previousCharges = this.gameState.livingVaultCharges;
       this.gameState = { ...this.gameState, livingVaultCharges: Math.min(30, previousCharges + coins), lifetimeCoinsCollected: this.gameState.lifetimeCoinsCollected + coins };
       this.cabinet.setVaultCharge(this.gameState.livingVaultCharges);
@@ -125,6 +131,7 @@ export class GameScene {
       this.refreshWalletDisplay();
 
       await this.cabinet.spinTo(result.grid.matrix);
+      if (coins > 0) await this.cabinet.collectCoins(coins);
 
       if (result.totalAwardUnits > 0) {
         this.cabinet.setStatus(`${result.wayWins.length} WIN${result.wayWins.length === 1 ? "" : "S"}`);
@@ -133,24 +140,28 @@ export class GameScene {
         });
         this.cabinet.setWin(`$${formatCreditUnits(result.totalAwardUnits)}`);
         this.cabinet.setStatus("WINNER");
+        await this.cabinet.celebrateWin(result.totalAwardUnits, wagerUnits);
       } else {
         this.cabinet.setStatus("READY");
       }
       const meterFilled = previousCharges < 30 && this.gameState.livingVaultCharges >= 30;
       let featureAward = 0;
       if (coins >= 3) {
+        featureTriggered = true;
         this.cabinet.setStatus("BONUS!");
         const bonusAward = await this.cabinet.playVaultHeist(wagerUnits, coins);
         if (bonusAward > 0) this.wallet.award(bonusAward, { reason: "Vault Heist bonus", metadata: { gameId: "beard-bank" } });
         featureAward += bonusAward;
       }
-      if (vaultDoors >= 3) {
+      if (stackedVaultDoors) {
+        featureTriggered = true;
         this.cabinet.setStatus("FREE SPINS!");
         const award = await this.runVernonFreeSpins(wagerUnits, vaultDoors);
         if (award > 0) this.wallet.award(award, { reason: "Vernon's Free Spins", metadata: { gameId: "beard-bank" } });
         featureAward += award;
       }
       if (meterFilled) {
+        featureTriggered = true;
         this.cabinet.setStatus("LIVING VAULT!");
         const award = await this.cabinet.playLivingVaultRespin(wagerUnits);
         if (award > 0) this.wallet.award(award, { reason: "Living Vault Hold & Respin", metadata: { gameId: "beard-bank" } });
@@ -164,13 +175,68 @@ export class GameScene {
         this.cabinet.setStatus("FEATURES PAID");
       }
       this.refreshWalletDisplay();
+      return featureTriggered;
     } catch (error: unknown) {
       console.error("Spin failed", error);
       this.cabinet.setStatus(error instanceof Error ? error.message.toUpperCase() : "SPIN ERROR");
+      if (fromAuto) this.stopAuto("AUTO STOPPED • SPIN ERROR");
+      return true;
     } finally {
       this.isSpinning = false;
       this.refreshBetControls();
     }
+  }
+
+  private handleAutoSelection(spins: number | "infinite"): void {
+    if (this.autoSpinsRemaining !== null) {
+      this.autoStopRequested = true;
+      this.cabinet.setStatus("AUTO STOPS AFTER THIS SPIN");
+      return;
+    }
+    if (this.isSpinning) return;
+    const wager = BET_LEVELS[this.betIndex]!;
+    if (!this.wallet.canAfford(wager)) {
+      this.cabinet.setStatus("INSUFFICIENT CREDIT");
+      return;
+    }
+    this.autoSpinsRemaining = spins;
+    this.autoStopRequested = false;
+    this.cabinet.setAutoState(true, spins === "infinite" ? undefined : spins);
+    void this.runAutoSpins();
+  }
+
+  private async runAutoSpins(): Promise<void> {
+    while (this.autoSpinsRemaining !== null && !this.autoStopRequested) {
+      const wager = BET_LEVELS[this.betIndex]!;
+      if (!this.wallet.canAfford(wager)) {
+        this.stopAuto("AUTO COMPLETE • LOW CREDIT");
+        return;
+      }
+      const featureTriggered = await this.handleSpin(true);
+      if (this.autoSpinsRemaining === null) return;
+      if (this.autoSpinsRemaining !== "infinite") {
+        this.autoSpinsRemaining -= 1;
+        if (this.autoSpinsRemaining <= 0) {
+          this.stopAuto("AUTO SPINS COMPLETE");
+          return;
+        }
+      }
+      if (featureTriggered) {
+        this.stopAuto("AUTO STOPPED • FEATURE WON");
+        return;
+      }
+      this.cabinet.setAutoState(true, this.autoSpinsRemaining === "infinite" ? undefined : this.autoSpinsRemaining);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 450));
+    }
+    if (this.autoStopRequested) this.stopAuto("AUTO SPIN STOPPED");
+  }
+
+  private stopAuto(status?: string): void {
+    this.autoSpinsRemaining = null;
+    this.autoStopRequested = false;
+    this.cabinet.setAutoState(false);
+    if (status) this.cabinet.setStatus(status);
+    this.refreshBetControls();
   }
 
   private refreshWalletDisplay(): void {
@@ -181,7 +247,7 @@ export class GameScene {
   }
 
   private changeBet(direction: -1 | 1): void {
-    if (this.isSpinning) return;
+    if (this.isSpinning || this.autoSpinsRemaining !== null) return;
     this.betIndex = Math.max(0, Math.min(BET_LEVELS.length - 1, this.betIndex + direction));
     this.refreshBetControls();
   }
@@ -189,12 +255,14 @@ export class GameScene {
   private refreshBetControls(): void {
     const wager = BET_LEVELS[this.betIndex]!;
     this.cabinet.setBet(`$${formatCreditUnits(wager)}`);
-    this.cabinet.setBetEnabled(!this.isSpinning && this.betIndex > 0, !this.isSpinning && this.betIndex < BET_LEVELS.length - 1);
-    this.cabinet.setSpinEnabled(!this.isSpinning && this.wallet.canAfford(wager));
+    const controlsReady = !this.isSpinning && this.autoSpinsRemaining === null;
+    this.cabinet.setBetEnabled(controlsReady && this.betIndex > 0, controlsReady && this.betIndex < BET_LEVELS.length - 1);
+    this.cabinet.setSpinEnabled(controlsReady && this.wallet.canAfford(wager));
   }
 
   private exitToLobby(): void {
     if (this.isSpinning) return;
+    this.stopAuto();
     window.removeEventListener("resize", this.handleResize);
     window.removeEventListener("casino:dev", this.handleDeveloperAction as EventListener);
     this.onBalanceChange(this.wallet.getSnapshot().casinoWalletUnits);

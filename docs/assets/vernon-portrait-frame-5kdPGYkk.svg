@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 520">
+<defs>
+ <linearGradient id="gold" x1="0" x2="1"><stop stop-color="#fff3a5"/><stop offset=".24" stop-color="#a76619"/><stop offset=".52" stop-color="#f0c452"/><stop offset=".82" stop-color="#663710"/><stop offset="1" stop-color="#ffe282"/></linearGradient>
+ <radialGradient id="bg"><stop stop-color="#653579"/><stop offset=".58" stop-color="#221029"/><stop offset="1" stop-color="#08050b"/></radialGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="8" y="8" width="404" height="504" rx="34" fill="url(#bg)" stroke="url(#gold)" stroke-width="16"/>
+<rect x="30" y="30" width="360" height="460" rx="24" fill="none" stroke="#7b3f91" stroke-width="7"/>
+<circle cx="210" cy="216" r="145" fill="#160b1b" stroke="#d6aa4f" stroke-width="10"/>
+<path d="M99 461c18-115 70-183 111-183s93 68 111 183z" fill="#4c2259" stroke="#e1b95d" stroke-width="9"/>
+<circle cx="210" cy="194" r="101" fill="#d89b6a" stroke="#f3d079" stroke-width="9"/>
+<path d="M114 191c16-111 177-120 192 0-34-31-63-42-96-42s-62 11-96 42z" fill="#24131d"/>
+<path d="M117 235c17 91 48 148 93 181 45-33 76-90 93-181-37 27-60 37-93 37s-56-10-93-37z" fill="#24121d" stroke="#efcc75" stroke-width="10"/>
+<circle cx="173" cy="196" r="9" fill="#171014"/><circle cx="247" cy="196" r="9" fill="#171014"/>
+<path d="M159 167q21-15 43 0M218 167q21-15 43 0M161 226q49 39 98 0" fill="none" stroke="#28151e" stroke-width="10" stroke-linecap="round"/>
+<path d="M306 88l27 68-123-19-123 19 27-68 96-34z" fill="#4f245d" stroke="#f0cd71" stroke-width="10"/>
+<rect x="117" y="116" width="186" height="28" rx="13" fill="#23112b" stroke="#e2b85b" stroke-width="6"/>
+<rect x="54" y="399" width="312" height="74" rx="18" fill="#100915" stroke="url(#gold)" stroke-width="8" filter="url(#glow)"/>
+<text x="210" y="430" text-anchor="middle" font-family="Georgia" font-size="25" font-weight="900" fill="#fff0a0">VAULTMASTER</text>
+<text x="210" y="460" text-anchor="middle" font-family="Georgia" font-size="35" font-weight="900" fill="#fff0a0">VERNON</text>
+</svg>
