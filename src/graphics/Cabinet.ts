@@ -656,7 +656,7 @@ export class Cabinet extends Container {
     const infoText = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     infoText.anchor.set(0.5); infoText.position.set(1542, 44);
     this.addChild(this.homeButton, homeText, this.infoButton, infoText);
-    const buildBadge = new Text({ text: "BEARD BANK V31", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    const buildBadge = new Text({ text: "BEARD BANK V32", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     buildBadge.anchor.set(0.5); buildBadge.position.set(836, 382); this.addChild(buildBadge);
   }
 

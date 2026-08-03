@@ -25,6 +25,7 @@ export class NeemasHighSeas {
   private cabin = 0;
   private bonusMultiplier = 1;
   private bonusWin = 0;
+  private lastDisplayedWin = 0;
 
   public constructor(
     private readonly root: HTMLElement,
@@ -97,8 +98,10 @@ export class NeemasHighSeas {
     this.spinning = true; if (!free) this.setWallet(this.getWallet()-BET); else this.freeSpins-=1;
     this.message(free ? `FREE SPIN • ${this.freeSpins} REMAIN` : "SAILING..."); this.update();
     const reels=this.root.querySelector<HTMLElement>("[data-neema-reels]")!; reels.classList.remove("has-win"); reels.classList.add("spinning");
-    for (let frame=0; frame<7; frame+=1) { this.renderGrid(this.makeGrid()); await new Promise<void>(resolve=>window.setTimeout(resolve,110 + frame*18)); }
-    const grid=this.makeGrid(); reels.classList.remove("spinning");
+    for (let frame=0; frame<10; frame+=1) { this.renderGrid(this.makeGrid()); await this.wait(72 + frame*15); }
+    const grid=this.makeGrid();
+    for(let stopped=0;stopped<REELS;stopped+=1){this.renderGrid(grid);reels.dataset.stopped=String(stopped+1);await this.wait(115+stopped*32);}
+    reels.classList.remove("spinning"); delete reels.dataset.stopped;
     const result=this.evaluate(grid); let award=result.award; const tickets=grid.flat().filter(s=>s.id==="ticket").length;
     if (free) {
       award=Math.round(award*this.bonusMultiplier);
@@ -109,15 +112,15 @@ export class NeemasHighSeas {
       const retrigger = free;
       this.freeSpins += retrigger ? 5 : 10; this.cabin=Math.min(4,this.cabin+1); this.bonusMultiplier=1+this.cabin;
       this.message(retrigger ? "CRUISE TICKET RETRIGGER • +5 SPINS" : "ALL ABOARD • 10 FREE SPINS");
+      await this.showVoyageIntro(retrigger);
     }
     else if(award>0) this.message(award>=BET*10 ? "SUITE-SIZED WIN!" : "CHEERS, NEEMA!");
-    else if(free && this.freeSpins===0) { const lastCall=Math.max(BET,Math.round(this.bonusWin*.1)); award+=lastCall; this.message(`LAST CALL FINALE • +$${(lastCall/100).toFixed(2)}`); this.cabin=0; this.bonusMultiplier=1; this.bonusWin=0; }
+    else if(free && this.freeSpins===0) { const lastCall=await this.playLastCall(); award+=lastCall; this.message(`LAST CALL FINALE • +$${(lastCall/100).toFixed(2)}`); this.cabin=0; this.bonusMultiplier=1; this.bonusWin=0; }
     else this.message(free ? "THE ENCORE CONTINUES" : "WELCOME ABOARD");
     this.renderGrid(grid, result.winners);
     const callout=this.root.querySelector<HTMLElement>("[data-neema-callout]")!;
     callout.hidden=award<=0; callout.textContent=award>0?`${result.summary || "VOYAGE WIN"}  •  $${(award/100).toFixed(2)}`:"";
-    if(award>0) { this.setWallet(this.getWallet()+award); await new Promise<void>(resolve=>window.setTimeout(resolve,850)); }
-    this.root.querySelector<HTMLElement>("[data-neema-win]")!.textContent=`$${(award/100).toFixed(2)}`;
+    if(award>0) { this.setWallet(this.getWallet()+award); await this.animateWin(award); await this.showWinTier(award); }
     this.spinning=false; this.update(); return tickets>=3;
   }
   private toggleAuto(): void { if(this.auto!==null){this.stopRequested=true;this.message("AUTO STOPS AFTER THIS SPIN");return;} const menu=this.root.querySelector<HTMLElement>("[data-neema-menu]")!;menu.hidden=!menu.hidden; }
@@ -125,6 +128,11 @@ export class NeemasHighSeas {
   private async runAuto(): Promise<void> { while(this.auto!==null&&!this.stopRequested){const feature=await this.spin();if(this.auto===null)return;if(this.auto!=="infinite"){this.auto-=1;if(this.auto<=0){this.stopAuto();return;}}if(feature){this.stopAuto();return;}this.update();await new Promise<void>(r=>window.setTimeout(r,400));}this.stopAuto(); }
   private stopAuto(): void { this.auto=null;this.stopRequested=false;this.update(); }
   private message(text:string):void{const node=this.root.querySelector<HTMLElement>("[data-neema-message]");if(node)node.textContent=text;}
+  private wait(ms:number):Promise<void>{return new Promise(resolve=>window.setTimeout(resolve,ms));}
+  private async animateWin(target:number):Promise<void>{const node=this.root.querySelector<HTMLElement>("[data-neema-win]")!;const began=performance.now();await new Promise<void>(resolve=>{const tick=(now:number)=>{const p=Math.min(1,(now-began)/700);const value=Math.round(this.lastDisplayedWin+(target-this.lastDisplayedWin)*(1-Math.pow(1-p,3)));node.textContent=`$${(value/100).toFixed(2)}`;if(p<1)requestAnimationFrame(tick);else resolve();};requestAnimationFrame(tick);});this.lastDisplayedWin=target;}
+  private async showVoyageIntro(retrigger:boolean):Promise<void>{const overlay=document.createElement("div");overlay.className="feature-cinematic sea-cinematic";overlay.innerHTML=`<div class="sea-ship">🚢</div><small>${retrigger?"THE PARTY CONTINUES":"CABIN UPGRADE FEATURE"}</small><h2>${retrigger?"RETRIGGER!":"ALL ABOARD"}</h2><p>${retrigger?"5 MORE FREE SPINS":`10 FREE SPINS • ${this.bonusMultiplier}× STARTING MULTIPLIER`}</p><div class="voyage-route">${CABINS.map((c,i)=>`<span class="${i<=this.cabin?"reached":""}">${c}</span>`).join("")}</div></div>`;this.root.appendChild(overlay);await this.wait(2200);overlay.classList.add("leaving");await this.wait(420);overlay.remove();}
+  private async playLastCall():Promise<number>{const choices=[.08,.12,.18].sort(()=>Math.random()-.5);const overlay=document.createElement("div");overlay.className="feature-cinematic sea-cinematic last-call";overlay.innerHTML=`<small>VOYAGE FINALE</small><h2>LAST CALL</h2><p>PICK A COCKTAIL</p><div>${choices.map((_,i)=>`<button data-pick="${i}">🍹<span>POUR ${i+1}</span></button>`).join("")}</div>`;this.root.appendChild(overlay);const pick=await new Promise<number>(resolve=>overlay.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach(b=>b.addEventListener("click",()=>resolve(Number(b.dataset.pick)),{once:true})));const award=Math.max(BET,Math.round(this.bonusWin*choices[pick]!));overlay.querySelector("p")!.textContent=`LAST CALL PAYS $${(award/100).toFixed(2)}`;overlay.classList.add("revealed");await this.wait(1350);overlay.remove();return award;}
+  private async showWinTier(award:number):Promise<void>{const multiple=award/BET;const tier=multiple>=50?"EPIC WIN":multiple>=20?"MEGA WIN":multiple>=10?"BIG WIN":"";if(!tier){await this.wait(650);return;}const overlay=document.createElement("div");overlay.className="win-tier sea-tier";overlay.innerHTML=`<strong>${tier}</strong><b>$${(award/100).toFixed(2)}</b>`;this.root.appendChild(overlay);await this.wait(1500);overlay.remove();}
   private update():void{const wallet=`$${(this.getWallet()/100).toFixed(2)}`;this.root.querySelector<HTMLElement>("[data-neema-wallet]")!.textContent=wallet;this.root.querySelector<HTMLElement>("[data-neema-credit]")!.textContent=wallet;const spin=this.root.querySelector<HTMLButtonElement>("[data-neema-spin]")!;spin.disabled=this.spinning||this.auto!==null||(this.freeSpins===0&&this.getWallet()<BET);spin.textContent=this.freeSpins>0?"FREE SPIN":"SPIN";const auto=this.root.querySelector<HTMLElement>("[data-neema-auto]")!;auto.textContent=this.auto===null?"AUTO":`STOP ${this.auto==="infinite"?"∞":this.auto}`;this.root.querySelectorAll<HTMLElement>("[data-cabin]").forEach((node,i)=>node.classList.toggle("active",i<=this.cabin));const feature=this.root.querySelector<HTMLElement>("[data-neema-feature]")!;feature.hidden=this.freeSpins<=0;this.root.querySelector<HTMLElement>("[data-neema-freespins]")!.textContent=`${this.freeSpins} FREE SPINS`;this.root.querySelector<HTMLElement>("[data-neema-multiplier]")!.textContent=`CABIN MULTIPLIER ${this.bonusMultiplier}×`;}
   private showRules():void{const modal=document.createElement("div");modal.className="slot-rules-backdrop";modal.innerHTML=`<section class="slot-rules sea-rules"><button data-close>×</button><small>NEEMA'S HIGH SEAS HAPPY HOUR</small><h2>HOW TO PLAY</h2><p>Five fixed paylines pay left to right. Sunset substitutes for every paying symbol. Three or more Cruise Tickets anywhere launch 10 free spins.</p><h3>CABIN UPGRADE BONUS</h3><ul><li>Begin in the Interior Cabin and upgrade during the voyage.</li><li>Each cabin raises the free-spin multiplier up to 5×.</li><li>Three Tickets during free spins retrigger 5 more.</li><li>Last Call adds a finale award when the voyage ends.</li></ul><h3>TOP SYMBOLS</h3><p>Captain Neema • Sunset Wild • Ship Wheel • Buffalo Helmet</p><p class="rules-note">Five displayed lines share the $1.00 wager. Fictional credits only.</p></section>`;document.body.appendChild(modal);modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.addEventListener("click",event=>{if(event.target===modal)modal.remove();});}
 }

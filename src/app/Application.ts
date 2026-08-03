@@ -56,7 +56,7 @@ export class Application {
     window.setTimeout(() => {
       const report = runBeardBankMathLab(1_000_000);
       const oneIn = (frequency: number): string => frequency > 0 ? `1 in ${(1 / frequency).toFixed(1)}` : "Not observed";
-      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V31 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
+      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V32 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
         <p><span>Total RTP</span><strong>${(report.totalRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Base RTP</span><strong>${(report.baseRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Vault Heist RTP</span><strong>${(report.vaultHeistRtp * 100).toFixed(2)}%</strong></p>
