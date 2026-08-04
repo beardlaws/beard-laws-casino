@@ -130,6 +130,7 @@ export class GameScene {
       this.onProgressChange(this.gameState.livingVaultCharges, this.gameState.lifetimeCoinsCollected);
       this.refreshWalletDisplay();
 
+      await this.cabinet.prepareAnticipation(coins, vaultDoors);
       await this.cabinet.spinTo(result.grid.matrix);
       if (coins > 0) await this.cabinet.collectCoins(coins);
 
