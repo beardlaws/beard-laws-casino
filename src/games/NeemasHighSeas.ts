@@ -457,7 +457,7 @@ export class NeemasHighSeas {
     }
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic frozen-happy-hour";
-    overlay.innerHTML = `<small>NEEMA'S HIGH SEAS</small><h2>FROZEN HAPPY HOUR</h2><p data-frozen-status>LOCK THE DRINKS • NEW DRINKS RESET 3 RESPINS</p><div class="frozen-hud"><b data-frozen-respins>RESPINS ● ● ●</b><b data-frozen-win>$0.00</b></div><div class="frozen-board" data-frozen-board></div><button class="frozen-go" data-frozen-go>POUR THE NEXT ROUND</button>`;
+    overlay.innerHTML = `<small>NEEMA'S HIGH SEAS</small><h2>FROZEN HAPPY HOUR</h2><p data-frozen-status>LOCK THE DRINKS • NEW DRINKS RESET 3 RESPINS</p><div class="frozen-hud"><b data-frozen-respins>RESPINS ● ● ●</b><b data-frozen-win>$0.00</b></div><div class="frozen-board" data-frozen-board></div><button class="frozen-go" data-frozen-go disabled>HAPPY HOUR RUNNING</button>`;
     this.root.appendChild(overlay);
     const host = overlay.querySelector<HTMLElement>("[data-frozen-board]")!;
     const status = overlay.querySelector<HTMLElement>("[data-frozen-status]")!;
@@ -482,10 +482,10 @@ export class NeemasHighSeas {
       const drink = makeDrink(); board[at] = drink; total += drink.value;
     }
     render();
-    await new Promise<void>((resolve) => go.addEventListener("click", async () => {
-      go.disabled = true;
-      while (respins > 0 && emptyIndices().length) {
+    await this.wait(900);
+    while (respins > 0 && emptyIndices().length) {
         status.textContent = "THE BAR IS POURING…";
+        go.textContent = `AUTO RESPIN • ${respins} LEFT`;
         host.classList.add("shaking"); await this.wait(520); host.classList.remove("shaking");
         const empty = emptyIndices();
         const hitCount = Math.random() < .5 ? 0 : Math.random() < .82 ? 1 : 2;
@@ -501,14 +501,13 @@ export class NeemasHighSeas {
           if (drink.kind === "wheel") { board.forEach((d) => { if (d && d.value <= this.betUnits * 2) { d.value += this.betUnits; total += this.betUnits; } }); status.textContent = "SHIP WHEEL • SMALL DRINKS UPGRADED"; }
         }
         if (hits.length) respins = Math.max(respins, 3);
-        render(); await this.wait(700);
-      }
-      if (!emptyIndices().length) { total += this.betUnits * 500; status.textContent = "FULL BAR • GRAND 500×!"; }
-      else status.textContent = `${20 - emptyIndices().length} DRINKS LOCKED • HAPPY HOUR COMPLETE`;
-      if (typeof localStorage !== "undefined") localStorage.removeItem(savedKey);
-      go.disabled = false; go.textContent = `COLLECT $${(total / 100).toFixed(2)}`;
-      go.addEventListener("click", () => { overlay.remove(); resolve(); }, { once: true });
-    }, { once: true }));
+        render(); await this.wait(850);
+    }
+    if (!emptyIndices().length) { total += this.betUnits * 500; status.textContent = "FULL BAR • GRAND 500×!"; }
+    else status.textContent = `${20 - emptyIndices().length} DRINKS LOCKED • HAPPY HOUR COMPLETE`;
+    if (typeof localStorage !== "undefined") localStorage.removeItem(savedKey);
+    go.disabled = false; go.textContent = `COLLECT $${(total / 100).toFixed(2)}`;
+    await new Promise<void>((resolve) => go.addEventListener("click", () => { overlay.remove(); resolve(); }, { once: true }));
     return total;
   }
   private async chooseVoyageRoute(): Promise<VoyageRoute> {

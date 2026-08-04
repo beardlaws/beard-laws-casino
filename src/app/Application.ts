@@ -437,7 +437,7 @@ export class Application {
   }
 
   private async openBeardBank(): Promise<void> {
-    this.appRoot.innerHTML = `<main class="beard-bank-stage"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V55</b></span><button data-beard-info>PAYTABLE</button></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
+    this.appRoot.innerHTML = `<main class="beard-bank-stage v56-vault"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V56</b></span><button data-beard-info>PAYTABLE</button></div><header class="vault-native-header"><small>BEARD LAWS CASINO • 243 WAYS</small><h1>BEARD BANK</h1><p>BUILD THE VAULT. WAKE THE GUARDIAN. BREAK THE BANK.</p></header><div class="vault-native-chase"><span>VAULT HEIST</span><strong>THE LIVING VAULT</strong><span>VERNON FREE SPINS</span></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
     const canvasHost = this.appRoot.querySelector<HTMLElement>("[data-beard-canvas]")!;
     this.pixi = new PixiApplication();
     await Promise.all([

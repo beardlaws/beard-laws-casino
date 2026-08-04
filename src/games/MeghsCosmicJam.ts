@@ -42,6 +42,7 @@ export class MeghsCosmicJam {
   private auto: AutoCount = null;
   private stopRequested = false;
   private spinning = false;
+  private bonusAutoRunning = false;
   private multiplier = 1;
   private encore = 0;
   private freeDrops = 0;
@@ -331,7 +332,21 @@ export class MeghsCosmicJam {
     );
     this.spinning = false;
     this.update();
+    if (!free && this.freeDrops > 0 && !this.bonusAutoRunning) void this.runFreeDrops();
     return feature;
+  }
+  private async runFreeDrops(): Promise<void> {
+    if (this.bonusAutoRunning) return;
+    this.bonusAutoRunning = true;
+    this.stopAuto();
+    while (this.freeDrops > 0) {
+      this.message(`NEXT FREE DROP IN 1… • ${this.freeDrops} REMAIN`);
+      await this.wait(900);
+      await this.spin();
+      await this.wait(450);
+    }
+    this.bonusAutoRunning = false;
+    this.update();
   }
   private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<void> {
     const roll = Math.random();
@@ -347,16 +362,35 @@ export class MeghsCosmicJam {
     surge.classList.add("active");
     const surgeClass = `surge-${this.lastSurge.toLowerCase().replaceAll(" ", "-")}`;
     host.classList.add("reel-rushing", surgeClass);
-    const flashes = free ? 2 : 3;
+    const effect = document.createElement("div");
+    effect.className = `cosmic-event ${surgeClass}`;
+    effect.innerHTML = this.lastSurge === "UFO SCAN"
+      ? `<i class="ufo-craft">🛸</i><i class="scan-beam"></i><b>SCANNING REELS</b>`
+      : this.lastSurge === "AMPLIFIER OVERLOAD"
+        ? `<i class="amp-burst">⚡</i><b>WILD REEL CHARGED</b>`
+        : this.lastSurge === "MYSTERY SIGNAL"
+          ? `<i class="mystery-pulse">?</i><b>MATCHING SIGNAL LOCKED</b>`
+          : this.lastSurge === "STAGGERED REEL RUSH"
+            ? `<i class="rush-arrows">↓ ↓ ↓ ↓ ↓ ↓</i><b>UNSTABLE REEL ORDER</b>`
+            : free ? `<i class="gravity-well">◎</i><b>ENCORE GRAVITY</b>` : "";
+    if (effect.innerHTML) host.appendChild(effect);
+    const flashes = free ? 3 : 5;
     for (let pass = 0; pass < flashes; pass += 1) {
       this.render(this.makeGrid());
-      await this.wait(135 + pass * 45);
+      await this.wait(150 + pass * 55);
     }
     this.render(finalGrid);
+    if (effect.innerHTML) host.appendChild(effect);
     host.classList.remove("reel-rushing");
     host.classList.add("dropping", "reel-locking");
-    await this.wait(780);
+    for (let reel = 0; reel < COLS; reel += 1) {
+      host.dataset.locked = String(reel + 1);
+      await this.wait(this.lastSurge === "STAGGERED REEL RUSH" ? 190 + (reel % 2) * 120 : 175 + reel * 32);
+    }
+    await this.wait(380);
     host.classList.remove("dropping", "reel-locking", surgeClass);
+    delete host.dataset.locked;
+    effect.remove();
     surge.classList.remove("active");
   }
   private chargeSoundboard(symbols: string[]): void {
@@ -451,7 +485,7 @@ export class MeghsCosmicJam {
       .forEach((button) => {
         button.disabled = this.spinning || this.freeDrops > 0;
       });
-    spin.textContent = this.freeDrops > 0 ? "FREE DROP" : "DROP";
+    spin.textContent = this.bonusAutoRunning ? "ENCORE RUNNING" : this.freeDrops > 0 ? "FREE DROP" : "DROP";
     this.root.querySelector<HTMLElement>("[data-megh-auto]")!.textContent =
       this.auto === null
         ? "AUTO"
@@ -464,7 +498,7 @@ export class MeghsCosmicJam {
       `${this.freeDrops} FREE DROPS`;
     this.root.querySelector<HTMLElement>(
       "[data-megh-feature-multi]",
-    )!.textContent = `LIVE MULTIPLIER ${this.multiplier}×`;
+    )!.textContent = `LIVE ${this.multiplier}× • BONUS WIN $${(this.encoreWin / 100).toFixed(2)}`;
     this.root.querySelector<HTMLElement>("[data-megh-stage]")!.textContent =
       `${this.stageName()} • AMP ${Math.min(this.stageEnergy, 60)} / 60`;
   }
@@ -533,10 +567,14 @@ export class MeghsCosmicJam {
     return this.encoreMode === "long-set" ? "LONG SET" : this.encoreMode === "power-chords" ? "POWER CHORDS" : this.encoreMode === "ufo-storm" ? "UFO STORM" : "BONUS FEATURE";
   }
   private async playGuitarSmash(): Promise<number> {
-    const factors = [0.1, 0.15, 0.22].sort(() => Math.random() - 0.5);
+    const guitars = [
+      { name: "NEON AXE", icon: "⚡", copy: "MULTIPLY THE ENCORE", factor: .22 },
+      { name: "COSMIC BASS", icon: "🛸", copy: "COLLECT MULTIPLIER TILES", factor: .15 },
+      { name: "STARBREAKER", icon: "★", copy: "FIVE FINAL POWER CHORDS", factor: .1 },
+    ].sort(() => Math.random() - 0.5);
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic cosmic-cinematic guitar-smash";
-    overlay.innerHTML = `<small>ENCORE FINALE</small><h2>GUITAR SMASH</h2><p>CHOOSE YOUR WEAPON</p><div>${factors.map((_, i) => `<button data-guitar="${i}">🎸<span>GUITAR ${i + 1}</span></button>`).join("")}</div>`;
+    overlay.innerHTML = `<small>ENCORE FINALE</small><h2>GUITAR SMASH</h2><p>CHOOSE YOUR WEAPON</p><div>${guitars.map((g, i) => `<button data-guitar="${i}"><i>${g.icon}</i><b>${g.name}</b><span>${g.copy}</span></button>`).join("")}</div>`;
     this.root.appendChild(overlay);
     const pick = await new Promise<number>((resolve) =>
       overlay
@@ -549,10 +587,10 @@ export class MeghsCosmicJam {
     );
     const award = Math.max(
       this.betUnits,
-      Math.round(this.encoreWin * factors[pick]!),
+      Math.round(this.encoreWin * guitars[pick]!.factor),
     );
     overlay.querySelector("p")!.textContent =
-      `SMASH PAYS $${(award / 100).toFixed(2)}`;
+      `${guitars[pick]!.name} SMASH PAYS $${(award / 100).toFixed(2)}`;
     overlay.classList.add("revealed");
     await this.wait(1400);
     overlay.remove();
