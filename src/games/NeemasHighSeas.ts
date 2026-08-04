@@ -73,6 +73,7 @@ const SYMBOLS: readonly SeaSymbol[] = [
 const REELS = 5;
 const ROWS = 3;
 const DEPARTURE_TARGET = 50;
+const HAPPY_HOUR_TRIGGER = 3;
 const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 const LINES = [
   [0, 0, 0, 0, 0],
@@ -118,9 +119,9 @@ export class NeemasHighSeas {
     this.root.innerHTML = `<main class="neema-room">
       <button class="back" data-neema-home>← CASINO LOBBY</button><div class="table-wallet">WALLET <b data-neema-wallet></b></div>
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
-      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>HAPPY HOUR WILDS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS SAIL NOW • METER GUARANTEES THE NEXT VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
+      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>FROZEN CASH RESPINS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS LAUNCH FROZEN HAPPY HOUR + THE VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
         <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
-        <div class="neema-feature-bar"><span>HAPPY HOUR WILDS</span><span>CABIN UPGRADES</span><span>LAST CALL</span></div>
+        <div class="neema-feature-bar"><span>6+ DRINKS HOLD &amp; RESPIN</span><span>FILL 20 FOR GRAND</span><span>VOYAGE + LAST CALL</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div><div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
           <button data-neema-auto>AUTO</button><button class="neema-spin" data-neema-spin>SPIN</button></div>
         <div class="neema-auto-menu" data-neema-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
@@ -298,13 +299,18 @@ export class NeemasHighSeas {
       this.writeProgress("neema-departure", this.departureMiles);
     }
     const guaranteedDeparture = !free && this.departureMiles >= DEPARTURE_TARGET;
-    if (tickets >= 3 || guaranteedDeparture) {
+    if (tickets >= HAPPY_HOUR_TRIGGER || guaranteedDeparture) {
       const retrigger = free;
       if (!retrigger) {
         this.departureMiles = 0;
         this.writeProgress("neema-departure", 0);
       }
       if (!retrigger) this.route = await this.chooseVoyageRoute();
+      if (!retrigger) {
+        const happyHourAward = await this.playFrozenHappyHour(Math.max(6, tickets + 3));
+        award += happyHourAward;
+        this.bonusWin += happyHourAward;
+      }
       this.freeSpins += retrigger ? 5 : this.route === "party" ? 14 : 10;
       this.cabin = Math.min(4, this.cabin + 1);
       this.bonusMultiplier = 1 + this.cabin;
@@ -435,6 +441,76 @@ export class NeemasHighSeas {
     await this.wait(420);
     overlay.remove();
   }
+  private async playFrozenHappyHour(startingDrinks = 6): Promise<number> {
+    type Drink = { value: number; kind: "cash" | "vodka" | "ice" | "cranberry" | "neema" | "bell" | "wheel" | "jackpot" };
+    const savedKey = "beard-laws-neema-frozen-happy-hour";
+    const board: Array<Drink | null> = Array(20).fill(null);
+    let respins = 3;
+    let total = 0;
+    if (typeof localStorage !== "undefined") {
+      try {
+        const saved = JSON.parse(localStorage.getItem(savedKey) ?? "null") as { board?: Array<Drink | null>; respins?: number; total?: number } | null;
+        if (saved?.board?.length === 20) saved.board.forEach((drink, index) => { board[index] = drink; });
+        if (typeof saved?.respins === "number") respins = saved.respins;
+        if (typeof saved?.total === "number") total = saved.total;
+      } catch { localStorage.removeItem(savedKey); }
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "feature-cinematic frozen-happy-hour";
+    overlay.innerHTML = `<small>NEEMA'S HIGH SEAS</small><h2>FROZEN HAPPY HOUR</h2><p data-frozen-status>LOCK THE DRINKS • NEW DRINKS RESET 3 RESPINS</p><div class="frozen-hud"><b data-frozen-respins>RESPINS ● ● ●</b><b data-frozen-win>$0.00</b></div><div class="frozen-board" data-frozen-board></div><button class="frozen-go" data-frozen-go>POUR THE NEXT ROUND</button>`;
+    this.root.appendChild(overlay);
+    const host = overlay.querySelector<HTMLElement>("[data-frozen-board]")!;
+    const status = overlay.querySelector<HTMLElement>("[data-frozen-status]")!;
+    const respinNode = overlay.querySelector<HTMLElement>("[data-frozen-respins]")!;
+    const winNode = overlay.querySelector<HTMLElement>("[data-frozen-win]")!;
+    const go = overlay.querySelector<HTMLButtonElement>("[data-frozen-go]")!;
+    const render = (): void => {
+      host.innerHTML = board.map((drink) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty">+</div>`).join("");
+      respinNode.textContent = `RESPINS ${"● ".repeat(respins)}${"○ ".repeat(3 - respins)}`;
+      winNode.textContent = `$${(total / 100).toFixed(2)}`;
+      if (typeof localStorage !== "undefined") localStorage.setItem(savedKey, JSON.stringify({ board, respins, total }));
+    };
+    const makeDrink = (): Drink => {
+      const roll = Math.random();
+      const multiple = roll < .56 ? 1 : roll < .78 ? 2 : roll < .9 ? 3 : roll < .965 ? 5 : 10;
+      const kind: Drink["kind"] = roll < .62 ? "cash" : roll < .7 ? "ice" : roll < .77 ? "cranberry" : roll < .83 ? "vodka" : roll < .88 ? "neema" : roll < .93 ? "bell" : roll < .98 ? "wheel" : "jackpot";
+      return { kind, value: this.betUnits * (kind === "jackpot" ? 10 : multiple) };
+    };
+    const emptyIndices = (): number[] => board.map((v, i) => v ? -1 : i).filter((i) => i >= 0);
+    for (let i = board.filter(Boolean).length; i < Math.min(startingDrinks, 20); i += 1) {
+      const empty = emptyIndices(); const at = empty[Math.floor(Math.random() * empty.length)]!;
+      const drink = makeDrink(); board[at] = drink; total += drink.value;
+    }
+    render();
+    await new Promise<void>((resolve) => go.addEventListener("click", async () => {
+      go.disabled = true;
+      while (respins > 0 && emptyIndices().length) {
+        status.textContent = "THE BAR IS POURING…";
+        host.classList.add("shaking"); await this.wait(520); host.classList.remove("shaking");
+        const empty = emptyIndices();
+        const hitCount = Math.random() < .5 ? 0 : Math.random() < .82 ? 1 : 2;
+        const hits = empty.sort(() => Math.random() - .5).slice(0, hitCount);
+        if (!hits.length) respins -= 1;
+        for (const at of hits) {
+          const drink = makeDrink(); board[at] = drink; total += drink.value;
+          if (drink.kind === "ice") { drink.value *= 2; total += drink.value / 2; status.textContent = "ICE CUBE • VALUE DOUBLED"; }
+          if (drink.kind === "cranberry") { const reel = at % 5; board.forEach((d, index) => { if (d && index % 5 === reel) { total += d.value; d.value *= 2; } }); status.textContent = "CRANBERRY SPLASH • REEL DOUBLED"; }
+          if (drink.kind === "vodka") { const collected = board.reduce((s, d) => s + (d?.value ?? 0), 0); total += Math.round(collected * .2); status.textContent = "VODKA POUR • BAR COLLECTOR"; }
+          if (drink.kind === "neema") { const open = emptyIndices(); if (open.length) { const extra = makeDrink(); board[open[0]!] = extra; total += extra.value; } status.textContent = "BARTENDER NEEMA ADDS A DRINK"; }
+          if (drink.kind === "bell") { respins += 1; status.textContent = "LAST CALL BELL • EXTRA RESPIN"; }
+          if (drink.kind === "wheel") { board.forEach((d) => { if (d && d.value <= this.betUnits * 2) { d.value += this.betUnits; total += this.betUnits; } }); status.textContent = "SHIP WHEEL • SMALL DRINKS UPGRADED"; }
+        }
+        if (hits.length) respins = Math.max(respins, 3);
+        render(); await this.wait(700);
+      }
+      if (!emptyIndices().length) { total += this.betUnits * 500; status.textContent = "FULL BAR • GRAND 500×!"; }
+      else status.textContent = `${20 - emptyIndices().length} DRINKS LOCKED • HAPPY HOUR COMPLETE`;
+      if (typeof localStorage !== "undefined") localStorage.removeItem(savedKey);
+      go.disabled = false; go.textContent = `COLLECT $${(total / 100).toFixed(2)}`;
+      go.addEventListener("click", () => { overlay.remove(); resolve(); }, { once: true });
+    }, { once: true }));
+    return total;
+  }
   private async chooseVoyageRoute(): Promise<VoyageRoute> {
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic sea-cinematic voyage-choice";
@@ -538,7 +614,7 @@ export class NeemasHighSeas {
   private showRules(): void {
     const modal = document.createElement("div");
     modal.className = "slot-rules-backdrop";
-    modal.innerHTML = `<section class="slot-rules sea-rules"><button data-close>×</button><small>NEEMA'S HIGH SEAS HAPPY HOUR</small><h2>HOW TO PLAY</h2><p>Five fixed paylines pay left to right. Sunset substitutes for every paying symbol. Three or more Cruise Tickets anywhere launch the voyage immediately. Paid spins and landed Tickets also fill the persistent Departure meter; a full meter guarantees the next voyage.</p><h3>CABIN UPGRADE BONUS</h3><ul><li>Begin in the Interior Cabin and upgrade during the voyage.</li><li>Each cabin raises the free-spin multiplier up to 5×.</li><li>Party Cove and later ports unlock inside free spins when Captain Neema lands.</li><li>Ocean View through Captain&apos;s Deck are cabin multiplier upgrades.</li><li>Three Tickets during free spins retrigger 5 more.</li><li>Last Call adds a finale award when the voyage ends.</li></ul><h3>TOP SYMBOLS</h3><p>Captain Neema • Sunset Wild • Ship Wheel • Buffalo Helmet</p><p class="rules-note">Five displayed lines share the $1.00 wager. Fictional credits only.</p></section>`;
+    modal.innerHTML = `<section class="slot-rules sea-rules"><button data-close>×</button><small>NEEMA'S HIGH SEAS HAPPY HOUR</small><h2>HOW TO PLAY</h2><p>Five fixed paylines pay left to right. Sunset substitutes for every paying symbol. Three Cruise Tickets or a full Departure meter launch Frozen Happy Hour and Captain Neema's voyage.</p><h3>FROZEN HAPPY HOUR</h3><ul><li>Six drinks lock on a 5×4 board with three respins.</li><li>Every new drink resets respins to three.</li><li>Vodka collects, Ice doubles, Cranberry doubles a reel, Bartender Neema adds a drink, and Last Call adds a respin.</li><li>Fill all 20 positions for the 500× Grand.</li></ul><h3>PREMIER VOYAGE</h3><ul><li>Choose Party Deck, Casino Deck or Mystery Island.</li><li>Ocean View through Captain&apos;s Deck raise the multiplier.</li><li>Captain Neema advances through Party Cove, Golden Port and Mystery Isle.</li><li>Last Call adds a player-picked finale.</li></ul><p class="rules-note">Fictional credits only.</p></section>`;
     document.body.appendChild(modal);
     modal
       .querySelector("[data-close]")

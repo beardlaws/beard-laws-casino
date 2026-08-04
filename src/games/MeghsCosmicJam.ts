@@ -49,6 +49,8 @@ export class MeghsCosmicJam {
   private encoreMode: EncoreMode | null = null;
   private stageEnergy = 0;
   private stageLevel = 0;
+  private soundboard = new Set<string>();
+  private multiplierTiles = 0;
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
   private betIndex = 1;
@@ -70,7 +72,7 @@ export class MeghsCosmicJam {
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
         <div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
-        <div class="megh-feature"><span>6+ MATCHING SYMBOLS WIN</span><span>WINS VANISH &amp; TUMBLE</span><span>4 CASCADES LAUNCH ENCORE</span></div>
+        <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
         <div class="megh-auto-menu" data-megh-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
@@ -248,7 +250,9 @@ export class MeghsCosmicJam {
       );
       total += award;
       this.encore += 1;
+      this.chargeSoundboard(matches.map((m) => m.symbol.id));
       if (free) this.growEncoreStage(removed.size);
+      if (free) this.multiplierTiles = Math.min(12, this.multiplierTiles + 1);
       const groups = matches
         .map((m) => `${m.cells.size} ${m.symbol.label}`)
         .join(" + ");
@@ -274,7 +278,8 @@ export class MeghsCosmicJam {
       this.writeProgress("megh-soundcheck", this.soundcheck);
     }
     const guaranteedEncore = !free && this.soundcheck >= SOUNDCHECK_TARGET;
-    if (ufos >= 3 || (!free && this.encore >= 4) || guaranteedEncore) {
+    const headliner = !free && this.soundboard.size >= 5;
+    if (ufos >= 3 || (!free && this.encore >= 4) || (!free && this.soundboard.size >= 3) || guaranteedEncore) {
       feature = true;
       if (!free) {
         this.soundcheck = 0;
@@ -291,8 +296,9 @@ export class MeghsCosmicJam {
         this.encoreMode = await this.chooseEncoreMode(baseDrops);
         this.stageEnergy = 0;
         this.stageLevel = 0;
-        this.freeDrops += baseDrops + (this.encoreMode === "long-set" ? 4 : 0);
+        this.freeDrops += baseDrops + (this.encoreMode === "long-set" ? 4 : 0) + (headliner ? 5 : 0);
         if (this.encoreMode === "power-chords") this.multiplier = Math.max(this.multiplier, 3);
+        if (headliner) { this.multiplier = Math.max(this.multiplier, 5); this.stageLevel = 3; await this.showHeadlinerIntro(); }
         this.message(`${this.encoreModeLabel()} • ${this.freeDrops} FREE DROPS`);
         await this.showEncoreIntro(false, this.freeDrops);
       }
@@ -307,6 +313,8 @@ export class MeghsCosmicJam {
       this.encoreMode = null;
       this.stageEnergy = 0;
       this.stageLevel = 0;
+      this.soundboard.clear();
+      this.multiplierTiles = 0;
     }
     if (total > 0) {
       this.setWallet(this.getWallet() + total);
@@ -326,6 +334,17 @@ export class MeghsCosmicJam {
     this.spinning = false;
     this.update();
     return feature;
+  }
+  private chargeSoundboard(symbols: string[]): void {
+    const map: Record<string, string> = { amp: "BASS", guitar: "LEAD", goat: "DRUMS", megh: "VOCALS", ufo: "UFO", vinyl: "BASS", strawberry: "VOCALS" };
+    symbols.forEach((symbol) => { const channel = map[symbol]; if (channel) this.soundboard.add(channel); });
+    this.root.querySelectorAll<HTMLElement>("[data-channel]").forEach((node) => node.classList.toggle("charged", this.soundboard.has(node.dataset.channel ?? "")));
+  }
+  private async showHeadlinerIntro(): Promise<void> {
+    const overlay = document.createElement("div");
+    overlay.className = "feature-cinematic cosmic-cinematic headliner-mode";
+    overlay.innerHTML = `<div class="cosmic-portal"></div><small>ALL FIVE CHANNELS CHARGED</small><h2>HEADLINER MODE</h2><p>5× START • +5 DROPS • PERSISTENT MULTIPLIER TILES</p>`;
+    this.root.appendChild(overlay); await this.wait(2200); overlay.classList.add("leaving"); await this.wait(420); overlay.remove();
   }
   private toggleAuto(): void {
     if (this.auto !== null) {
@@ -539,7 +558,7 @@ export class MeghsCosmicJam {
   private showRules(): void {
     const modal = document.createElement("div");
     modal.className = "slot-rules-backdrop";
-    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Three, four or five UFOs award 8, 12 or 16 free drops.</li><li>Paid drops and landed UFOs fill Soundcheck; a full meter guarantees the Encore.</li><li>Choose Long Set, Power Chords or UFO Storm before the feature.</li><li>The multiplier persists throughout the Encore.</li><li>Winning cascades charge the amp and upgrade the stage.</li><li>UFOs can retrigger up to 5 additional drops.</li><li>The final Guitar Smash adds a player-picked finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">Awards scale with the selected fictional-credit wager.</p></section>`;
+    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>COSMIC SOUNDBOARD</h3><ul><li>Cascades charge Bass, Lead, Drums, Vocals and UFO channels.</li><li>Three charged channels can launch Encore; all five launch Headliner Mode.</li><li>Headliner begins at 5× with five extra drops and persistent multiplier tiles.</li></ul><h3>INTERGALACTIC ENCORE</h3><ul><li>Choose Long Set, Power Chords or UFO Storm.</li><li>The multiplier persists and the stage upgrades through Galactic Headliner.</li><li>UFOs retrigger; Guitar Smash adds a player-picked finale.</li></ul><p class="rules-note">Fictional credits only.</p></section>`;
     document.body.appendChild(modal);
     modal
       .querySelector("[data-close]")

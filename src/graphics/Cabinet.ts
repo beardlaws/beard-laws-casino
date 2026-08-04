@@ -347,6 +347,22 @@ export class Cabinet extends Container {
     totalText.anchor.set(0.5); totalText.position.set(836, 768);
     overlay.addChild(shade, panel, title, subtitle, totalText);
     this.addChild(overlay);
+    type HeistTool = "drill" | "magnet" | "skeleton";
+    let tool: HeistTool | null = null;
+    const toolNames: Record<HeistTool, string> = { drill: "POWER DRILL", magnet: "COIN MAGNET", skeleton: "SKELETON KEY" };
+    (["drill", "magnet", "skeleton"] as HeistTool[]).forEach((choice, index) => {
+      const x = 462 + index * 250;
+      const button = new Graphics().roundRect(x, 286, 226, 46, 12).fill({ color: 0x351044 }).stroke({ color: 0xd898ff, width: 3 });
+      const label = new Text({ text: toolNames[choice], style: { fontFamily: "Arial Black, Arial", fontSize: 15, fill: 0xffe7a0 } });
+      label.anchor.set(0.5); label.position.set(x + 113, 309); button.eventMode = "static"; button.cursor = "pointer";
+      button.on("pointertap", () => {
+        if (tool) return;
+        tool = choice;
+        subtitle.text = choice === "drill" ? "POWER DRILL • CHANCE TO DOUBLE EVERY CASH BOX" : choice === "magnet" ? "COIN MAGNET • EVERY GOOD PICK PULLS EXTRA CREDITS" : "SKELETON KEY • FIRST ALARM BECOMES A SAFE WIN";
+        button.clear().roundRect(x, 286, 226, 46, 12).fill({ color: 0xd19a35 }).stroke({ color: 0xfff0a0, width: 4 });
+      });
+      overlay.addChild(button, label);
+    });
 
     // Values are assigned before the first choice. We reveal every unopened
     // box at the end so the player's choice is visibly genuine.
@@ -399,14 +415,17 @@ export class Cabinet extends Container {
         const label = new Text({ text: String(index + 1).padStart(2, "0"), style: { fontFamily: "Arial Black, Arial", fontSize: 29, fill: GOLD } });
         label.anchor.set(0.5); label.position.set(x + 77, y + 49);
         box.on("pointertap", () => {
-          if (finished || box.eventMode === "none") return;
+          if (finished || box.eventMode === "none" || !tool) { if (!tool) subtitle.text = "CHOOSE YOUR HEIST TOOL FIRST"; return; }
           box.eventMode = "none";
           picks += 1;
-          revealLabel(label, prize, true);
-          if (prize === -1) alarms += 1;
-          else if (prize !== 20) total += wagerUnits * prize;
+          let resolvedPrize = prize;
+          if (tool === "skeleton" && resolvedPrize === -1 && alarms === 0) resolvedPrize = 3;
+          if (tool === "drill" && resolvedPrize > 0 && resolvedPrize !== 20 && Math.random() < .45) resolvedPrize *= 2;
+          revealLabel(label, resolvedPrize, true);
+          if (resolvedPrize === -1) alarms += 1;
+          else if (resolvedPrize !== 20) total += wagerUnits * resolvedPrize + (tool === "magnet" ? wagerUnits : 0);
           totalText.text = `BONUS WIN  $${((total * startingMultiplier) / 100).toFixed(2)}   •   PICKS ${picks}/${maxPicks}   •   ALARMS ${alarms}/3`;
-          if (prize === 20) finish("key");
+          if (resolvedPrize === 20) finish("key");
           else if (alarms >= 3) finish("alarm");
           else if (picks >= maxPicks) finish("picks");
         });
@@ -557,6 +576,17 @@ export class Cabinet extends Container {
             cell.coin.alpha = 1; cell.label.alpha = 1;
           }
           first = false; lives = hits.length ? 3 : lives - 1;
+          if (hits.length && this.randomInt(100) < 12) {
+            const locked = cells.filter((cell) => cell.locked);
+            locked.forEach((cell) => { cell.value += wagerUnits; total += wagerUnits; cell.label.text = cell.prize?.jackpot ? cell.label.text : `${Math.round(cell.value / wagerUnits)}×`; });
+            actionText.text = "SHAKE THE VAULT • EVERY LOCKED COIN UPGRADED";
+            await this.delay(850);
+          }
+          if (hits.length && this.randomInt(100) < 5) {
+            const breakAward = Math.round(total * .25); total += breakAward;
+            actionText.text = `BREAK THE BANK • +$${(breakAward / 100).toFixed(2)} COLLECTED`;
+            await this.delay(900);
+          }
           livesText.text = `RESPINS  ${"● ".repeat(lives)}${"○ ".repeat(3 - lives)}`; winText.text = `LOCKED VALUE  $${(total / 100).toFixed(2)}`;
           actionText.text = hits.length ? `${hits.length} NEW COIN${hits.length === 1 ? "" : "S"} • THREE LIVES RESTORED` : lives ? `NO COIN • ${lives} RESPIN${lives === 1 ? "" : "S"} REMAIN` : "FINAL RESPIN MISSED • VAULT SEALING";
           await this.delay(hits.length ? 850 : 1050);
@@ -764,7 +794,7 @@ export class Cabinet extends Container {
     this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
     this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
-    this.buildBadge = new Text({ text: "BEARD BANK V52", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge = new Text({ text: "BEARD BANK V53", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
@@ -778,7 +808,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(113, 45);
     this.infoButton.clear().roundRect(512, 18, 190, 54, 14).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(607, 45);
-    this.buildBadge.text = "BEARD BANK V52"; this.buildBadge.position.set(360, 92);
+    this.buildBadge.text = "BEARD BANK V53"; this.buildBadge.position.set(360, 92);
 
     // The readouts are drawn with landscape-local coordinates. Translate them
     // into one clean row below the reels instead of letting them overlap it.
@@ -824,7 +854,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(105, 44);
     this.infoButton.clear().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(1542, 44);
-    this.buildBadge.text = "BEARD BANK V52"; this.buildBadge.position.set(836, 382);
+    this.buildBadge.text = "BEARD BANK V53"; this.buildBadge.position.set(836, 382);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {
