@@ -35,6 +35,8 @@ const SYMBOL_LABELS: Record<BeardBankSymbolId, string> = {
 export class SymbolView extends Container {
   private winGlow: Graphics | undefined;
   private art: Sprite | undefined;
+  private artScaleX = 1;
+  private artScaleY = 1;
 
   public constructor(
     symbolId: BeardBankSymbolId,
@@ -51,6 +53,8 @@ export class SymbolView extends Container {
     // destroyed Sprite after switching to generated artwork.
     this.art = undefined;
     this.winGlow = undefined;
+    this.artScaleX = 1;
+    this.artScaleY = 1;
     this.removeChildren().forEach((child) => child.destroy());
     const width = this.symbolWidth - 2;
     const height = this.symbolHeight - 2;
@@ -68,10 +72,31 @@ export class SymbolView extends Container {
       wordWrapWidth: width * 0.72,
     } });
     fallback.anchor.set(0.5); fallback.position.set(width / 2, height / 2);
+    // Production art is bundled and preloaded before the cabinet opens. Keep
+    // this emergency label in the display tree, but never paint it underneath
+    // healthy art (the old behaviour produced words behind transparent PNGs).
+    fallback.visible = false;
     this.art = Sprite.from(symbolUrl(symbolId));
-    this.art.width = width;
-    this.art.height = height;
-    this.art.position.set(0, 0);
+    // Preserve the fitted scale. The previous renderer sized the sprite and
+    // then reset scale to 1 during normal win-state cleanup. That made the new
+    // 1254px transparent artwork enormous, leaving only a transparent corner
+    // inside the reel window and creating the apparent blank symbols.
+    const textureWidth = Math.max(1, this.art.texture.width);
+    const textureHeight = Math.max(1, this.art.texture.height);
+    const generatedArt = symbolId === "balm" || symbolId === "razor"
+      || symbolId === "vault-crest" || symbolId === "luxury-kit";
+    if (generatedArt) {
+      const fit = Math.min((width * 0.88) / textureWidth, (height * 0.84) / textureHeight);
+      this.artScaleX = fit;
+      this.artScaleY = fit;
+      this.art.anchor.set(0.5);
+      this.art.position.set(width / 2, height / 2 - 2);
+    } else {
+      this.artScaleX = width / textureWidth;
+      this.artScaleY = height / textureHeight;
+      this.art.position.set(0, 0);
+    }
+    this.art.scale.set(this.artScaleX, this.artScaleY);
     this.addChild(well, fallback, this.art);
 
     const shade = new Graphics()
@@ -101,12 +126,15 @@ export class SymbolView extends Container {
     const clamped = Math.max(0, Math.min(1, intensity));
     this.alpha = 1;
     if (this.winGlow) this.winGlow.alpha = clamped;
-    if (this.art) this.art.scale.set(1 + clamped * 0.025);
+    if (this.art) this.art.scale.set(
+      this.artScaleX * (1 + clamped * 0.025),
+      this.artScaleY * (1 + clamped * 0.025),
+    );
   }
 
   public resetWinState(): void {
     this.alpha = 1;
     if (this.winGlow) this.winGlow.alpha = 0;
-    if (this.art) this.art.scale.set(1);
+    if (this.art) this.art.scale.set(this.artScaleX, this.artScaleY);
   }
 }

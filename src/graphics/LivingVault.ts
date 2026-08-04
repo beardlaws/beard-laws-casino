@@ -75,19 +75,7 @@ export class LivingVault extends Container {
     subtitle.anchor.set(0.5);
     subtitle.position.set(247, 49);
 
-    const chargeText = new Text({
-      text: "1 / 30",
-      style: {
-        fontFamily: "Arial Black, Arial",
-        fontSize: 11,
-        fontWeight: "bold",
-        fill: COLORS.brightPurple,
-      },
-    });
-    chargeText.anchor.set(0.5);
-    chargeText.position.set(247, 65);
-
-    this.addChild(shadow, frame, this.glow, innerFrame, this.vaultDoor, title, subtitle, chargeText);
+    this.addChild(shadow, frame, this.glow, innerFrame, this.vaultDoor, title, subtitle);
   }
 
   private buildVaultDoor(): void {

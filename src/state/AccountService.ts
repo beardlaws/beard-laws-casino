@@ -1,65 +1,205 @@
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { PlayerProfile } from "./PlayerProfileStore";
+import {
+  createClient,
+  type Session,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
+import { freshProfile, type PlayerProfile } from "./PlayerProfileStore";
 
-export type AccountResult = { ok: true; user?: User; message?: string } | { ok: false; message: string };
+export interface AccountState {
+  readonly connected: boolean;
+  readonly session: Session | null;
+  readonly email: string;
+}
+
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 export class AccountService {
-  private readonly client?: SupabaseClient;
+  private readonly client: SupabaseClient | null =
+    url && anonKey
+      ? createClient(url, anonKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        })
+      : null;
+  private session: Session | null = null;
+  private saveTimer: number | null = null;
+  private pendingProfile: PlayerProfile | null = null;
 
-  public constructor() {
-    const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
-    if (url && key && !url.includes("YOUR-PROJECT")) this.client = createClient(url, key);
+  public async restore(): Promise<AccountState> {
+    if (!this.client) return this.state();
+    const { data } = await this.client.auth.getSession();
+    this.session = data.session;
+    this.client.auth.onAuthStateChange((_event, session) => {
+      this.session = session;
+    });
+    return this.state();
   }
 
-  public get configured(): boolean { return Boolean(this.client); }
-
-  public async currentUser(): Promise<User | undefined> {
-    if (!this.client) return undefined;
-    const { data } = await this.client.auth.getUser();
-    return data.user ?? undefined;
+  public state(): AccountState {
+    return {
+      connected: this.client !== null,
+      session: this.session,
+      email: this.session?.user.email ?? "",
+    };
   }
 
-  public onChange(callback: (user?: User) => void): () => void {
-    if (!this.client) return () => undefined;
-    const { data } = this.client.auth.onAuthStateChange((_event, session) => callback(session?.user));
-    return () => data.subscription.unsubscribe();
+  public async signIn(email: string, password: string): Promise<string | null> {
+    if (!this.client) return "Cloud accounts are not connected in this build.";
+    const { data, error } = await this.client.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) return error.message;
+    this.session = data.session;
+    return null;
   }
 
-  public async signIn(email: string, password: string): Promise<AccountResult> {
-    if (!this.client) return { ok: false, message: "Cloud accounts are not connected yet." };
-    const { data, error } = await this.client.auth.signInWithPassword({ email, password });
-    return error ? { ok: false, message: error.message } : { ok: true, user: data.user };
+  public async signUp(
+    email: string,
+    password: string,
+  ): Promise<{ error: string | null; confirmationRequired: boolean }> {
+    if (!this.client)
+      return {
+        error: "Cloud accounts are not connected in this build.",
+        confirmationRequired: false,
+      };
+    const { data, error } = await this.client.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
+      },
+    });
+    if (error) return { error: error.message, confirmationRequired: false };
+    this.session = data.session;
+    return { error: null, confirmationRequired: data.session === null };
   }
 
-  public async signUp(email: string, password: string, displayName: string): Promise<AccountResult> {
-    if (!this.client) return { ok: false, message: "Cloud accounts are not connected yet." };
-    const { data, error } = await this.client.auth.signUp({ email, password, options: { data: { display_name: displayName } } });
-    if (error) return { ok: false, message: error.message };
-    const message = data.session ? "Account created." : "Check your email to confirm your account.";
-    return data.user ? { ok: true, user: data.user, message } : { ok: true, message };
+  public async resetPassword(email: string): Promise<string | null> {
+    if (!this.client) return "Cloud accounts are not connected in this build.";
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + import.meta.env.BASE_URL,
+    });
+    return error?.message ?? null;
   }
 
-  public async sendReset(email: string): Promise<AccountResult> {
-    if (!this.client) return { ok: false, message: "Cloud accounts are not connected yet." };
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
-    const { error } = await this.client.auth.resetPasswordForEmail(email, { redirectTo });
-    return error ? { ok: false, message: error.message } : { ok: true, message: "Password reset email sent." };
+  public async signOut(): Promise<void> {
+    if (this.client) await this.client.auth.signOut();
+    this.session = null;
   }
 
-  public async signOut(): Promise<void> { await this.client?.auth.signOut(); }
-
-  public async loadProfile(user: User): Promise<PlayerProfile | undefined> {
-    if (!this.client) return undefined;
-    const { data } = await this.client.from("casino_profiles").select("profile").eq("user_id", user.id).maybeSingle();
-    return data?.profile as PlayerProfile | undefined;
+  public async loadProfile(): Promise<PlayerProfile | null> {
+    if (!this.client || !this.session) return null;
+    const userId = this.session.user.id;
+    let lookup = await this.client
+      .from("casino_profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (lookup.error) {
+      lookup = await this.client
+        .from("casino_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+    }
+    if (lookup.error || !lookup.data) return freshProfile(userId);
+    const data = lookup.data;
+    const row = data as Record<string, unknown>;
+    const nested = row.profile ?? row.profile_data ?? row.data;
+    if (nested && typeof nested === "object")
+      return this.normalizeCloud(nested as Partial<PlayerProfile>, userId);
+    const flat: {
+      displayName?: string;
+      walletUnits?: number;
+      beardBank?: PlayerProfile["beardBank"];
+      updatedAtIso?: string;
+    } = {};
+    if (typeof row.display_name === "string") flat.displayName = row.display_name;
+    if (typeof row.wallet_units === "number") flat.walletUnits = row.wallet_units;
+    if (row.beard_bank && typeof row.beard_bank === "object") flat.beardBank = row.beard_bank as PlayerProfile["beardBank"];
+    if (typeof row.updated_at === "string") flat.updatedAtIso = row.updated_at;
+    return this.normalizeCloud(flat, userId);
   }
 
-  public async saveProfile(profile: PlayerProfile): Promise<AccountResult> {
-    if (!this.client) return { ok: false, message: "Cloud accounts are offline." };
-    const user = await this.currentUser();
-    if (!user) return { ok: false, message: "Sign in to save across devices." };
-    const { error } = await this.client.from("casino_profiles").upsert({ user_id: user.id, profile, updated_at: new Date().toISOString() });
-    return error ? { ok: false, message: error.message } : { ok: true };
+  public saveProfile(profile: PlayerProfile): void {
+    if (!this.client || !this.session) return;
+    this.pendingProfile = profile;
+    if (this.saveTimer !== null) window.clearTimeout(this.saveTimer);
+    this.saveTimer = window.setTimeout(() => {
+      void this.flush();
+    }, 700);
+  }
+
+  public async flush(): Promise<void> {
+    if (!this.client || !this.session || !this.pendingProfile) return;
+    const profile = this.pendingProfile;
+    this.pendingProfile = null;
+    this.saveTimer = null;
+    const id = this.session.user.id;
+    const candidates: Record<string, unknown>[] = [
+      { id, profile, updated_at: new Date().toISOString() },
+      {
+        user_id: id,
+        profile_data: profile,
+        updated_at: new Date().toISOString(),
+      },
+      { user_id: id, profile, updated_at: new Date().toISOString() },
+      {
+        id,
+        display_name: profile.displayName,
+        wallet_units: profile.walletUnits,
+        beard_bank: profile.beardBank,
+        updated_at: new Date().toISOString(),
+      },
+    ];
+    for (const candidate of candidates) {
+      const conflict = "user_id" in candidate ? "user_id" : "id";
+      const { error } = await this.client
+        .from("casino_profiles")
+        .upsert(candidate, { onConflict: conflict });
+      if (!error) return;
+    }
+    console.error(
+      "Casino cloud save could not match the casino_profiles schema.",
+    );
+  }
+
+  private normalizeCloud(
+    value: Partial<PlayerProfile>,
+    id: string,
+  ): PlayerProfile {
+    const base = freshProfile(id);
+    return {
+      id,
+      displayName: String(
+        value.displayName ||
+          this.session?.user.user_metadata.display_name ||
+          this.session?.user.email?.split("@")[0] ||
+          "Cloud Player",
+      ),
+      walletUnits: Math.max(
+        0,
+        Math.round(Number(value.walletUnits ?? base.walletUnits)),
+      ),
+      beardBank: {
+        livingVaultCharges: Math.max(
+          0,
+          Math.min(
+            29,
+            Math.round(Number(value.beardBank?.livingVaultCharges ?? 0)),
+          ),
+        ),
+        lifetimeCoinsCollected: Math.max(
+          0,
+          Math.round(Number(value.beardBank?.lifetimeCoinsCollected ?? 0)),
+        ),
+      },
+      updatedAtIso: String(value.updatedAtIso || new Date().toISOString()),
+    };
   }
 }

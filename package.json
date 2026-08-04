@@ -11,10 +11,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.53.0",
+    "@supabase/supabase-js": "^2.112.0",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {
+    "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",
     "vitest": "^4.0.9"

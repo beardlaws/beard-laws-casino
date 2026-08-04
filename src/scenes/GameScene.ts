@@ -286,10 +286,10 @@ export class GameScene {
     );
 
     this.cabinet.scale.set(scale);
-    const portrait = height > width * 1.15;
+    const portrait = height > width;
     this.cabinet.position.set(
       (width - this.cabinet.cabinetWidth * scale) / 2,
-      portrait ? 12 : (height - this.cabinet.cabinetHeight * scale) / 2,
+      portrait ? verticalPadding : (height - this.cabinet.cabinetHeight * scale) / 2,
     );
   }
 }
