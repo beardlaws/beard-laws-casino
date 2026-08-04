@@ -332,7 +332,15 @@ export class NeemasHighSeas {
       }
       if (!retrigger) this.route = await this.chooseVoyageRoute();
       if (!retrigger) {
-        const happyHourAward = await this.playFrozenHappyHour(Math.max(6, tickets + 3));
+        let happyHourAward = 0;
+        try {
+          happyHourAward = await this.playFrozenHappyHour(Math.max(6, tickets + 3));
+        } catch (error) {
+          console.error("Frozen Happy Hour recovered from an unexpected error.", error);
+          localStorage.removeItem("beard-laws-neema-frozen-happy-hour");
+          this.root.querySelector(".frozen-happy-hour")?.remove();
+          this.message("HAPPY HOUR RECOVERED • VOYAGE CONTINUES");
+        }
         award += happyHourAward;
         this.bonusWin += happyHourAward;
       }
@@ -520,12 +528,16 @@ export class NeemasHighSeas {
     const savedKey = "beard-laws-neema-frozen-happy-hour";
     const board: Array<Drink | null> = Array(20).fill(null);
     let respins = 3;
+    let roundsPlayed = 0;
+    let extraRespinsAwarded = 0;
+    const MAX_ROUNDS = 60;
+    const MAX_EXTRA_RESPINS = 8;
     let total = 0;
     if (typeof localStorage !== "undefined") {
       try {
         const saved = JSON.parse(localStorage.getItem(savedKey) ?? "null") as { board?: Array<Drink | null>; respins?: number; total?: number } | null;
         if (saved?.board?.length === 20) saved.board.forEach((drink, index) => { board[index] = drink; });
-        if (typeof saved?.respins === "number") respins = saved.respins;
+        if (typeof saved?.respins === "number") respins = Math.max(0, Math.min(4, Math.floor(saved.respins)));
         if (typeof saved?.total === "number") total = saved.total;
       } catch { localStorage.removeItem(savedKey); }
     }
@@ -540,7 +552,8 @@ export class NeemasHighSeas {
     const go = overlay.querySelector<HTMLButtonElement>("[data-frozen-go]")!;
     const render = (): void => {
       host.innerHTML = board.map((drink) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty">+</div>`).join("");
-      respinNode.textContent = `RESPINS ${"● ".repeat(respins)}${"○ ".repeat(3 - respins)}`;
+      const visibleRespins = Math.max(0, Math.min(4, Math.floor(respins)));
+      respinNode.textContent = `RESPINS ${"● ".repeat(visibleRespins)}${"○ ".repeat(Math.max(0, 3 - visibleRespins))}${visibleRespins > 3 ? "+" : ""}`;
       winNode.textContent = `$${(total / 100).toFixed(2)}`;
       if (typeof localStorage !== "undefined") localStorage.setItem(savedKey, JSON.stringify({ board, respins, total }));
     };
@@ -557,7 +570,8 @@ export class NeemasHighSeas {
     }
     render();
     await this.wait(900);
-    while (respins > 0 && emptyIndices().length) {
+    while (respins > 0 && emptyIndices().length && roundsPlayed < MAX_ROUNDS) {
+        roundsPlayed += 1;
         status.textContent = "THE BAR IS POURING…";
         go.textContent = `AUTO RESPIN • ${respins} LEFT`;
         host.classList.add("shaking"); await this.wait(520); host.classList.remove("shaking");
@@ -571,12 +585,19 @@ export class NeemasHighSeas {
           if (drink.kind === "cranberry") { const reel = at % 5; board.forEach((d, index) => { if (d && index % 5 === reel) { total += d.value; d.value *= 2; } }); status.textContent = "CRANBERRY SPLASH • REEL DOUBLED"; }
           if (drink.kind === "vodka") { const collected = board.reduce((s, d) => s + (d?.value ?? 0), 0); total += Math.round(collected * .2); status.textContent = "VODKA POUR • BAR COLLECTOR"; }
           if (drink.kind === "neema") { const open = emptyIndices(); if (open.length) { const extra = makeDrink(); board[open[0]!] = extra; total += extra.value; } status.textContent = "BARTENDER NEEMA ADDS A DRINK"; }
-          if (drink.kind === "bell") { respins += 1; status.textContent = "LAST CALL BELL • EXTRA RESPIN"; }
+          if (drink.kind === "bell") {
+            if (extraRespinsAwarded < MAX_EXTRA_RESPINS) {
+              respins = Math.min(4, respins + 1);
+              extraRespinsAwarded += 1;
+              status.textContent = "LAST CALL BELL • EXTRA RESPIN";
+            } else status.textContent = "LAST CALL BELL • RESPIN BANK FULL";
+          }
           if (drink.kind === "wheel") { board.forEach((d) => { if (d && d.value <= this.betUnits * 2) { d.value += this.betUnits; total += this.betUnits; } }); status.textContent = "SHIP WHEEL • SMALL DRINKS UPGRADED"; }
         }
-        if (hits.length) respins = Math.max(respins, 3);
+        if (hits.length) respins = Math.min(4, Math.max(respins, 3));
         render(); await this.wait(850);
     }
+    if (roundsPlayed >= MAX_ROUNDS) status.textContent = "LAST CALL • HAPPY HOUR SAFELY CLOSED";
     if (!emptyIndices().length) { total += this.betUnits * 500; status.textContent = "FULL BAR • GRAND 500×!"; }
     else status.textContent = `${20 - emptyIndices().length} DRINKS LOCKED • HAPPY HOUR COMPLETE`;
     if (typeof localStorage !== "undefined") localStorage.removeItem(savedKey);

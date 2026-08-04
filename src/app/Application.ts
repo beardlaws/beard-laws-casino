@@ -39,6 +39,7 @@ export class Application {
       if (cloud) {
         this.profile = cloud;
         this.walletUnits = cloud.walletUnits;
+        await this.accounts.publishStats(cloud);
       }
     }
     this.showLobby();
@@ -222,12 +223,15 @@ export class Application {
 
   private async showLeaderboard(): Promise<void> {
     const modal = document.createElement("div"); modal.className = "modal-backdrop";
-    modal.innerHTML = `<section class="progress-modal leaderboard-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V60</small><h2>The Beard Board</h2><p>Loading public Casino Cards…</p></section>`; document.body.appendChild(modal);
+    modal.innerHTML = `<section class="progress-modal leaderboard-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V61</small><h2>The Beard Board</h2><p>Loading public Casino Cards…</p></section>`; document.body.appendChild(modal);
     modal.querySelector("[data-close]")?.addEventListener("click", () => modal.remove());
-    const players = await this.accounts.leaderboard();
-    const rows = players.length ? players.map((p,i)=>`<button class="leader-row" data-card="${i}"><b>${i+1}</b><span><strong>${p.display_name}</strong><small>${p.favorite_game.replaceAll("-"," ").toUpperCase()} • ${p.total_spins} PLAYS</small></span><em>${Number(p.biggest_multiplier).toFixed(1)}×</em></button>`).join("") : `<div class="leader-empty"><strong>THE FLOOR IS WAITING</strong><p>Run the V60 database setup once, then registered players will appear here automatically. Guest profiles remain private.</p></div>`;
-    modal.querySelector("section")!.innerHTML = `<button class="close" data-close>×</button><small>BEARD LAWS CASINO • V60</small><h2>The Beard Board</h2><div class="leader-tabs"><span>BIGGEST MULTIPLIER</span><span>ALL TIME</span></div><div class="leader-list">${rows}</div><p class="privacy-note">Public cards show display names and game records only. Emails and wallet balances never appear.</p>`;
+    if (this.accounts.state().session) await this.accounts.publishStats(this.profile);
+    const result = await this.accounts.leaderboard();
+    const players = result.players;
+    const rows = result.status !== "ready" ? `<div class="leader-empty error"><strong>BEARD BOARD CONNECTION FAILED</strong><p>${result.message}</p><button data-retry>TRY AGAIN</button></div>` : players.length ? players.map((p,i)=>`<button class="leader-row" data-card="${i}"><b>${i+1}</b><span><strong>${p.display_name}</strong><small>${p.favorite_game.replaceAll("-"," ").toUpperCase()} • ${p.total_spins} PLAYS</small></span><em>${Number(p.biggest_multiplier).toFixed(1)}×</em></button>`).join("") : `<div class="leader-empty"><strong>FIRST NAME ON THE BOARD?</strong><p>The Beard Board is connected. Sign in and play once to publish your Casino Card. Guest profiles remain private.</p></div>`;
+    modal.querySelector("section")!.innerHTML = `<button class="close" data-close>×</button><small>BEARD LAWS CASINO • V61</small><h2>The Beard Board</h2><div class="leader-tabs"><span>BIGGEST MULTIPLIER</span><span>ALL TIME</span></div><div class="leader-list">${rows}</div><p class="privacy-note">Public cards show display names and game records only. Emails and wallet balances never appear.</p>`;
     modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
+    modal.querySelector("[data-retry]")?.addEventListener("click",()=>{ modal.remove(); void this.showLeaderboard(); });
     modal.querySelectorAll<HTMLElement>("[data-card]").forEach((node)=>node.addEventListener("click",()=>{const p=players[Number(node.dataset.card)]!;this.showCasinoCard(p);}));
   }
 
@@ -286,6 +290,7 @@ export class Application {
         if (cloud) {
           this.profile = cloud;
           this.walletUnits = cloud.walletUnits;
+          await this.accounts.publishStats(cloud);
         }
         close();
         this.showLobby();
@@ -310,6 +315,7 @@ export class Application {
         if (cloud) {
           this.profile = cloud;
           this.walletUnits = cloud.walletUnits;
+          await this.accounts.publishStats(cloud);
         }
         close();
         this.showLobby();

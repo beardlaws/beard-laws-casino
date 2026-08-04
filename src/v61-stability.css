@@ -1,0 +1,9 @@
+/* V61: reel-first Beard Bank finish and truthful Beard Board states. */
+.bb60-machine{border-color:#e3bd58;box-shadow:0 22px 70px #000,0 0 46px #b668c966,inset 0 0 55px #000}
+.bb60-reels{position:relative;grid-template-rows:repeat(3,minmax(112px,1fr));gap:4px;margin:8px 14px;padding:8px;border:4px solid #d3a43e;background:linear-gradient(90deg,#030105,#16081d 50%,#030105);box-shadow:inset 0 0 32px #000,0 0 26px #984cc788,0 8px 22px #000}
+.bb60-reels:after{content:"";pointer-events:none;position:absolute;inset:6px;border-radius:9px;background:linear-gradient(#fff4be18,transparent 20%,transparent 75%,#0008);box-shadow:inset 0 2px #fff7c933}
+.bb60-symbol{border-color:#7e5a89;border-radius:7px;background:radial-gradient(circle at 50% 32%,#52275f,#17091d 72%);box-shadow:inset 0 3px 9px #b469c822,inset 0 -12px 18px #000}
+.bb60-symbol img{width:92%;height:86%;transform:translateY(-3px);filter:drop-shadow(0 7px 6px #000)}
+.bb60-symbol small{z-index:2;font-weight:900;letter-spacing:.05em;color:#ffe89b;text-shadow:0 1px 3px #000,0 0 4px #000}
+.leader-empty.error{border-color:#b85050;color:#ffd1d1}.leader-empty button{margin-top:8px}
+@media(max-width:560px){.bb60-machine header{padding:8px 12px 6px;align-items:center}.bb60-machine header small{font-size:7px}.bb60-machine h1{font-size:29px}.bb60-vault{grid-template-columns:49px 1fr;padding:5px 12px}.bb60-door{width:44px;height:44px}.bb60-door i{width:22px}.bb60-vault strong{font-size:12px}.bb60-vault p{display:none}.bb60-meter{height:6px;margin-top:3px}.bb60-status{padding:5px;font-size:9px}.bb60-reels{margin:5px 7px;grid-template-rows:repeat(3,minmax(112px,1fr))}.bb60-symbol img{width:96%;height:89%}}

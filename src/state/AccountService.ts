@@ -24,6 +24,10 @@ export interface LeaderboardPlayer {
   readonly updated_at: string;
 }
 
+export type LeaderboardResult =
+  | { readonly status: "ready"; readonly players: LeaderboardPlayer[] }
+  | { readonly status: "unavailable" | "sync-failed"; readonly players: []; readonly message: string };
+
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
@@ -150,21 +154,22 @@ export class AccountService {
     }, 700);
   }
 
-  public async leaderboard(): Promise<LeaderboardPlayer[]> {
-    if (!this.client) return [];
+  public async leaderboard(): Promise<LeaderboardResult> {
+    if (!this.client) return { status: "unavailable", players: [], message: "Cloud accounts are not connected in this build." };
     const { data, error } = await this.client.from("casino_public_leaderboard").select("*").order("biggest_multiplier", { ascending: false }).limit(50);
-    if (error || !data) return [];
-    return data as LeaderboardPlayer[];
+    if (error) return { status: "unavailable", players: [], message: error.message };
+    return { status: "ready", players: (data ?? []) as LeaderboardPlayer[] };
   }
 
-  public async publishStats(profile: PlayerProfile): Promise<void> {
-    if (!this.client || !this.session) return;
-    await this.client.rpc("publish_casino_stats", {
+  public async publishStats(profile: PlayerProfile): Promise<string | null> {
+    if (!this.client || !this.session) return null;
+    const { error } = await this.client.rpc("publish_casino_stats", {
       p_display_name: profile.displayName, p_total_spins: profile.casino.totalSpins,
       p_total_bonuses: profile.casino.totalBonuses, p_biggest_multiplier: profile.casino.biggestMultiplier,
       p_biggest_win_units: profile.casino.biggestWinUnits, p_xp: profile.casino.xp,
       p_favorite_game: profile.casino.favoriteGame, p_achievement_count: profile.casino.achievements.length,
     });
+    return error?.message ?? null;
   }
 
   public async flush(): Promise<void> {

@@ -14,13 +14,20 @@ const LABELS: Record<string, string> = {
   "jackpot-key": "KEY",
 };
 const ART: Record<string, string> = {
-  comb: "comb.svg", oil: "oil.svg", crown: "crown.svg", "jackpot-key": "key.svg",
-  "beard-coin": "concept-symbols/beard-coin.png", "gold-crest": "concept-symbols/gold-crest.png",
-  "vault-door": "concept-symbols/vault-door.png", vernon: "concept-symbols/vernon.png",
-  balm: "generated/balm.png", razor: "generated/razor.png", "vault-crest": "generated/vault-crest.png",
-  "luxury-kit": "generated/luxury-kit.png",
+  comb: new URL("../../../assets/comb.svg", import.meta.url).href,
+  oil: new URL("../../../assets/oil.svg", import.meta.url).href,
+  crown: new URL("../../../assets/crown.svg", import.meta.url).href,
+  "jackpot-key": new URL("../../../assets/key.svg", import.meta.url).href,
+  "beard-coin": new URL("../../../assets/concept-symbols/beard-coin.png", import.meta.url).href,
+  "gold-crest": new URL("../../../assets/concept-symbols/gold-crest.png", import.meta.url).href,
+  "vault-door": new URL("../../../assets/concept-symbols/vault-door.png", import.meta.url).href,
+  vernon: new URL("../../../assets/concept-symbols/vernon.png", import.meta.url).href,
+  balm: new URL("../../../assets/generated/balm.png", import.meta.url).href,
+  razor: new URL("../../../assets/generated/razor.png", import.meta.url).href,
+  "vault-crest": new URL("../../../assets/generated/vault-crest.png", import.meta.url).href,
+  "luxury-kit": new URL("../../../assets/generated/luxury-kit.png", import.meta.url).href,
 };
-const asset = (id: string): string => new URL(`../../../assets/${ART[id]}`, import.meta.url).href;
+const asset = (id: string): string => ART[id] ?? ART.comb!;
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 export class BeardBankDOM {
