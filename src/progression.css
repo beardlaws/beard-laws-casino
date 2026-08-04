@@ -3,6 +3,7 @@
   align-items: stretch;
   gap: 10px;
 }
+.experience-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0}.experience-grid button{padding:18px;border:1px solid #9e61c8;border-radius:12px;background:#13091c;color:#dfc9e8;font-weight:900}.experience-grid b{display:block;margin-top:6px;color:#ffe17e}.reduced-motion *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}@media(max-width:520px){.experience-grid{grid-template-columns:1fr}}
 .rank-pill,
 .profile-button {
   border: 1px solid #6f477f;

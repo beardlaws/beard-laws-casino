@@ -27,6 +27,8 @@ export class PapasBlackjack {
   private lastReturnedUnits = 0;
   private lastProfitUnits = 0;
   private dealerResult: "win" | "bust" | "push" | "" = "";
+  private roundsPlayed = 0;
+  private roundsWon = 0;
 
   public constructor(
     private readonly root: HTMLElement,
@@ -132,6 +134,18 @@ export class PapasBlackjack {
     this.render();
   }
 
+  private surrender(): void {
+    const hand = this.hands[this.activeHand];
+    if (!this.canSurrender(hand) || !hand) return;
+    const returned = Math.floor(hand.betUnits / 2);
+    this.setWalletUnits(this.getWalletUnits() + returned);
+    hand.finished = true; hand.result = "SURRENDER";
+    this.lastReturnedUnits = returned; this.lastProfitUnits = -returned;
+    this.roundActive = false; this.roundsPlayed += 1;
+    this.message = `Late surrender accepted. ${this.money(returned)} returned.`;
+    this.render();
+  }
+
   private advance(): void {
     const next = this.hands.findIndex((hand, index) => index > this.activeHand && !hand.finished);
     if (next >= 0) { this.activeHand = next; this.message = `Playing hand ${next + 1} of ${this.hands.length}.`; }
@@ -161,6 +175,8 @@ export class PapasBlackjack {
     this.lastProfitUnits = returned - totalWagered;
     this.dealerResult = dealerValue > 21 ? "bust" : wins === 0 && pushes === this.hands.length ? "push" : wins > 0 ? "" : "win";
     this.roundActive = false;
+    this.roundsPlayed += 1;
+    if (wins > 0) this.roundsWon += 1;
     this.message = dealerValue > 21 ? "Dealer busts. Papa raises the cold one." : wins > 0 ? `${wins} winning hand${wins === 1 ? "" : "s"}. Biggie and Vern approve.` : "Dealer takes it. The house hounds remain suspiciously calm.";
   }
 
@@ -171,6 +187,7 @@ export class PapasBlackjack {
     const point = (rank: Rank): number => ["J", "Q", "K"].includes(rank) ? 10 : rank === "A" ? 11 : Number(rank);
     return point(hand!.cards[0]!.rank) === point(hand!.cards[1]!.rank);
   }
+  private canSurrender(hand?: Hand): boolean { return Boolean(this.roundActive && this.hands.length === 1 && hand && !hand.finished && hand.cards.length === 2); }
 
   private cardMarkup(card: Card, hidden = false): string {
     if (hidden) return `<b class="playing-card card-back" aria-label="Hidden dealer card"><span>P</span></b>`;
@@ -204,7 +221,7 @@ export class PapasBlackjack {
       <div class="papa-scoreboard"><span>BIG BLUE</span><b>21</b><span>ORANGE</span></div>
       <div class="papa-hud"><div><small>CASINO WALLET</small><strong>${this.money(this.getWalletUnits())}</strong></div><div><small>NEXT BET</small><strong>${this.money(this.selectedBetUnits)}</strong></div><div class="result-cell"><small>LAST HAND</small><strong>${this.lastReturnedUnits ? `${this.lastProfitUnits >= 0 ? "+" : ""}${this.money(this.lastProfitUnits)}` : "READY"}</strong></div></div>
       <div class="felt papa-felt">
-        <div class="table-rail"><span>BLACKJACK PAYS 3 TO 2</span><b>PAPA'S HOUSE • EST. 2026</b><span>DEALER STANDS ON 17</span></div>
+        <div class="table-rail"><span>BLACKJACK PAYS 3 TO 2</span><b>PAPA'S HOUSE • EST. 2026</b><span>SHOE ${this.shoe.length} • W ${this.roundsWon}/${this.roundsPlayed}</span></div>
         <div class="papa-corner"><div class="papa-chair"><span class="papa-head"><i class="papa-hair"></i><i class="papa-face"></i><i class="papa-beard"></i><i class="papa-smile"></i></span><b>PAPA'S GOOD CHAIR</b><em>PAPA</em></div><div class="cold-one" title="Papa's frosty table drink"><i></i>PAPA'S<br><b>COLD ONE</b></div></div>
         <div class="hound biggie"><i class="dog-head"><u></u><s></s></i><b>BIGGIE</b><span>HOUSE SECURITY</span></div>
         <div class="hound vern"><i class="dog-head"><u></u><s></s></i><b>VERN</b><span>TABLE MANAGEMENT</span></div>
@@ -219,6 +236,7 @@ export class PapasBlackjack {
         <button data-stand ${this.canHit(active) ? "" : "disabled"}>STAND</button>
         <button data-double ${this.canDouble(active) ? "" : "disabled"}>DOUBLE</button>
         <button data-split ${this.canSplit(active) ? "" : "disabled"}>SPLIT</button>
+        <button data-surrender ${this.canSurrender(active) ? "" : "disabled"}>SURRENDER</button>
       </div>
       <button class="blackjack-rules" data-rules>TABLE RULES</button>
     </section>`;
@@ -229,7 +247,8 @@ export class PapasBlackjack {
     this.root.querySelector("[data-stand]")?.addEventListener("click", () => this.stand());
     this.root.querySelector("[data-double]")?.addEventListener("click", () => this.doubleDown());
     this.root.querySelector("[data-split]")?.addEventListener("click", () => this.split());
-    this.root.querySelector("[data-rules]")?.addEventListener("click", () => alert("PAPA'S TABLE RULES\n\nSix-deck shoe\nDealer stands on soft 17\nBlackjack pays 3:2\nDouble on any first two cards\nDouble after split allowed\nSplit up to three hands\nSplit aces receive one card each\nBets: $5 to $100\nInsurance and surrender are not offered"));
+    this.root.querySelector("[data-surrender]")?.addEventListener("click", () => this.surrender());
+    this.root.querySelector("[data-rules]")?.addEventListener("click", () => alert("PAPA'S TABLE RULES\n\nSix-deck shoe\nDealer stands on soft 17\nBlackjack pays 3:2\nDouble on any first two cards\nDouble after split allowed\nSplit up to three hands\nSplit aces receive one card each\nLate surrender returns half the bet\nBets: $5 to $100\nInsurance is not offered"));
   }
 
   private money(units: number): string { return `$${(units / 100).toFixed(2)}`; }

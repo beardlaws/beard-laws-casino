@@ -67,9 +67,14 @@ export class Application {
   }
 
   private installSoundControl(): void {
-    const button = document.createElement("button"); button.className = "sound-toggle";
-    const update = (): void => { button.textContent = this.audio.isEnabled() ? "SOUND ON" : "SOUND OFF"; };
-    update(); button.addEventListener("click", () => { this.audio.toggle(); update(); }); document.body.appendChild(button);
+    const button = document.createElement("button"); button.className = "sound-toggle"; button.textContent = "⚙ EXPERIENCE";
+    const applyMotion = (): void => { document.documentElement.classList.toggle("reduced-motion", localStorage.getItem("beard-laws-casino-motion") === "reduced"); };
+    applyMotion();
+    button.addEventListener("click", () => {
+      const modal=document.createElement("div");modal.className="modal-backdrop";
+      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V40</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});};
+      render();document.body.appendChild(modal);
+    }); document.body.appendChild(button);
   }
 
   private installDeveloperPanel(): void {

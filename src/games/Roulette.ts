@@ -42,6 +42,7 @@ export class RouletteGame {
   private message = "Place one or more bets, then launch the wheel.";
   private landedResult: string | null = null;
   private forcedResult: string | null = null;
+  private turbo = typeof localStorage !== "undefined" && localStorage.getItem("beard-laws-casino-turbo") === "on";
 
   public constructor(
     private readonly root: HTMLElement,
@@ -117,6 +118,22 @@ export class RouletteGame {
     this.render();
   }
 
+  private doubleBet(): void {
+    const required = this.totalBet();
+    if (!required || this.spinning) return;
+    if (required * 2 > this.getWallet()) { this.message = `Doubling needs ${this.money(required * 2)} available.`; this.render(); return; }
+    this.bets = [...this.bets, ...this.bets.map((bet) => ({ ...bet }))];
+    this.message = `Bet doubled to ${this.money(this.totalBet())}.`; this.render();
+  }
+
+  private historyInsight(): string {
+    if (this.lastResults.length < 3) return "HISTORY BUILDS AFTER 3 SPINS";
+    const counts = new Map<string, number>();
+    this.lastResults.forEach((p) => counts.set(p, (counts.get(p) ?? 0) + 1));
+    const hot = [...counts.entries()].sort((a,b) => b[1] - a[1])[0];
+    return hot ? `HISTORICAL ONLY • HOT: ${hot[0]} (${hot[1]}×)` : "HISTORICAL ONLY";
+  }
+
   private board(): string {
     const betCount = (kind: BetKind, pocket?: string) => this.bets.filter((bet) => bet.kind === kind && bet.pocket === pocket).reduce((sum, bet) => sum + bet.units, 0);
     const button = (kind: BetKind, label: string, pocket?: string, classes = "") => {
@@ -170,11 +187,11 @@ export class RouletteGame {
     const title = this.freeFall ? "BEARDFALL ROULETTE" : "ROYAL ROULETTE";
     this.root.innerHTML = `<section class="roulette-room ${this.freeFall ? "freefall" : "classic"}">
       <nav class="game-nav"><button data-back>← CASINO FLOOR</button><div class="roulette-brand"><small>BEARD LAWS CASINO</small><strong>${title}</strong></div><div class="game-wallet"><small>WALLET</small><strong>${this.money(this.getWallet())}</strong></div></nav>
-      <main class="roulette-main"><section class="roulette-machine">${this.freeFall ? this.dropTower() : this.wheel()}<div class="result-history">${this.lastResults.length ? this.lastResults.map((p)=>`<span class="${this.colorOf(p)}">${p}</span>`).join("") : "LAST RESULTS WILL APPEAR HERE"}</div></section>
+      <main class="roulette-main"><section class="roulette-machine">${this.freeFall ? this.dropTower() : this.wheel()}<div class="result-history">${this.lastResults.length ? this.lastResults.map((p)=>`<span class="${this.colorOf(p)}">${p}</span>`).join("") : "LAST RESULTS WILL APPEAR HERE"}</div><small class="history-insight">${this.historyInsight()}</small></section>
       <section class="roulette-console"><div class="roulette-status"><span class="status-light"></span><p>${this.message}</p></div>${this.board()}
       <div class="roulette-dock"><div class="chip-rack">${[100,500,1000,2500,5000].map((units)=>`<button class="casino-chip ${units===this.chipUnits?"selected":""}" data-chip="${units}" ${units>this.getWallet()?"disabled":""}><small>${this.money(units)}</small></button>`).join("")}</div>
       <div class="bet-summary"><small>TOTAL BET</small><strong>${this.money(total)}</strong><span>${this.bets.length} CHIP${this.bets.length===1?"":"S"}</span></div>
-      <div class="roulette-actions"><button data-undo ${!this.bets.length||this.spinning?"disabled":""}>UNDO</button><button data-clear ${!this.bets.length||this.spinning?"disabled":""}>CLEAR</button><button data-repeat ${!this.lastBets.length||this.bets.length||this.spinning?"disabled":""}>REPEAT BET</button><button class="launch-button" data-spin ${!this.bets.length||this.spinning||total>this.getWallet()?"disabled":""}>${this.freeFall?"DROP BALL":"SPIN WHEEL"}</button></div></div>
+      <div class="roulette-actions"><button data-undo ${!this.bets.length||this.spinning?"disabled":""}>UNDO</button><button data-clear ${!this.bets.length||this.spinning?"disabled":""}>CLEAR</button><button data-repeat ${!this.lastBets.length||this.bets.length||this.spinning?"disabled":""}>REPEAT</button><button data-double ${!this.bets.length||this.spinning||total*2>this.getWallet()?"disabled":""}>DOUBLE</button><button data-turbo class="${this.turbo?"active":""}">${this.turbo?"TURBO ON":"TURBO"}</button><button class="launch-button" data-spin ${!this.bets.length||this.spinning||total>this.getWallet()?"disabled":""}>${this.freeFall?"DROP BALL":"SPIN WHEEL"}</button></div></div>
       <button class="rules-link" data-rules>HOW TO PLAY & PAYOUTS</button></section></main></section>`;
     this.bind();
   }
@@ -186,6 +203,8 @@ export class RouletteGame {
     this.root.querySelector("[data-undo]")?.addEventListener("click",()=>{this.bets.pop();this.message="Last chip returned.";this.render();});
     this.root.querySelector("[data-clear]")?.addEventListener("click",()=>{this.bets=[];this.message="Bets cleared.";this.render();});
     this.root.querySelector("[data-repeat]")?.addEventListener("click",()=>this.repeatBet());
+    this.root.querySelector("[data-double]")?.addEventListener("click",()=>this.doubleBet());
+    this.root.querySelector("[data-turbo]")?.addEventListener("click",()=>{this.turbo=!this.turbo;if(typeof localStorage!=="undefined")localStorage.setItem("beard-laws-casino-turbo",this.turbo?"on":"off");this.render();});
     this.root.querySelector("[data-spin]")?.addEventListener("click",()=>void this.spin());
     this.root.querySelector("[data-rules]")?.addEventListener("click",()=>alert("AMERICAN DOUBLE-ZERO ROULETTE\n\nStraight 35:1 • Split 17:1 • Street 11:1\nCorner 8:1 • First Five 6:1 • Six Line 5:1\nDozens/Columns 2:1 • Even-money bets 1:1\n0 and 00 lose on all outside bets\n\nPlace chips directly on numbers, connecting lines, or intersections. Highlighted wheel pockets show every number covered by your active inside bets."));
   }
@@ -228,7 +247,7 @@ export class RouletteGame {
 
   private async animate(result: string): Promise<void> {
     const wheel=this.root.querySelector<HTMLElement>("[data-wheel]");
-    const duration=this.freeFall?BEARDFALL_SPIN_DURATION_MS:ROYAL_SPIN_DURATION_MS;
+    const duration=(this.freeFall?BEARDFALL_SPIN_DURATION_MS:ROYAL_SPIN_DURATION_MS)*(this.turbo?.48:1);
     const randomExtraSpins = 2 + Math.floor(Math.random() * 3);
     const fullSpins=(this.freeFall?12:10)+randomExtraSpins;
     const finalWheelRotation=wheelLandingRotation(result,this.freeFall,fullSpins);

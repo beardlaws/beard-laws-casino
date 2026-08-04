@@ -95,3 +95,4 @@
 .classic .landed-ball.landed-top{top:3.5%;width:20px;height:20px;left:calc(50% - 10px);z-index:28}
 .classic .wheel-pocket.landed span{background:#fff3a8;color:#170b04;text-shadow:none;box-shadow:0 0 13px #fff,0 0 25px #ffd84c}
 .classic .roulette-wheel-shell:has(.landed-ball) .roulette-ball-orbit{display:none}
+.history-insight{display:block;margin-top:4px;color:#7f90aa;font-size:8px;letter-spacing:.15em}.roulette-actions button.active{border-color:#68f5ff;color:#68f5ff;box-shadow:0 0 12px #40dfff55}.landing-flash strong{animation:resultPunch .5s cubic-bezier(.2,1.5,.3,1)}@keyframes resultPunch{from{transform:scale(.35);filter:brightness(3)}}

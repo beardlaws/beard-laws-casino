@@ -44,3 +44,4 @@
 .dog-head u,.dog-head s{text-decoration:none!important;border:0!important}
 .papa-hud{border-color:#ff8b34;box-shadow:0 10px 35px #0009,0 0 22px #ff7c3033}
 .blackjack-rules{border-color:#48dfff;background:#071a30;color:#aeeeff}
+.playing-card{animation:cardDeal .38s cubic-bezier(.2,.9,.25,1) both}.playing-card:nth-child(2){animation-delay:.08s}.playing-card:nth-child(3){animation-delay:.16s}.playing-card:nth-child(4){animation-delay:.24s}@keyframes cardDeal{from{transform:translate(90px,-120px) rotate(12deg);opacity:0}}@media(prefers-reduced-motion:reduce){.playing-card,.roulette-wheel,.roulette-ball-orbit{animation:none!important;transition:none!important}}
