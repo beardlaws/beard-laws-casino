@@ -275,6 +275,8 @@ export class GameScene {
   };
 
   private resize(width: number, height: number): void {
+    const portrait = height > width && width < 820;
+    this.cabinet.setPortraitMode(portrait);
     const horizontalPadding = 12;
     const verticalPadding = 12;
     const availableWidth = width - horizontalPadding * 2;
@@ -286,7 +288,6 @@ export class GameScene {
     );
 
     this.cabinet.scale.set(scale);
-    const portrait = height > width;
     this.cabinet.position.set(
       (width - this.cabinet.cabinetWidth * scale) / 2,
       portrait ? verticalPadding : (height - this.cabinet.cabinetHeight * scale) / 2,

@@ -21,6 +21,12 @@ const GOLD = 0xffd86b;
 const PURPLE = 0xa943ff;
 
 export class Cabinet extends Container {
+  private readonly backgroundLayer = new Container();
+  private readonly reelLayer = new Container();
+  private readonly energyLayer = new Container();
+  private readonly controlLayer = new Container();
+  private readonly headerLayer = new Container();
+  private portraitMode = false;
   private reelSet!: ReelSet;
   private spinButton!: Graphics;
   private spinText!: Text;
@@ -32,7 +38,10 @@ export class Cabinet extends Container {
   private winValue!: Text;
   private statusValue!: Text;
   private homeButton!: Graphics;
+  private homeLabel!: Text;
   private infoButton!: Graphics;
+  private infoLabel!: Text;
+  private buildBadge!: Text;
   private betMinusButton!: Graphics;
   private betPlusButton!: Graphics;
   private betValue!: Text;
@@ -58,9 +67,43 @@ export class Cabinet extends Container {
     super.destroy(options);
   }
 
-  public get cabinetWidth(): number { return CABINET_WIDTH; }
-  public get cabinetHeight(): number { return CABINET_HEIGHT; }
+  public get cabinetWidth(): number { return this.portraitMode ? 720 : CABINET_WIDTH; }
+  public get cabinetHeight(): number { return this.portraitMode ? 1500 : CABINET_HEIGHT; }
   public getReelBounds(): CabinetReelBounds { return this.reelBounds; }
+
+  public setPortraitMode(enabled: boolean): void {
+    if (enabled === this.portraitMode) return;
+    this.portraitMode = enabled;
+    if (enabled) {
+      this.backgroundLayer.scale.set(1.6);
+      this.backgroundLayer.position.set((720 - CABINET_WIDTH * 1.6) / 2, 0);
+      this.backgroundLayer.alpha = 0.72;
+
+      this.reelLayer.scale.set(0.49, 1.1);
+      this.reelLayer.position.set(-64, -52);
+
+      this.energyLayer.scale.set(0.72);
+      this.energyLayer.position.set(-242, 18);
+
+      this.controlLayer.scale.set(0.47, 1.5);
+      this.controlLayer.position.set(-58, -405);
+
+      this.headerLayer.scale.set(1);
+      this.headerLayer.position.set(0, 18);
+      this.infoButton.position.x = -952;
+      this.infoLabel.position.x = 590;
+      this.buildBadge.position.set(360, 112);
+    } else {
+      for (const layer of [this.backgroundLayer, this.reelLayer, this.energyLayer, this.controlLayer, this.headerLayer]) {
+        layer.scale.set(1);
+        layer.position.set(0, 0);
+        layer.alpha = 1;
+      }
+      this.infoButton.position.x = 0;
+      this.infoLabel.position.set(1542, 44);
+      this.buildBadge.position.set(836, 382);
+    }
+  }
 
   public onSpin(handler: () => void): void {
     this.spinButton.eventMode = "static";
@@ -168,6 +211,7 @@ export class Cabinet extends Container {
     shade.eventMode = "static";
     overlay.addChild(shade, panel, title, intro, rules, bonusBox, bonus, close, closeText);
     this.rulesOverlay = overlay;
+    this.fitOverlayForCurrentLayout(overlay);
     this.addChild(overlay);
   }
 
@@ -515,7 +559,16 @@ export class Cabinet extends Container {
     const panel = new Graphics().roundRect(286, 72, 1100, 798, 36).fill({ color: 0x14051f }).stroke({ color: GOLD, width: 8 });
     const title = this.centerText(titleText, 66, GOLD, 150); title.style.stroke = { color: 0x4b126d, width: 9 };
     const subtitle = this.centerText(subtitleText, 23, 0xe7c9f7, 214);
-    overlay.addChild(shade, panel, title, subtitle); return overlay;
+    overlay.addChild(shade, panel, title, subtitle);
+    this.fitOverlayForCurrentLayout(overlay);
+    return overlay;
+  }
+
+  private fitOverlayForCurrentLayout(overlay: Container): void {
+    if (!this.portraitMode) return;
+    const scale = 720 / CABINET_WIDTH;
+    overlay.scale.set(scale);
+    overlay.position.set(0, 430);
   }
 
   private centerText(text: string, size: number, fill: number, y: number): Text {
@@ -543,12 +596,13 @@ export class Cabinet extends Container {
   }
 
   private build(): void {
+    this.addChild(this.backgroundLayer, this.energyLayer, this.reelLayer, this.controlLayer, this.headerLayer);
     const cabinet = Sprite.from(
       new URL("../../assets/beard-bank-2040-cabinet.png", import.meta.url).href,
     );
     cabinet.width = CABINET_WIDTH;
     cabinet.height = CABINET_HEIGHT;
-    this.addChild(cabinet);
+    this.backgroundLayer.addChild(cabinet);
 
     this.buildReels();
     this.buildLivingEnergy();
@@ -566,10 +620,10 @@ export class Cabinet extends Container {
       .fill({ color: 0x10051a, alpha: 1 })
       .stroke({ color: PURPLE, width: 3, alpha: 0.7 });
 
-    this.addChild(blackout, purpleWell);
+    this.reelLayer.addChild(blackout, purpleWell);
     this.reelSet = new ReelSet(this.reelBounds.width - 16, this.reelBounds.height - 16);
     this.reelSet.position.set(this.reelBounds.x + 8, this.reelBounds.y + 8);
-    this.addChild(this.reelSet);
+    this.reelLayer.addChild(this.reelSet);
 
     const glass = new Graphics()
       .moveTo(this.reelBounds.x + 18, this.reelBounds.y + 12)
@@ -578,14 +632,14 @@ export class Cabinet extends Container {
       .lineTo(this.reelBounds.x + 18, this.reelBounds.y + 82)
       .closePath()
       .fill({ color: 0xffffff, alpha: 0.045 });
-    this.addChild(glass);
+    this.reelLayer.addChild(glass);
   }
 
   private buildLivingEnergy(): void {
     this.energy
       .ellipse(836, 213, 170, 190)
       .stroke({ color: PURPLE, width: 9, alpha: 0.34 });
-    this.addChild(this.energy);
+    this.energyLayer.addChild(this.energy);
     this.setVaultCharge(0);
   }
 
@@ -594,7 +648,7 @@ export class Cabinet extends Container {
       .roundRect(148, 870, 1380, 58, 13)
       .fill({ color: 0x08030d, alpha: 0.96 })
       .stroke({ color: 0xc9942f, width: 3, alpha: 0.9 });
-    this.addChild(deck);
+    this.controlLayer.addChild(deck);
 
     const credit = this.readout("CREDIT", "$100.00", 170, 878, 250);
     const bet = this.readout("BET", "$1.00", 438, 878, 250);
@@ -602,7 +656,7 @@ export class Cabinet extends Container {
     this.creditValue = credit.value;
     this.betValue = bet.value;
     this.winValue = win.value;
-    this.addChild(credit.container, bet.container, win.container);
+    this.controlLayer.addChild(credit.container, bet.container, win.container);
 
     const statusBox = new Graphics()
       .roundRect(984, 879, 216, 40, 10)
@@ -647,17 +701,17 @@ export class Cabinet extends Container {
       .fill({ color: 0x301041, alpha: 0.96 }).stroke({ color: 0xd898ff, width: 3 });
     this.autoText = new Text({ text: "AUTO", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: 0xffe7a0, align: "center" } });
     this.autoText.anchor.set(0.5); this.autoText.position.set(1365, 899);
-    this.addChild(statusBox, this.statusValue, this.betMinusButton, this.betPlusButton, betMinusText, betPlusText, this.spinButton, this.spinText, this.autoButton, this.autoText);
+    this.controlLayer.addChild(statusBox, this.statusValue, this.betMinusButton, this.betPlusButton, betMinusText, betPlusText, this.spinButton, this.spinText, this.autoButton, this.autoText);
 
     this.homeButton = new Graphics().roundRect(20, 20, 170, 48, 12).fill({ color: 0x13051f, alpha: 0.92 }).stroke({ color: GOLD, width: 3 });
-    const homeText = new Text({ text: "CASINO LOBBY", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: GOLD } });
-    homeText.anchor.set(0.5); homeText.position.set(105, 44);
+    this.homeLabel = new Text({ text: "CASINO LOBBY", style: { fontFamily: "Arial Black, Arial", fontSize: 16, fontWeight: "bold", fill: GOLD } });
+    this.homeLabel.anchor.set(0.5); this.homeLabel.position.set(105, 44);
     this.infoButton = new Graphics().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f, alpha: 0.96 }).stroke({ color: GOLD, width: 3 });
-    const infoText = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
-    infoText.anchor.set(0.5); infoText.position.set(1542, 44);
-    this.addChild(this.homeButton, homeText, this.infoButton, infoText);
-    const buildBadge = new Text({ text: "BEARD BANK V35", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
-    buildBadge.anchor.set(0.5); buildBadge.position.set(836, 382); this.addChild(buildBadge);
+    this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
+    this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
+    this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
+    this.buildBadge = new Text({ text: "BEARD BANK V36", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

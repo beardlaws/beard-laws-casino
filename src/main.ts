@@ -5,6 +5,7 @@ import "./roulette.css";
 import "./math-report.css";
 import "./neema.css";
 import "./megh.css";
+import "./megh-fixes.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {

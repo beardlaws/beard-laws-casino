@@ -1,4 +1,5 @@
 type AutoCount = number | "infinite" | null;
+type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
 interface JamSymbol {
   id: string;
   label: string;
@@ -43,6 +44,9 @@ export class MeghsCosmicJam {
   private encore = 0;
   private freeDrops = 0;
   private encoreWin = 0;
+  private encoreMode: EncoreMode | null = null;
+  private stageEnergy = 0;
+  private stageLevel = 0;
   private lastDisplayedWin = 0;
   private betIndex = 1;
   private get betUnits(): number {
@@ -61,7 +65,7 @@ export class MeghsCosmicJam {
       <header><small>BEARD LAWS CASINO • CASCADE FEATURE SLOT</small><h1>MEGH'S COSMIC JAM</h1><p>Space goats came for the strawberries. They stayed to melt faces.</p><button class="game-rules cosmic-rules-button" data-megh-rules>RULES &amp; PAYTABLE</button></header>
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
-        <div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span></div><div class="megh-reels" data-megh-reels></div>
+        <div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="megh-feature"><span>6+ MATCHING SYMBOLS WIN</span><span>WINS VANISH &amp; TUMBLE</span><span>4 CASCADES LAUNCH ENCORE</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
@@ -119,12 +123,18 @@ export class MeghsCosmicJam {
   }
 
   private pick(): JamSymbol {
-    let roll = Math.random() * SYMBOLS.reduce((s, x) => s + x.weight, 0);
+    const totalWeight = SYMBOLS.reduce((s, x) => s + this.symbolWeight(x), 0);
+    let roll = Math.random() * totalWeight;
     for (const symbol of SYMBOLS) {
-      roll -= symbol.weight;
+      roll -= this.symbolWeight(symbol);
       if (roll < 0) return symbol;
     }
     return SYMBOLS[0]!;
+  }
+  private symbolWeight(symbol: JamSymbol): number {
+    return symbol.id === "ufo" && this.freeDrops > 0 && this.encoreMode === "ufo-storm"
+      ? symbol.weight * 3.2
+      : symbol.weight;
   }
   private makeGrid(): JamSymbol[][] {
     return Array.from({ length: ROWS }, () =>
@@ -233,6 +243,7 @@ export class MeghsCosmicJam {
       );
       total += award;
       this.encore += 1;
+      if (free) this.growEncoreStage(removed.size);
       const groups = matches
         .map((m) => `${m.cells.size} ${m.symbol.label}`)
         .join(" + ");
@@ -255,13 +266,21 @@ export class MeghsCosmicJam {
     const ufos = grid.flat().filter((s) => s.id === "ufo").length;
     if (ufos >= 3 || (!free && this.encore >= 4)) {
       feature = true;
-      this.freeDrops += free ? 3 : 8;
-      this.message(
-        free
-          ? "ENCORE RETRIGGER • +3 FREE DROPS"
-          : "INTERGALACTIC ENCORE • 8 FREE DROPS",
-      );
-      await this.showEncoreIntro(free);
+      if (free) {
+        const added = ufos >= 5 ? 5 : ufos >= 4 ? 4 : 3;
+        this.freeDrops += added;
+        this.message(`ENCORE RETRIGGER • +${added} FREE DROPS`);
+        await this.showEncoreIntro(true, added);
+      } else {
+        const baseDrops = ufos >= 5 ? 16 : ufos >= 4 ? 12 : 8;
+        this.encoreMode = await this.chooseEncoreMode(baseDrops);
+        this.stageEnergy = 0;
+        this.stageLevel = 0;
+        this.freeDrops += baseDrops + (this.encoreMode === "long-set" ? 4 : 0);
+        if (this.encoreMode === "power-chords") this.multiplier = Math.max(this.multiplier, 3);
+        this.message(`${this.encoreModeLabel()} • ${this.freeDrops} FREE DROPS`);
+        await this.showEncoreIntro(false, this.freeDrops);
+      }
     }
     if (free) this.encoreWin += total;
     if (free && this.freeDrops === 0 && !feature) {
@@ -270,6 +289,9 @@ export class MeghsCosmicJam {
       this.message(`FINAL GUITAR SMASH • +$${(finale / 100).toFixed(2)}`);
       this.encoreWin = 0;
       this.multiplier = 1;
+      this.encoreMode = null;
+      this.stageEnergy = 0;
+      this.stageLevel = 0;
     }
     if (total > 0) {
       this.setWallet(this.getWallet() + total);
@@ -380,6 +402,8 @@ export class MeghsCosmicJam {
     this.root.querySelector<HTMLElement>(
       "[data-megh-feature-multi]",
     )!.textContent = `LIVE MULTIPLIER ${this.multiplier}×`;
+    this.root.querySelector<HTMLElement>("[data-megh-stage]")!.textContent =
+      `${this.stageName()} • AMP ${Math.min(this.stageEnergy, 60)} / 60`;
   }
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -398,15 +422,51 @@ export class MeghsCosmicJam {
     });
     this.lastDisplayedWin = target;
   }
-  private async showEncoreIntro(retrigger: boolean): Promise<void> {
+  private async showEncoreIntro(retrigger: boolean, drops: number): Promise<void> {
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic cosmic-cinematic";
-    overlay.innerHTML = `<div class="cosmic-portal"></div><small>${retrigger ? "THE CROWD DEMANDS MORE" : "BONUS FEATURE"}</small><h2>${retrigger ? "ENCORE RETRIGGER" : "INTERGALACTIC ENCORE"}</h2><p>${retrigger ? "+3 FREE DROPS" : "8 FREE DROPS • MULTIPLIER NEVER RESETS"}</p>`;
+    overlay.innerHTML = `<div class="cosmic-portal"></div><small>${retrigger ? "THE CROWD DEMANDS MORE" : this.encoreModeLabel()}</small><h2>${retrigger ? "ENCORE RETRIGGER" : "INTERGALACTIC ENCORE"}</h2><p>${retrigger ? `+${drops} FREE DROPS` : `${drops} FREE DROPS • BUILD THE AMP • UPGRADE THE STAGE`}</p>`;
     this.root.appendChild(overlay);
     await this.wait(2300);
     overlay.classList.add("leaving");
     await this.wait(420);
     overlay.remove();
+  }
+  private async chooseEncoreMode(baseDrops: number): Promise<EncoreMode> {
+    const overlay = document.createElement("div");
+    overlay.className = "feature-cinematic cosmic-cinematic encore-choice";
+    overlay.innerHTML = `<small>${baseDrops} FREE DROPS WON</small><h2>CHOOSE THE ENCORE</h2><p>Pick how Megh takes over the galaxy.</p><div class="encore-choice-grid">
+      <button data-mode="long-set"><b>LONG SET</b><span>+4 FREE DROPS</span></button>
+      <button data-mode="power-chords"><b>POWER CHORDS</b><span>START AT 3×</span></button>
+      <button data-mode="ufo-storm"><b>UFO STORM</b><span>MORE RETRIGGER UFOS</span></button>
+    </div>`;
+    this.root.appendChild(overlay);
+    return await new Promise<EncoreMode>((resolve) => {
+      overlay.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const mode = button.dataset.mode as EncoreMode;
+          button.classList.add("selected");
+          window.setTimeout(() => { overlay.remove(); resolve(mode); }, 420);
+        }, { once: true });
+      });
+    });
+  }
+  private growEncoreStage(energy: number): void {
+    this.stageEnergy = Math.min(60, this.stageEnergy + energy);
+    const nextLevel = this.stageEnergy >= 60 ? 3 : this.stageEnergy >= 40 ? 2 : this.stageEnergy >= 18 ? 1 : 0;
+    if (nextLevel <= this.stageLevel) return;
+    const gained = nextLevel - this.stageLevel;
+    this.stageLevel = nextLevel;
+    this.multiplier += gained;
+    this.message(`${this.stageName()} UNLOCKED • MULTIPLIER +${gained}`);
+    this.root.querySelector("[data-megh-reels]")?.classList.add("stage-upgrade");
+    window.setTimeout(() => this.root.querySelector("[data-megh-reels]")?.classList.remove("stage-upgrade"), 850);
+  }
+  private stageName(): string {
+    return ["GARAGE", "ARENA", "COSMIC STADIUM", "GALACTIC HEADLINER"][this.stageLevel] ?? "GARAGE";
+  }
+  private encoreModeLabel(): string {
+    return this.encoreMode === "long-set" ? "LONG SET" : this.encoreMode === "power-chords" ? "POWER CHORDS" : this.encoreMode === "ufo-storm" ? "UFO STORM" : "BONUS FEATURE";
   }
   private async playGuitarSmash(): Promise<number> {
     const factors = [0.1, 0.15, 0.22].sort(() => Math.random() - 0.5);
@@ -458,7 +518,7 @@ export class MeghsCosmicJam {
   private showRules(): void {
     const modal = document.createElement("div");
     modal.className = "slot-rules-backdrop";
-    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Every consecutive cascade raises the multiplier.</li><li>Four cascades or three Encore UFOs launch 8 free drops.</li><li>The multiplier persists and grows throughout the Encore.</li><li>Three UFOs during the Encore retrigger 3 drops.</li><li>The final guitar smash adds a finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">All cluster awards use the current $1.00 wager. Fictional credits only.</p></section>`;
+    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Three, four or five UFOs award 8, 12 or 16 free drops.</li><li>Choose Long Set, Power Chords or UFO Storm before the feature.</li><li>The multiplier persists throughout the Encore.</li><li>Winning cascades charge the amp and upgrade the stage.</li><li>UFOs can retrigger up to 5 additional drops.</li><li>The final Guitar Smash adds a player-picked finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">Awards scale with the selected fictional-credit wager.</p></section>`;
     document.body.appendChild(modal);
     modal
       .querySelector("[data-close]")

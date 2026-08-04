@@ -1,0 +1,32 @@
+/* Final responsive overrides for the tall portrait source art. */
+.jam-symbol.s-megh {
+  background: radial-gradient(circle at 50% 30%, #9b2ca0 0, #351044 48%, #090214 78%);
+}
+
+.jam-symbol.s-megh img {
+  width: 100%;
+  height: 100%;
+  padding: 2%;
+  object-fit: contain;
+  object-position: center center;
+  transform: none;
+  transform-origin: center center;
+}
+
+@media (max-width: 800px) {
+  .jam-symbol.s-megh img {
+    width: 96%;
+    height: 96%;
+    padding: 1%;
+    object-position: center center;
+    transform: none;
+  }
+}
+
+.encore-choice{overflow:auto}
+.encore-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,240px));gap:18px;justify-content:center;margin-top:28px}
+.encore-choice-grid button{min-height:150px;padding:22px;border:3px solid #caff68;border-radius:20px;background:linear-gradient(145deg,#641078,#260430);color:#fff;box-shadow:0 12px 0 #14021c,0 0 28px #baff5744;transition:.2s}
+.encore-choice-grid button:hover,.encore-choice-grid button.selected{transform:translateY(-5px) scale(1.03);filter:brightness(1.3);box-shadow:0 8px 0 #14021c,0 0 42px #baff57aa}
+.encore-choice-grid b,.encore-choice-grid span{display:block}.encore-choice-grid b{font:900 23px 'Barlow Condensed';color:#dfff86}.encore-choice-grid span{margin-top:12px;font-size:12px;letter-spacing:.08em}.megh-reels.stage-upgrade{animation:stageUpgrade .85s ease both}
+@keyframes stageUpgrade{0%,100%{filter:none}40%{filter:brightness(1.8) saturate(1.5);box-shadow:inset 0 0 100px #caff68,0 0 70px #ff43d3}}
+@media(max-width:800px){.encore-choice-grid{grid-template-columns:1fr;gap:10px;width:min(330px,92vw)}.encore-choice-grid button{min-height:82px;padding:12px}.encore-choice-grid b{font-size:20px}}
