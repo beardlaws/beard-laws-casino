@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.0",
+    "@supabase/supabase-js": "^2.53.0",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {

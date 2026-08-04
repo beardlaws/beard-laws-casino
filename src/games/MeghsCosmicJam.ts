@@ -12,7 +12,7 @@ const SYMBOLS: readonly JamSymbol[] = [
   { id: "wild", label: "WILD NOTE", art: art("note"), weight: 5, pay: 18 },
   { id: "ufo", label: "ENCORE UFO", art: art("ufo"), weight: 1.4, pay: 0 },
 ];
-const COLS = 6; const ROWS = 5; const BET = 100;
+const COLS = 6; const ROWS = 5; const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 
 export class MeghsCosmicJam {
   private auto: AutoCount = null;
@@ -22,6 +22,8 @@ export class MeghsCosmicJam {
   private encore = 0;
   private freeDrops = 0;
   private encoreWin = 0;
+  private betIndex = 1;
+  private get bet():number{return BET_LEVELS[this.betIndex]!;}
 
   public constructor(private readonly root: HTMLElement, private readonly getWallet: () => number,
     private readonly setWallet: (units: number) => void, private readonly onExit: () => void) {}
@@ -33,7 +35,7 @@ export class MeghsCosmicJam {
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
         <div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="megh-feature"><span>6+ MATCHING SYMBOLS WIN</span><span>WINS VANISH &amp; TUMBLE</span><span>4 CASCADES LAUNCH ENCORE</span></div>
-        <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div><small>BET</small><b>$1.00</b></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
+        <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="slot-bet-box"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
         <div class="megh-auto-menu" data-megh-menu hidden>${[5,10,25,50].map(n=>`<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
       </section><p class="megh-disclaimer">Fictional credits only • Shared casino wallet • Auto stops before feature play</p></main>`;
@@ -41,6 +43,8 @@ export class MeghsCosmicJam {
     this.root.querySelector("[data-megh-rules]")?.addEventListener("click", () => this.showRules());
     this.root.querySelector("[data-megh-spin]")?.addEventListener("click", () => { void this.spin(); });
     this.root.querySelector("[data-megh-auto]")?.addEventListener("click", () => this.toggleAuto());
+    this.root.querySelector("[data-megh-bet-down]")?.addEventListener("click",()=>this.changeBet(-1));
+    this.root.querySelector("[data-megh-bet-up]")?.addEventListener("click",()=>this.changeBet(1));
     this.root.querySelectorAll<HTMLElement>("[data-auto]").forEach(button => button.addEventListener("click", () => this.startAuto(button.dataset.auto === "infinite" ? "infinite" : Number(button.dataset.auto))));
     void this.preloadArt().finally(() => { this.render(this.makeGrid()); this.update(); });
   }
@@ -64,20 +68,24 @@ export class MeghsCosmicJam {
     const next=grid.map(row=>[...row]);for(let x=0;x<COLS;x+=1){const kept:JamSymbol[]=[];for(let y=ROWS-1;y>=0;y-=1)if(!removed.has(`${x}:${y}`))kept.push(grid[y]![x]!);for(let y=ROWS-1;y>=0;y-=1)next[y]![x]=kept[ROWS-1-y]??this.pick();}return next;
   }
   private async spin(): Promise<boolean> {
-    if(this.spinning)return false;const free=this.freeDrops>0;if(!free&&this.getWallet()<BET){this.message("VISIT THE ATM");this.stopAuto();return false;}
-    this.spinning=true;if(!free)this.setWallet(this.getWallet()-BET);else this.freeDrops-=1;if(!free){this.multiplier=1;this.encore=0;}this.update();
-    let grid=this.makeGrid();let total=0;let feature=false;const host=this.root.querySelector<HTMLElement>("[data-megh-reels]")!;host.classList.add("dropping");await this.wait(620);host.classList.remove("dropping");this.render(grid);
-    for(let cascade=0;cascade<8;cascade+=1){const matches=this.clusters(grid);if(!matches.length)break;const removed=new Set(matches.flatMap(m=>[...m.cells]));const raw=matches.reduce((sum,m)=>sum+m.symbol.pay*m.cells.size,0);const award=Math.round(raw*this.multiplier*3.15);total+=award;this.encore+=1;this.message(`${this.multiplier}× TRACTOR-BEAM CASCADE`);this.render(grid,removed);this.update();await this.wait(620);grid=this.tumble(grid,removed);this.multiplier+=1;this.render(grid);await this.wait(480);}
-    const ufos=grid.flat().filter(s=>s.id==="ufo").length;if(ufos>=3||(!free&&this.encore>=4)){feature=true;this.freeDrops+=free?3:8;this.message(free?"ENCORE RETRIGGER • +3 FREE DROPS":"INTERGALACTIC ENCORE • 8 FREE DROPS");host.classList.add("encore");await this.wait(1600);host.classList.remove("encore");}
-    if(free)this.encoreWin+=total;if(free&&this.freeDrops===0&&!feature){const finale=Math.max(BET,Math.round(this.encoreWin*.12));total+=finale;this.message(`FINAL GUITAR SMASH • +$${(finale/100).toFixed(2)}`);this.encoreWin=0;this.multiplier=1;}
-    if(total>0)this.setWallet(this.getWallet()+total);this.root.querySelector<HTMLElement>("[data-megh-win]")!.textContent=`$${(total/100).toFixed(2)}`;this.message(total>0?(total>=BET*10?"FINAL ENCORE • MEGA WIN":"COSMIC JAM PAYS"):"THE GOATS NEED A TUNE-UP");this.spinning=false;this.update();return feature;
+    if(this.spinning)return false;const free=this.freeDrops>0;if(!free&&this.getWallet()<this.bet){this.message("VISIT THE ATM");this.stopAuto();return false;}
+    this.spinning=true;if(!free)this.setWallet(this.getWallet()-this.bet);else this.freeDrops-=1;if(!free){this.multiplier=1;this.encore=0;}this.update();
+    let grid=this.makeGrid();let total=0;let feature=false;const host=this.root.querySelector<HTMLElement>("[data-megh-reels]")!;host.classList.add("dropping");for(let frame=0;frame<6;frame+=1){this.render(frame===5?grid:this.makeGrid());await this.wait(85+frame*18);}host.classList.remove("dropping");this.render(grid);
+    for(let cascade=0;cascade<8;cascade+=1){const matches=this.clusters(grid);if(!matches.length)break;const removed=new Set(matches.flatMap(m=>[...m.cells]));const raw=matches.reduce((sum,m)=>sum+m.symbol.pay*m.cells.size,0);const award=Math.round(raw*this.multiplier*(this.bet/100)*3.15);total+=award;this.encore+=1;this.message(`${matches[0]!.symbol.label} • ${removed.size} SYMBOLS • ${this.multiplier}×`);this.render(grid,removed);host.classList.add("beaming");this.update();await this.wait(720);host.classList.remove("beaming");grid=this.tumble(grid,removed);this.multiplier+=1;this.render(grid);host.classList.add("settling");await this.wait(520);host.classList.remove("settling");}
+    const ufos=grid.flat().filter(s=>s.id==="ufo").length;if(ufos>=3||(!free&&this.encore>=4)){feature=true;this.freeDrops+=free?3:8;this.message(free?"ENCORE RETRIGGER • +3 FREE DROPS":"INTERGALACTIC ENCORE • 8 FREE DROPS");await this.featureIntro(free?"ENCORE RETRIGGER":"INTERGALACTIC ENCORE",free?"+3 FREE DROPS":"8 FREE DROPS • MULTIPLIER STAYS LIVE");}
+    if(free)this.encoreWin+=total;if(free&&this.freeDrops===0&&!feature){const finale=Math.max(this.bet,Math.round(this.encoreWin*.12));total+=finale;await this.guitarSmash(finale);this.message(`FINAL GUITAR SMASH • +$${(finale/100).toFixed(2)}`);this.encoreWin=0;this.multiplier=1;}
+    if(total>0){this.setWallet(this.getWallet()+total);await this.celebrate(total);}this.root.querySelector<HTMLElement>("[data-megh-win]")!.textContent=`$${(total/100).toFixed(2)}`;this.message(total>0?(total>=this.bet*10?"FINAL ENCORE • MEGA WIN":"COSMIC JAM PAYS"):"THE GOATS NEED A TUNE-UP");this.spinning=false;this.update();return feature;
   }
   private toggleAuto():void{if(this.auto!==null){this.stopRequested=true;this.message("AUTO STOPS AFTER THIS DROP");return;}const menu=this.root.querySelector<HTMLElement>("[data-megh-menu]")!;menu.hidden=!menu.hidden;}
   private startAuto(count:Exclude<AutoCount,null>):void{if(this.spinning)return;this.auto=count;this.stopRequested=false;this.root.querySelector<HTMLElement>("[data-megh-menu]")!.hidden=true;void this.runAuto();}
   private async runAuto():Promise<void>{while(this.auto!==null&&!this.stopRequested){const feature=await this.spin();if(this.auto===null)return;if(this.auto!=="infinite"){this.auto-=1;if(this.auto<=0){this.stopAuto();return;}}if(feature){this.stopAuto();return;}this.update();await this.wait(350);}this.stopAuto();}
   private stopAuto():void{this.auto=null;this.stopRequested=false;this.update();}
+  private changeBet(direction:number):void{if(this.spinning||this.auto!==null)return;this.betIndex=Math.max(0,Math.min(BET_LEVELS.length-1,this.betIndex+direction));this.update();}
+  private async featureIntro(title:string,copy:string):Promise<void>{const overlay=document.createElement("div");overlay.className="slot-spectacle cosmic-spectacle";overlay.innerHTML=`<div><small>MEGH'S COSMIC JAM</small><h2>${title}</h2><p>${copy}</p><span>🎸</span></div>`;this.root.appendChild(overlay);await this.wait(1500);overlay.remove();}
+  private async guitarSmash(award:number):Promise<void>{await this.featureIntro("GUITAR SMASH",`PICKED THE NEON AXE • +$${(award/100).toFixed(2)}`);}
+  private async celebrate(award:number):Promise<void>{const multiple=award/this.bet;if(multiple<10)return;await this.featureIntro(multiple>=100?"EPIC COSMIC WIN":multiple>=40?"MEGA WIN":"BIG WIN",`$${(award/100).toFixed(2)}`);}
   private message(text:string):void{const node=this.root.querySelector<HTMLElement>("[data-megh-message]");if(node)node.textContent=text;}
-  private update():void{const credit=this.root.querySelector<HTMLElement>("[data-megh-credit]");if(!credit)return;credit.textContent=`$${(this.getWallet()/100).toFixed(2)}`;this.root.querySelector<HTMLElement>("[data-megh-multi]")!.textContent=`${this.multiplier}×`;this.root.querySelector<HTMLElement>("[data-megh-encore]")!.textContent=`${Math.min(4,this.encore)} / 4`;const spin=this.root.querySelector<HTMLButtonElement>("[data-megh-spin]")!;spin.disabled=this.spinning||this.auto!==null||(this.freeDrops===0&&this.getWallet()<BET);spin.textContent=this.freeDrops>0?"FREE DROP":"DROP";this.root.querySelector<HTMLElement>("[data-megh-auto]")!.textContent=this.auto===null?"AUTO":`STOP ${this.auto==="infinite"?"∞":this.auto}`;const feature=this.root.querySelector<HTMLElement>("[data-megh-feature]")!;feature.hidden=this.freeDrops<=0;this.root.querySelector<HTMLElement>("[data-megh-freedrops]")!.textContent=`${this.freeDrops} FREE DROPS`;this.root.querySelector<HTMLElement>("[data-megh-feature-multi]")!.textContent=`LIVE MULTIPLIER ${this.multiplier}×`;}
+  private update():void{const credit=this.root.querySelector<HTMLElement>("[data-megh-credit]");if(!credit)return;credit.textContent=`$${(this.getWallet()/100).toFixed(2)}`;this.root.querySelector<HTMLElement>("[data-megh-bet]")!.textContent=`$${(this.bet/100).toFixed(2)}`;this.root.querySelector<HTMLElement>("[data-megh-multi]")!.textContent=`${this.multiplier}×`;this.root.querySelector<HTMLElement>("[data-megh-encore]")!.textContent=`${Math.min(4,this.encore)} / 4`;const locked=this.spinning||this.auto!==null;this.root.querySelector<HTMLButtonElement>("[data-megh-bet-down]")!.disabled=locked||this.betIndex===0;this.root.querySelector<HTMLButtonElement>("[data-megh-bet-up]")!.disabled=locked||this.betIndex===BET_LEVELS.length-1;const spin=this.root.querySelector<HTMLButtonElement>("[data-megh-spin]")!;spin.disabled=locked||(this.freeDrops===0&&this.getWallet()<this.bet);spin.textContent=this.freeDrops>0?"FREE DROP":"DROP";this.root.querySelector<HTMLElement>("[data-megh-auto]")!.textContent=this.auto===null?"AUTO":`STOP ${this.auto==="infinite"?"∞":this.auto}`;const feature=this.root.querySelector<HTMLElement>("[data-megh-feature]")!;feature.hidden=this.freeDrops<=0;this.root.querySelector<HTMLElement>("[data-megh-freedrops]")!.textContent=`${this.freeDrops} FREE DROPS`;this.root.querySelector<HTMLElement>("[data-megh-feature-multi]")!.textContent=`LIVE MULTIPLIER ${this.multiplier}×`;}
   private wait(ms:number):Promise<void>{return new Promise(resolve=>window.setTimeout(resolve,ms));}
   private showRules():void{const modal=document.createElement("div");modal.className="slot-rules-backdrop";modal.innerHTML=`<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Every consecutive cascade raises the multiplier.</li><li>Four cascades or three Encore UFOs launch 8 free drops.</li><li>The multiplier persists and grows throughout the Encore.</li><li>Three UFOs during the Encore retrigger 3 drops.</li><li>The final guitar smash adds a finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">All cluster awards use the current $1.00 wager. Fictional credits only.</p></section>`;document.body.appendChild(modal);modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.addEventListener("click",event=>{if(event.target===modal)modal.remove();});}
 }
