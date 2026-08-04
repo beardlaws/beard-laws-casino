@@ -123,7 +123,7 @@ export class Application {
       const report = runBeardBankMathLab(1_000_000);
       const oneIn = (frequency: number): string =>
         frequency > 0 ? `1 in ${(1 / frequency).toFixed(1)}` : "Not observed";
-      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V36 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
+      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V38 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
         <p><span>Total RTP</span><strong>${(report.totalRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Base RTP</span><strong>${(report.baseRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Vault Heist RTP</span><strong>${(report.vaultHeistRtp * 100).toFixed(2)}%</strong></p>
@@ -209,9 +209,9 @@ export class Application {
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     if (state.session) {
-      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V36</small><h2>Cloud Player</h2><p class="account-email">${state.email}</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p>Your login and casino profile are saved across devices.</p><button class="primary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
+      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V38</small><h2>Cloud Player</h2><p class="account-email">${state.email}</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p>Your login and casino profile are saved across devices.</p><button class="primary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
     } else {
-      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V36</small><h2>Player Account</h2><p>${state.connected ? "Sign in to restore your private cloud wallet." : "Cloud accounts need the Supabase connection in your .env file before building."}</p><p class="account-message" data-account-message>${message}</p><label>Email<input data-email type="email" autocomplete="email"></label><label>Password<input data-password type="password" minlength="6" autocomplete="current-password"></label><button class="primary" data-signin ${state.connected ? "" : "disabled"}>SIGN IN</button><button class="account-secondary" data-signup ${state.connected ? "" : "disabled"}>CREATE ACCOUNT</button><button class="cashout" data-reset ${state.connected ? "" : "disabled"}>FORGOT PASSWORD</button></div>`;
+      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V38</small><h2>Player Account</h2><p>${state.connected ? "Sign in to restore your private cloud wallet." : "Cloud accounts need the Supabase connection in your .env file before building."}</p><p class="account-message" data-account-message>${message}</p><label>Email<input data-email type="email" autocomplete="email"></label><label>Password<input data-password type="password" minlength="6" autocomplete="current-password"></label><button class="primary" data-signin ${state.connected ? "" : "disabled"}>SIGN IN</button><button class="account-secondary" data-signup ${state.connected ? "" : "disabled"}>CREATE ACCOUNT</button><button class="cashout" data-reset ${state.connected ? "" : "disabled"}>FORGOT PASSWORD</button></div>`;
     }
     document.body.appendChild(modal);
     const close = (): void => modal.remove();
