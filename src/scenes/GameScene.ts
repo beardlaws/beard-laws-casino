@@ -277,6 +277,9 @@ export class GameScene {
     this.onExit();
   }
 
+  public requestExit(): void { this.exitToLobby(); }
+  public showRules(): void { this.cabinet.toggleRules(); }
+
   private readonly handleResize = (): void => {
     this.resize(this.app.renderer.width, this.app.renderer.height);
   };

@@ -10,6 +10,7 @@ import "./progression.css";
 import "./v50-polish.css";
 import "./v53-bonus-revolution.css";
 import "./v54-chaos.css";
+import "./v55-premium.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {

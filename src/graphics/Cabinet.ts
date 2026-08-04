@@ -689,8 +689,19 @@ export class Cabinet extends Container {
   }
 
   private buildPortraitShell(): void {
-    const backdrop = Sprite.from(new URL("../../assets/beard-bank-mobile-vault.png", import.meta.url).href);
-    backdrop.width = 720; backdrop.height = 1500;
+    // Keep the mobile shell vector-sharp. The former generated bitmap had
+    // baked-in film grain that became visibly muddy after phone scaling.
+    const backdrop = new Graphics()
+      .rect(0, 0, 720, 1370).fill({ color: 0x08030d })
+      .circle(360, 190, 330).fill({ color: 0x4d1469, alpha: 0.42 })
+      .roundRect(20, 16, 680, 1338, 34).stroke({ color: 0x9b6423, width: 4 })
+      .roundRect(28, 24, 664, 1322, 30).stroke({ color: 0x5d2674, width: 2 });
+    const vaultHalo = new Graphics()
+      .circle(360, 176, 116).fill({ color: 0x13061d, alpha: 0.96 })
+      .circle(360, 176, 96).stroke({ color: GOLD, width: 7 })
+      .circle(360, 176, 72).stroke({ color: PURPLE, width: 5, alpha: 0.8 })
+      .moveTo(360, 104).lineTo(360, 248).moveTo(288, 176).lineTo(432, 176)
+      .stroke({ color: GOLD, width: 4, alpha: 0.75 });
     const titlePlate = new Graphics().roundRect(74, 292, 572, 92, 20).fill({ color: 0x0a0411, alpha: 0.92 }).stroke({ color: GOLD, width: 4 });
     const title = new Text({ text: "BEARD BANK", style: { fontFamily: "Georgia, serif", fontSize: 50, fontWeight: "bold", fill: GOLD, stroke: { color: 0x18051f, width: 7 }, letterSpacing: 3 } });
     title.anchor.set(0.5); title.position.set(360, 326);
@@ -709,7 +720,7 @@ export class Cabinet extends Container {
     this.vaultMeterText.anchor.set(0.5); this.vaultMeterText.position.set(360, 497);
     const reelFrame = new Graphics().roundRect(34, 500, 652, 626, 22).fill({ color: 0x020104, alpha: 0.62 }).stroke({ color: GOLD, width: 4 });
     const controlDeck = new Graphics().roundRect(34, 1136, 652, 214, 26).fill({ color: 0x07020c, alpha: 0.96 }).stroke({ color: 0xb67a29, width: 3 });
-    this.portraitShell.addChild(backdrop, titlePlate, title, subtitle, jackpotPlate, jackpots, this.chaseHeist, this.chaseSpins, meterTrack, this.vaultMeterFill, this.vaultMeterText, reelFrame, controlDeck);
+    this.portraitShell.addChild(backdrop, vaultHalo, titlePlate, title, subtitle, jackpotPlate, jackpots, this.chaseHeist, this.chaseSpins, meterTrack, this.vaultMeterFill, this.vaultMeterText, reelFrame, controlDeck);
     this.portraitShell.visible = false;
   }
 
@@ -794,7 +805,7 @@ export class Cabinet extends Container {
     this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
     this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
-    this.buildBadge = new Text({ text: "BEARD BANK V54", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge = new Text({ text: "BEARD BANK V55", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
@@ -808,7 +819,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(113, 45);
     this.infoButton.clear().roundRect(512, 18, 190, 54, 14).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(607, 45);
-    this.buildBadge.text = "BEARD BANK V54"; this.buildBadge.position.set(360, 92);
+    this.buildBadge.text = "BEARD BANK V55"; this.buildBadge.position.set(360, 92);
 
     // The readouts are drawn with landscape-local coordinates. Translate them
     // into one clean row below the reels instead of letting them overlap it.
@@ -854,7 +865,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(105, 44);
     this.infoButton.clear().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(1542, 44);
-    this.buildBadge.text = "BEARD BANK V54"; this.buildBadge.position.set(836, 382);
+    this.buildBadge.text = "BEARD BANK V55"; this.buildBadge.position.set(836, 382);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

@@ -437,15 +437,16 @@ export class Application {
   }
 
   private async openBeardBank(): Promise<void> {
-    this.appRoot.innerHTML = "";
+    this.appRoot.innerHTML = `<main class="beard-bank-stage"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V55</b></span><button data-beard-info>PAYTABLE</button></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
+    const canvasHost = this.appRoot.querySelector<HTMLElement>("[data-beard-canvas]")!;
     this.pixi = new PixiApplication();
     await Promise.all([
       this.pixi.init({
-        resizeTo: window,
+        resizeTo: canvasHost,
         background: new Color(0x12081f),
         antialias: true,
         autoDensity: true,
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        resolution: Math.min(window.devicePixelRatio || 1, 3),
       }),
       Assets.load([
         cabinetAssetUrl,
@@ -454,8 +455,8 @@ export class Application {
         ...finishedSymbolAssetUrls,
       ]),
     ]);
-    this.appRoot.appendChild(this.pixi.canvas);
-    new GameScene(
+    canvasHost.appendChild(this.pixi.canvas);
+    const scene = new GameScene(
       this.pixi,
       this.walletUnits,
       this.profile.beardBank,
@@ -464,7 +465,10 @@ export class Application {
         this.saveBeardBankProgress(charges, lifetimeCoins),
       () => this.showLobby(),
       (activity) => this.recordActivity(activity),
-    ).initialize();
+    );
+    scene.initialize();
+    this.appRoot.querySelector("[data-beard-floor]")?.addEventListener("click", () => scene.requestExit());
+    this.appRoot.querySelector("[data-beard-info]")?.addEventListener("click", () => scene.showRules());
   }
 
   private openBlackjack(): void {
