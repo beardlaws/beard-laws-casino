@@ -437,7 +437,8 @@ export class Application {
   }
 
   private async openBeardBank(): Promise<void> {
-    this.appRoot.innerHTML = `<main class="beard-bank-stage v56-vault"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V57</b></span><button data-beard-info>PAYTABLE</button></div><header class="vault-native-header"><small>BEARD LAWS CASINO • 243 WAYS</small><h1>BEARD BANK</h1><p>BUILD THE VAULT. WAKE THE GUARDIAN. BREAK THE BANK.</p></header><div class="vault-native-chase"><span>VAULT HEIST</span><strong>THE LIVING VAULT</strong><span>VERNON FREE SPINS</span></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
+    const startingCharges = this.profile.beardBank.livingVaultCharges;
+    this.appRoot.innerHTML = `<main class="beard-bank-stage v56-vault v58-vault"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V58</b></span><button data-beard-info>PAYTABLE</button></div><header class="vault-native-header"><small>BEARD LAWS CASINO • 243 WAYS</small><h1>BEARD BANK</h1><p>BUILD THE VAULT. WAKE THE GUARDIAN. BREAK THE BANK.</p></header><div class="vault-native-chase"><span>3 COINS • HEIST</span><strong>THE LIVING VAULT</strong><span>STACKED DOORS • VERNON</span></div><div class="vault-pressure"><span><small>VAULT PRESSURE</small><b data-vault-pressure>${startingCharges} / 30 COINS</b></span><i><em data-vault-pressure-fill style="width:${startingCharges / 30 * 100}%"></em></i></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
     const canvasHost = this.appRoot.querySelector<HTMLElement>("[data-beard-canvas]")!;
     this.pixi = new PixiApplication();
     await Promise.all([
@@ -461,8 +462,13 @@ export class Application {
       this.walletUnits,
       this.profile.beardBank,
       (units) => this.saveWallet(units),
-      (charges, lifetimeCoins) =>
-        this.saveBeardBankProgress(charges, lifetimeCoins),
+      (charges, lifetimeCoins) => {
+        this.saveBeardBankProgress(charges, lifetimeCoins);
+        const label = this.appRoot.querySelector<HTMLElement>("[data-vault-pressure]");
+        const fill = this.appRoot.querySelector<HTMLElement>("[data-vault-pressure-fill]");
+        if (label) label.textContent = charges >= 30 ? "VAULT READY TO CRACK" : `${charges} / 30 COINS`;
+        if (fill) fill.style.width = `${Math.min(100, charges / 30 * 100)}%`;
+      },
       () => this.showLobby(),
       (activity) => this.recordActivity(activity),
     );

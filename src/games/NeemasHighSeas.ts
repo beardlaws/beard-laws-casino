@@ -95,6 +95,7 @@ export class NeemasHighSeas {
   private stopRequested = false;
   private spinning = false;
   private bonusAutoRunning = false;
+  private happyHourDeck: string[] = [];
   private freeSpins = 0;
   private cabin = 0;
   private bonusMultiplier = 1;
@@ -121,7 +122,7 @@ export class NeemasHighSeas {
       <button class="back" data-neema-home>← CASINO LOBBY</button><div class="table-wallet">WALLET <b data-neema-wallet></b></div>
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
       <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>FROZEN CASH RESPINS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS LAUNCH FROZEN HAPPY HOUR + THE VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
-        <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
+        <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="happy-hour-forecast" data-happy-forecast><small>HAPPY HOUR FORECAST</small><b>CALM SEAS</b></div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
         <div class="neema-feature-bar"><span>6+ DRINKS HOLD &amp; RESPIN</span><span>FILL 20 FOR GRAND</span><span>VOYAGE + LAST CALL</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div><div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
           <button data-neema-auto>AUTO</button><button class="neema-spin" data-neema-spin>SPIN</button></div>
@@ -265,13 +266,25 @@ export class NeemasHighSeas {
       this.renderGrid(this.makeGrid());
       await this.wait(72 + frame * 15);
     }
-    const grid = this.makeGrid();
+    const event = free ? "VOYAGE BOOST" : this.dealHappyHourEvent();
+    const forecast = this.root.querySelector<HTMLElement>("[data-happy-forecast]")!;
+    forecast.querySelector("b")!.textContent = event;
+    forecast.classList.toggle("active", event !== "CALM SEAS");
+    const grid = this.applyHappyHourEvent(this.makeGrid(), event);
+    const earlyTickets = grid.slice(0, 4).flat().filter((s) => s.id === "ticket").length;
+    if (earlyTickets >= 2) {
+      this.message("TWO TICKETS • WATCH THE FINAL REEL");
+      reels.classList.add("ticket-anticipation");
+      await this.wait(850);
+    }
     for (let stopped = 0; stopped < REELS; stopped += 1) {
       this.renderGrid(grid);
       reels.dataset.stopped = String(stopped + 1);
       await this.wait(115 + stopped * 32);
     }
     reels.classList.remove("spinning");
+    reels.classList.remove("ticket-anticipation");
+    forecast.classList.remove("active");
     delete reels.dataset.stopped;
     const result = this.evaluate(grid);
     let award = result.award;
@@ -359,6 +372,26 @@ export class NeemasHighSeas {
       void this.runVoyageSpins();
     }
     return tickets >= 3 || guaranteedDeparture;
+  }
+  private dealHappyHourEvent(): string {
+    if (!this.happyHourDeck.length) {
+      this.happyHourDeck = ["DOUBLE POUR", "GOLDEN SUNSET", "CAPTAIN'S PICK", "PARTY COVE RUSH", "CALM SEAS", "CALM SEAS", "CALM SEAS"];
+      for (let i = this.happyHourDeck.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.happyHourDeck[i], this.happyHourDeck[j]] = [this.happyHourDeck[j]!, this.happyHourDeck[i]!];
+      }
+    }
+    return this.happyHourDeck.pop()!;
+  }
+  private applyHappyHourEvent(grid: SeaSymbol[][], event: string): SeaSymbol[][] {
+    const next = grid.map((reel) => [...reel]);
+    const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
+    const place = (id: string): void => { next[Math.floor(Math.random() * REELS)]![Math.floor(Math.random() * ROWS)] = symbol(id); };
+    if (event === "DOUBLE POUR") place("ticket");
+    if (event === "GOLDEN SUNSET") { place("wild"); place("wild"); }
+    if (event === "CAPTAIN'S PICK") place("captain");
+    if (event === "PARTY COVE RUSH") { place("cranberry"); place("cranberry"); place("ticket"); }
+    return next;
   }
   private async runVoyageSpins(): Promise<void> {
     if (this.bonusAutoRunning || this.freeSpins <= 0) return;

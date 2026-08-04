@@ -1,5 +1,6 @@
 type AutoCount = number | "infinite" | null;
 type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
+type CosmicEvent = "UFO SCAN" | "AMPLIFIER OVERLOAD" | "MYSTERY SIGNAL" | "STAGGERED REEL RUSH" | "GOAT STAMPEDE" | "COSMIC COLLISION" | "COSMIC WEATHER CLEAR";
 import type { CasinoActivity } from "../state/CasinoProgression";
 interface JamSymbol {
   id: string;
@@ -53,6 +54,8 @@ export class MeghsCosmicJam {
   private soundboard = new Set<string>();
   private multiplierTiles = 0;
   private lastSurge = "SYSTEMS NOMINAL";
+  private surgeDeck: CosmicEvent[] = [];
+  private cascadeStreak = 0;
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
   private betIndex = 1;
@@ -73,7 +76,7 @@ export class MeghsCosmicJam {
       <header><small>BEARD LAWS CASINO • CASCADE FEATURE SLOT</small><h1>MEGH'S COSMIC JAM</h1><p>Space goats came for the strawberries. They stayed to melt faces.</p><button class="game-rules cosmic-rules-button" data-megh-rules>RULES &amp; PAYTABLE</button></header>
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
-        <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
+        <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="invasion-ladder"><small>INVASION CHAIN</small>${Array.from({length:8},(_,i)=>`<i data-chain="${i+1}">${i+1}</i>`).join("")}<b data-chain-prize>4 CASCADES = ENCORE • 8 = 50 DROPS</b></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
@@ -231,7 +234,7 @@ export class MeghsCosmicJam {
     let total = 0;
     let feature = false;
     const host = this.root.querySelector<HTMLElement>("[data-megh-reels]")!;
-    await this.playReelRush(host, grid, free);
+    grid = await this.playReelRush(host, grid, free);
     const callout = this.root.querySelector<HTMLElement>(
       "[data-megh-callout]",
     )!;
@@ -249,6 +252,8 @@ export class MeghsCosmicJam {
       );
       total += award;
       this.encore += 1;
+      this.cascadeStreak = cascade + 1;
+      this.updateInvasionLadder();
       this.chargeSoundboard(matches.map((m) => m.symbol.id));
       if (free) this.growEncoreStage(removed.size);
       if (free) this.multiplierTiles = Math.min(12, this.multiplierTiles + 1);
@@ -291,7 +296,7 @@ export class MeghsCosmicJam {
         this.message(`ENCORE RETRIGGER • +${added} FREE DROPS`);
         await this.showEncoreIntro(true, added);
       } else {
-        const baseDrops = ufos >= 5 ? 16 : ufos >= 4 ? 12 : 8;
+        const baseDrops = this.cascadeStreak >= 8 ? 50 : ufos >= 5 ? 16 : ufos >= 4 ? 12 : 8;
         this.encoreMode = await this.chooseEncoreMode(baseDrops);
         this.stageEnergy = 0;
         this.stageLevel = 0;
@@ -331,6 +336,8 @@ export class MeghsCosmicJam {
         : "THE GOATS NEED A TUNE-UP",
     );
     this.spinning = false;
+    this.cascadeStreak = 0;
+    this.updateInvasionLadder();
     this.update();
     if (!free && this.freeDrops > 0 && !this.bonusAutoRunning) void this.runFreeDrops();
     return feature;
@@ -348,15 +355,9 @@ export class MeghsCosmicJam {
     this.bonusAutoRunning = false;
     this.update();
   }
-  private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<void> {
-    const roll = Math.random();
-    this.lastSurge = free
-      ? "ENCORE GRAVITY"
-      : roll < 0.12 ? "UFO SCAN"
-      : roll < 0.25 ? "AMPLIFIER OVERLOAD"
-      : roll < 0.40 ? "MYSTERY SIGNAL"
-      : roll < 0.58 ? "STAGGERED REEL RUSH"
-      : "COSMIC WEATHER CLEAR";
+  private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<JamSymbol[][]> {
+    this.lastSurge = free ? "ENCORE GRAVITY" : this.dealCosmicEvent();
+    if (!free) finalGrid = this.applyCosmicEvent(finalGrid, this.lastSurge as CosmicEvent);
     const surge = this.root.querySelector<HTMLElement>("[data-megh-surge]")!;
     surge.querySelector("b")!.textContent = this.lastSurge;
     surge.classList.add("active");
@@ -372,6 +373,10 @@ export class MeghsCosmicJam {
           ? `<i class="mystery-pulse">?</i><b>MATCHING SIGNAL LOCKED</b>`
           : this.lastSurge === "STAGGERED REEL RUSH"
             ? `<i class="rush-arrows">↓ ↓ ↓ ↓ ↓ ↓</i><b>UNSTABLE REEL ORDER</b>`
+            : this.lastSurge === "GOAT STAMPEDE"
+              ? `<i class="goat-stampede">🐐 🐐 🐐</i><b>GOATS CHARGE THE GRID</b>`
+              : this.lastSurge === "COSMIC COLLISION"
+                ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
             : free ? `<i class="gravity-well">◎</i><b>ENCORE GRAVITY</b>` : "";
     if (effect.innerHTML) host.appendChild(effect);
     const flashes = free ? 3 : 5;
@@ -392,6 +397,44 @@ export class MeghsCosmicJam {
     delete host.dataset.locked;
     effect.remove();
     surge.classList.remove("active");
+    return finalGrid;
+  }
+  private dealCosmicEvent(): CosmicEvent {
+    if (!this.surgeDeck.length) {
+      this.surgeDeck = ["UFO SCAN", "AMPLIFIER OVERLOAD", "MYSTERY SIGNAL", "STAGGERED REEL RUSH", "GOAT STAMPEDE", "COSMIC COLLISION", "COSMIC WEATHER CLEAR"];
+      for (let i = this.surgeDeck.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.surgeDeck[i], this.surgeDeck[j]] = [this.surgeDeck[j]!, this.surgeDeck[i]!];
+      }
+    }
+    return this.surgeDeck.pop()!;
+  }
+  private applyCosmicEvent(grid: JamSymbol[][], event: CosmicEvent): JamSymbol[][] {
+    const next = grid.map((row) => [...row]);
+    const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
+    if (event === "UFO SCAN") {
+      for (let i = 0; i < 2; i += 1) next[Math.floor(Math.random() * ROWS)]![Math.floor(Math.random() * COLS)] = symbol("wild");
+    } else if (event === "AMPLIFIER OVERLOAD") {
+      const col = Math.floor(Math.random() * COLS);
+      [1, 2, 3].forEach((row) => { next[row]![col] = symbol("amp"); });
+    } else if (event === "MYSTERY SIGNAL") {
+      const chosen = ["strawberry", "amp", "guitar", "vinyl", "goat"][Math.floor(Math.random() * 5)]!;
+      for (let i = 0; i < 3; i += 1) next[Math.floor(Math.random() * ROWS)]![Math.floor(Math.random() * COLS)] = symbol(chosen);
+    } else if (event === "GOAT STAMPEDE") {
+      const row = Math.floor(Math.random() * ROWS);
+      [1, 2, 3, 4].forEach((col) => { next[row]![col] = symbol("goat"); });
+    } else if (event === "COSMIC COLLISION") {
+      const row = Math.floor(Math.random() * (ROWS - 1));
+      const col = Math.floor(Math.random() * (COLS - 1));
+      const chosen = next[row]![col]!;
+      next[row]![col + 1] = chosen; next[row + 1]![col] = chosen; next[row + 1]![col + 1] = chosen;
+    }
+    return next;
+  }
+  private updateInvasionLadder(): void {
+    this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));
+    const label = this.root.querySelector<HTMLElement>("[data-chain-prize]");
+    if (label) label.textContent = this.cascadeStreak >= 8 ? "MAXIMUM INVASION • 50 FREE DROPS" : this.cascadeStreak >= 4 ? "ENCORE UNLOCKED • KEEP CASCADING" : "4 CASCADES = ENCORE • 8 = 50 DROPS";
   }
   private chargeSoundboard(symbols: string[]): void {
     const map: Record<string, string> = { amp: "BASS", guitar: "LEAD", goat: "DRUMS", megh: "VOCALS", ufo: "UFO", vinyl: "BASS", strawberry: "VOCALS" };

@@ -1,0 +1,6 @@
+.beard-bank-stage.v58-vault{grid-template-rows:50px auto auto auto minmax(0,1fr)}
+.vault-pressure{position:relative;z-index:4;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px;margin:0 10px 6px;padding:6px 9px;border:1px solid #5ccfa7;border-radius:9px;background:#06100eef}
+.vault-pressure span{display:grid}.vault-pressure small{color:#a9d9c8;font-size:6px;font-weight:900;letter-spacing:.14em}.vault-pressure b{color:#9dffdb;font:900 11px 'Barlow Condensed';letter-spacing:.08em}
+.vault-pressure i{height:9px;border:1px solid #477866;border-radius:99px;background:#020504;overflow:hidden}.vault-pressure em{display:block;height:100%;background:linear-gradient(90deg,#37d69b,#ffe27c,#e64cff);box-shadow:0 0 15px #8dffd5;transition:width .45s ease}
+.v58-vault .vault-native-header{padding-top:5px}.v58-vault .vault-native-chase{margin-bottom:4px}
+@media(max-width:540px){.beard-bank-stage.v58-vault{grid-template-rows:48px auto auto auto minmax(0,1fr)}.vault-pressure{margin:0 7px 4px;padding:4px 7px}.vault-pressure b{font-size:10px}}
