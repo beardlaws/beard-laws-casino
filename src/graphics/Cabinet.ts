@@ -79,7 +79,7 @@ export class Cabinet extends Container {
   }
 
   public get cabinetWidth(): number { return this.portraitMode ? 720 : CABINET_WIDTH; }
-  public get cabinetHeight(): number { return this.portraitMode ? 1500 : CABINET_HEIGHT; }
+  public get cabinetHeight(): number { return this.portraitMode ? 1370 : CABINET_HEIGHT; }
   public getReelBounds(): CabinetReelBounds { return this.reelBounds; }
 
   public setPortraitMode(enabled: boolean): void {
@@ -88,7 +88,7 @@ export class Cabinet extends Container {
     if (enabled) {
       this.backgroundLayer.visible = false;
       this.portraitShell.visible = true;
-      this.reelBounds = { x: 58, y: 650, width: 604, height: 558 };
+      this.reelBounds = { x: 44, y: 510, width: 632, height: 606 };
       this.rebuildReels();
       this.layoutPortrait();
     } else {
@@ -691,24 +691,24 @@ export class Cabinet extends Container {
   private buildPortraitShell(): void {
     const backdrop = Sprite.from(new URL("../../assets/beard-bank-mobile-vault.png", import.meta.url).href);
     backdrop.width = 720; backdrop.height = 1500;
-    const titlePlate = new Graphics().roundRect(74, 452, 572, 102, 20).fill({ color: 0x0a0411, alpha: 0.9 }).stroke({ color: GOLD, width: 4 });
+    const titlePlate = new Graphics().roundRect(74, 292, 572, 92, 20).fill({ color: 0x0a0411, alpha: 0.92 }).stroke({ color: GOLD, width: 4 });
     const title = new Text({ text: "BEARD BANK", style: { fontFamily: "Georgia, serif", fontSize: 50, fontWeight: "bold", fill: GOLD, stroke: { color: 0x18051f, width: 7 }, letterSpacing: 3 } });
-    title.anchor.set(0.5); title.position.set(360, 487);
+    title.anchor.set(0.5); title.position.set(360, 326);
     const subtitle = new Text({ text: "THE LIVING VAULT", style: { fontFamily: "Arial Black, Arial", fontSize: 15, fill: 0xe6c4ff, letterSpacing: 5 } });
-    subtitle.anchor.set(0.5); subtitle.position.set(360, 530);
-    const jackpotPlate = new Graphics().roundRect(62, 565, 596, 38, 12).fill({ color: 0x08030d, alpha: 0.92 }).stroke({ color: 0x8a5b24, width: 2 });
+    subtitle.anchor.set(0.5); subtitle.position.set(360, 365);
+    const jackpotPlate = new Graphics().roundRect(62, 398, 596, 38, 12).fill({ color: 0x08030d, alpha: 0.94 }).stroke({ color: 0x8a5b24, width: 2 });
     const jackpots = new Text({ text: "MINI 10×     MINOR 25×     MAJOR 100×     GRAND 500×", style: { fontFamily: "Arial Black, Arial", fontSize: 13, fill: 0xffe6a2 } });
-    jackpots.anchor.set(0.5); jackpots.position.set(360, 584);
+    jackpots.anchor.set(0.5); jackpots.position.set(360, 417);
     this.chaseHeist = new Text({ text: "●  3 COINS: VAULT HEIST", style: { fontFamily: "Arial Black, Arial", fontSize: 13, fill: 0xffd86b } });
-    this.chaseHeist.position.set(62, 612);
+    this.chaseHeist.position.set(62, 447);
     this.chaseSpins = new Text({ text: "▣  STACKED DOORS: FREE SPINS", style: { fontFamily: "Arial Black, Arial", fontSize: 13, fill: 0x9dffdb } });
-    this.chaseSpins.position.set(388, 612);
-    const meterTrack = new Graphics().roundRect(38, 642, 644, 12, 6).fill({ color: 0x16091f }).stroke({ color: 0xb078cf, width: 2 });
+    this.chaseSpins.position.set(388, 447);
+    const meterTrack = new Graphics().roundRect(38, 476, 644, 12, 6).fill({ color: 0x16091f }).stroke({ color: 0xb078cf, width: 2 });
     this.vaultMeterFill = new Graphics();
     this.vaultMeterText = new Text({ text: "LIVING VAULT  0 / 30 CHARGES", style: { fontFamily: "Arial Black, Arial", fontSize: 14, fill: 0xe7c9f7, letterSpacing: 2 } });
-    this.vaultMeterText.anchor.set(0.5); this.vaultMeterText.position.set(360, 670);
-    const reelFrame = new Graphics().roundRect(48, 640, 624, 578, 22).fill({ color: 0x020104, alpha: 0.55 }).stroke({ color: GOLD, width: 4 });
-    const controlDeck = new Graphics().roundRect(34, 1232, 652, 248, 26).fill({ color: 0x07020c, alpha: 0.94 }).stroke({ color: 0xb67a29, width: 3 });
+    this.vaultMeterText.anchor.set(0.5); this.vaultMeterText.position.set(360, 497);
+    const reelFrame = new Graphics().roundRect(34, 500, 652, 626, 22).fill({ color: 0x020104, alpha: 0.62 }).stroke({ color: GOLD, width: 4 });
+    const controlDeck = new Graphics().roundRect(34, 1136, 652, 214, 26).fill({ color: 0x07020c, alpha: 0.96 }).stroke({ color: 0xb67a29, width: 3 });
     this.portraitShell.addChild(backdrop, titlePlate, title, subtitle, jackpotPlate, jackpots, this.chaseHeist, this.chaseSpins, meterTrack, this.vaultMeterFill, this.vaultMeterText, reelFrame, controlDeck);
     this.portraitShell.visible = false;
   }
@@ -794,7 +794,7 @@ export class Cabinet extends Container {
     this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
     this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
-    this.buildBadge = new Text({ text: "BEARD BANK V53", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge = new Text({ text: "BEARD BANK V54", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
@@ -808,28 +808,28 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(113, 45);
     this.infoButton.clear().roundRect(512, 18, 190, 54, 14).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(607, 45);
-    this.buildBadge.text = "BEARD BANK V53"; this.buildBadge.position.set(360, 92);
+    this.buildBadge.text = "BEARD BANK V54"; this.buildBadge.position.set(360, 92);
 
     // The readouts are drawn with landscape-local coordinates. Translate them
     // into one clean row below the reels instead of letting them overlap it.
-    this.creditContainer.position.set(-90, 590);
-    this.betContainer.position.set(-64, 590);
-    this.winContainer.position.set(-38, 590);
+    this.creditContainer.position.set(-90, 475);
+    this.betContainer.position.set(-64, 475);
+    this.winContainer.position.set(-38, 475);
     this.creditContainer.scale.set(0.75);
     this.betContainer.scale.set(0.75);
     this.winContainer.scale.set(0.75);
 
-    this.statusBox.clear().roundRect(52, 1318, 616, 46, 14).fill({ color: 0x160820 }).stroke({ color: 0xa65fd0, width: 2 });
-    this.statusValue.position.set(360, 1341); this.statusValue.style.fontSize = 19;
+    this.statusBox.clear().roundRect(52, 1218, 616, 42, 14).fill({ color: 0x160820 }).stroke({ color: 0xa65fd0, width: 2 });
+    this.statusValue.position.set(360, 1239); this.statusValue.style.fontSize = 18;
 
-    this.betMinusButton.clear().roundRect(52, 1384, 94, 74, 18).fill({ color: 0x26102f }).stroke({ color: 0xc884ee, width: 3 });
-    this.betMinusText.position.set(99, 1421); this.betMinusText.style.fontSize = 38;
-    this.autoButton.clear().roundRect(166, 1391, 112, 60, 16).fill({ color: 0x24102d }).stroke({ color: 0xb878dc, width: 3 });
-    this.autoText.position.set(222, 1421); this.autoText.style.fontSize = 13;
-    this.spinButton.clear().circle(430, 1421, 48).fill({ color: 0xffcb4f }).stroke({ color: 0xfff1a6, width: 5 });
-    this.spinText.position.set(430, 1421); this.spinText.style.fontSize = 21;
-    this.betPlusButton.clear().roundRect(574, 1384, 94, 74, 18).fill({ color: 0x26102f }).stroke({ color: 0xc884ee, width: 3 });
-    this.betPlusText.position.set(621, 1421); this.betPlusText.style.fontSize = 36;
+    this.betMinusButton.clear().roundRect(52, 1273, 94, 66, 18).fill({ color: 0x26102f }).stroke({ color: 0xc884ee, width: 3 });
+    this.betMinusText.position.set(99, 1306); this.betMinusText.style.fontSize = 36;
+    this.autoButton.clear().roundRect(166, 1278, 112, 56, 16).fill({ color: 0x24102d }).stroke({ color: 0xb878dc, width: 3 });
+    this.autoText.position.set(222, 1306); this.autoText.style.fontSize = 13;
+    this.spinButton.clear().circle(430, 1306, 44).fill({ color: 0xffcb4f }).stroke({ color: 0xfff1a6, width: 5 });
+    this.spinText.position.set(430, 1306); this.spinText.style.fontSize = 19;
+    this.betPlusButton.clear().roundRect(574, 1273, 94, 66, 18).fill({ color: 0x26102f }).stroke({ color: 0xc884ee, width: 3 });
+    this.betPlusText.position.set(621, 1306); this.betPlusText.style.fontSize = 34;
 
     const deck = this.controlLayer.children[0];
     if (deck) deck.visible = false;
@@ -854,7 +854,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(105, 44);
     this.infoButton.clear().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(1542, 44);
-    this.buildBadge.text = "BEARD BANK V53"; this.buildBadge.position.set(836, 382);
+    this.buildBadge.text = "BEARD BANK V54"; this.buildBadge.position.set(836, 382);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

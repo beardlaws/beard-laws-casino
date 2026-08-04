@@ -51,6 +51,7 @@ export class MeghsCosmicJam {
   private stageLevel = 0;
   private soundboard = new Set<string>();
   private multiplierTiles = 0;
+  private lastSurge = "SYSTEMS NOMINAL";
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
   private betIndex = 1;
@@ -71,7 +72,7 @@ export class MeghsCosmicJam {
       <header><small>BEARD LAWS CASINO • CASCADE FEATURE SLOT</small><h1>MEGH'S COSMIC JAM</h1><p>Space goats came for the strawberries. They stayed to melt faces.</p><button class="game-rules cosmic-rules-button" data-megh-rules>RULES &amp; PAYTABLE</button></header>
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
-        <div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
+        <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
@@ -229,10 +230,7 @@ export class MeghsCosmicJam {
     let total = 0;
     let feature = false;
     const host = this.root.querySelector<HTMLElement>("[data-megh-reels]")!;
-    this.render(grid);
-    host.classList.add("dropping");
-    await this.wait(780);
-    host.classList.remove("dropping");
+    await this.playReelRush(host, grid, free);
     const callout = this.root.querySelector<HTMLElement>(
       "[data-megh-callout]",
     )!;
@@ -334,6 +332,32 @@ export class MeghsCosmicJam {
     this.spinning = false;
     this.update();
     return feature;
+  }
+  private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<void> {
+    const roll = Math.random();
+    this.lastSurge = free
+      ? "ENCORE GRAVITY"
+      : roll < 0.12 ? "UFO SCAN"
+      : roll < 0.25 ? "AMPLIFIER OVERLOAD"
+      : roll < 0.40 ? "MYSTERY SIGNAL"
+      : roll < 0.58 ? "STAGGERED REEL RUSH"
+      : "COSMIC WEATHER CLEAR";
+    const surge = this.root.querySelector<HTMLElement>("[data-megh-surge]")!;
+    surge.querySelector("b")!.textContent = this.lastSurge;
+    surge.classList.add("active");
+    const surgeClass = `surge-${this.lastSurge.toLowerCase().replaceAll(" ", "-")}`;
+    host.classList.add("reel-rushing", surgeClass);
+    const flashes = free ? 2 : 3;
+    for (let pass = 0; pass < flashes; pass += 1) {
+      this.render(this.makeGrid());
+      await this.wait(135 + pass * 45);
+    }
+    this.render(finalGrid);
+    host.classList.remove("reel-rushing");
+    host.classList.add("dropping", "reel-locking");
+    await this.wait(780);
+    host.classList.remove("dropping", "reel-locking", surgeClass);
+    surge.classList.remove("active");
   }
   private chargeSoundboard(symbols: string[]): void {
     const map: Record<string, string> = { amp: "BASS", guitar: "LEAD", goat: "DRUMS", megh: "VOCALS", ufo: "UFO", vinyl: "BASS", strawberry: "VOCALS" };

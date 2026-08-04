@@ -444,6 +444,8 @@ export class Application {
         resizeTo: window,
         background: new Color(0x12081f),
         antialias: true,
+        autoDensity: true,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
       }),
       Assets.load([
         cabinetAssetUrl,
