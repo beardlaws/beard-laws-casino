@@ -444,11 +444,9 @@ export class Cabinet extends Container {
     intro.addChild(this.centerText("VAULT DOORS CAN RETRIGGER • VERNON SYMBOLS GROW THE MULTIPLIER", 22, GOLD, 405));
     this.addChild(intro);
 
-    await new Promise<void>((resolve) => {
-      const start = this.featureButton("START THE REELS", 650);
-      intro.addChild(start.button, start.label);
-      start.button.on("pointertap", () => { intro.destroy({ children: true }); resolve(); });
-    });
+    intro.addChild(this.centerText("STARTING AUTOMATICALLY…", 22, 0x9dffdb, 650));
+    await this.delay(1200);
+    intro.destroy({ children: true });
 
     // The HUD leaves the reel window uncovered. The actual cabinet reels remain
     // visible and animate for every awarded free spin.
@@ -489,17 +487,16 @@ export class Cabinet extends Container {
     summary.addChild(this.centerText(`FINAL MULTIPLIER  ${multiplier}×`, 30, GOLD, 405));
     summary.addChild(this.centerText(`FEATURE WIN  $${(total / 100).toFixed(2)}`, 48, 0x9dffb0, 520));
     this.addChild(summary);
-    return await new Promise<number>((resolve) => {
-      const collect = this.featureButton("COLLECT FREE SPINS", 650);
-      collect.button.on("pointertap", () => { summary.destroy({ children: true }); resolve(total); });
-      summary.addChild(collect.button, collect.label);
-    });
+    summary.addChild(this.centerText("COLLECTING AUTOMATICALLY…", 22, 0x9dffdb, 650));
+    await this.delay(1800);
+    summary.destroy({ children: true });
+    return total;
   }
 
   public async playLivingVaultRespin(wagerUnits: number, forced: { jackpot?: "mini"|"minor"|"major"|"grand"; fullGrid?: boolean } = {}): Promise<number> {
     const overlay = this.featureShell("LIVING VAULT", "HOLD & RESPIN • THREE LIVES");
     const livesText = this.centerText("RESPINS  ● ● ●", 30, 0x9dffdb, 268);
-    const actionText = this.centerText("PRESS START • NEW COINS RESET THREE RESPINS", 19, 0xbdf7ff, 310);
+    const actionText = this.centerText("AUTO RESPINS • NEW COINS RESET THREE RESPINS", 19, 0xbdf7ff, 310);
     const winText = this.centerText("LOCKED VALUE  $0.00", 37, GOLD, 705);
     type VaultPrize = { label: string; multiple: number; color: number; textColor: number; jackpot: boolean };
     const cells: { coin: Graphics; label: Text; locked: boolean; value: number; prize?: VaultPrize }[] = [];
@@ -511,9 +508,10 @@ export class Cabinet extends Container {
     }
     overlay.addChild(livesText, actionText, winText); this.addChild(overlay);
     return await new Promise<number>((resolve) => {
-      const start = this.featureButton("CRACK THE LIVING VAULT", 770); overlay.addChild(start.button, start.label);
-      start.button.on("pointertap", async () => {
-        start.button.eventMode = "none"; start.button.alpha = 0; start.label.alpha = 0;
+      const startLabel = this.centerText("VAULT CRACKS AUTOMATICALLY…", 22, 0x9dffdb, 801); overlay.addChild(startLabel);
+      void (async () => {
+        await this.delay(1000);
+        startLabel.destroy();
         let lives = 3; let total = 0; let first = true; let respin = 0;
         while (lives > 0 && cells.some((cell) => !cell.locked)) {
           respin += 1;
@@ -595,7 +593,7 @@ export class Cabinet extends Container {
         else { livesText.text = "VAULT SEALED • EVERY LOCKED COIN PAYS"; actionText.text = `${cells.filter((cell) => cell.locked).length} OF 15 CHAMBERS LOCKED`; }
         winText.text = `LIVING VAULT WIN  $${(total / 100).toFixed(2)}`;
         const collect = this.featureButton("COLLECT VAULT WIN", 770); collect.button.on("pointertap", () => { overlay.destroy({ children: true }); resolve(total); }); overlay.addChild(collect.button, collect.label);
-      });
+      })();
     });
   }
 
@@ -805,7 +803,7 @@ export class Cabinet extends Container {
     this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
     this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
-    this.buildBadge = new Text({ text: "BEARD BANK V56", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge = new Text({ text: "BEARD BANK V57", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
@@ -819,7 +817,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(113, 45);
     this.infoButton.clear().roundRect(512, 18, 190, 54, 14).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(607, 45);
-    this.buildBadge.text = "BEARD BANK V56"; this.buildBadge.position.set(360, 92);
+    this.buildBadge.text = "BEARD BANK V57"; this.buildBadge.position.set(360, 92);
 
     // The readouts are drawn with landscape-local coordinates. Translate them
     // into one clean row below the reels instead of letting them overlap it.
@@ -865,7 +863,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(105, 44);
     this.infoButton.clear().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(1542, 44);
-    this.buildBadge.text = "BEARD BANK V56"; this.buildBadge.position.set(836, 382);
+    this.buildBadge.text = "BEARD BANK V57"; this.buildBadge.position.set(836, 382);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

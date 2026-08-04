@@ -94,6 +94,7 @@ export class NeemasHighSeas {
   private auto: AutoCount = null;
   private stopRequested = false;
   private spinning = false;
+  private bonusAutoRunning = false;
   private freeSpins = 0;
   private cabin = 0;
   private bonusMultiplier = 1;
@@ -354,7 +355,23 @@ export class NeemasHighSeas {
     }
     this.spinning = false;
     this.update();
+    if (!free && this.freeSpins > 0 && !this.bonusAutoRunning) {
+      void this.runVoyageSpins();
+    }
     return tickets >= 3 || guaranteedDeparture;
+  }
+  private async runVoyageSpins(): Promise<void> {
+    if (this.bonusAutoRunning || this.freeSpins <= 0) return;
+    this.bonusAutoRunning = true;
+    this.stopAuto();
+    this.update();
+    while (this.freeSpins > 0) {
+      this.message(`NEXT VOYAGE SPIN IN 1… • ${this.freeSpins} REMAIN`);
+      await this.wait(900);
+      await this.spin();
+    }
+    this.bonusAutoRunning = false;
+    this.update();
   }
   private toggleAuto(): void {
     if (this.auto !== null) {
@@ -585,7 +602,11 @@ export class NeemasHighSeas {
       .forEach((button) => {
         button.disabled = this.spinning || this.freeSpins > 0;
       });
-    spin.textContent = this.freeSpins > 0 ? "FREE SPIN" : "SPIN";
+    spin.textContent = this.bonusAutoRunning
+      ? "VOYAGE RUNNING"
+      : this.freeSpins > 0
+        ? "FREE SPIN"
+        : "SPIN";
     const auto = this.root.querySelector<HTMLElement>("[data-neema-auto]")!;
     auto.textContent =
       this.auto === null
