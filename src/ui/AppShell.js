@@ -62,8 +62,12 @@ export function createAppShell(){
            </div>
            <div class="lock-panel">
              <small>LIVING VAULT</small>
-             <strong>AWAKEN WHAT'S INSIDE</strong>
-             <span>MYSTERY FEATURE</span>
+             <strong data-charges>0 / 30</strong>
+             <span>LOCKS COLLECTED</span>
+             <div class="lock-grid">
+               ${Array.from({length:30},(_,i)=>`<i style="--lock:${i}"></i>`).join('')}
+             </div>
+             <div class="charge-track"><div data-charge-fill></div></div>
            </div>
          </section>
 

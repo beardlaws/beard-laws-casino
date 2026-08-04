@@ -24,6 +24,7 @@ export class CabinetRenderer{
   this.all('[data-bank]',money(engine.bank));
   this.all('[data-wallet]',money(engine.tripWallet));
   this.one('[data-message]',state.message);
+  this.one('[data-charges]',`${engine.vaultCharges} / 30`);
   this.one('[data-spins]',engine.spins);
   this.one('[data-wagered]',money(engine.wagered));
   this.one('[data-returned]',money(engine.returned));
@@ -33,6 +34,14 @@ export class CabinetRenderer{
    money(this.presentedWin??engine.lastResult?.totalWin??0)
   );
 
+  const chargeFill=this.root.querySelector('[data-charge-fill]');
+  if(chargeFill){
+   chargeFill.style.width=`${engine.vaultCharges/30*100}%`;
+  }
+
+  this.root.querySelectorAll('.lock-grid i').forEach((lock,index)=>{
+   lock.classList.toggle('charged',index<engine.vaultCharges);
+  });
 
   const spinButton=this.root.querySelector('[data-spin]');
   if(spinButton){

@@ -12,10 +12,52 @@
   text-transform: uppercase;
 }
 
+.profile-button { display:flex; align-items:center; gap:10px; border:1px solid rgba(229,185,63,.35); border-radius:999px; padding:7px 13px 7px 7px; color:#fff; background:rgba(18,8,31,.72); cursor:pointer; text-align:left; }
+.profile-button:hover { border-color:#ffe58a; box-shadow:0 0 20px rgba(229,185,63,.2); }
+.profile-button > span:last-child { display:grid; gap:2px; }
+.profile-button small { color:#ae8fc2; font-size:8px; letter-spacing:.18em; }
+.profile-button strong { font-size:12px; letter-spacing:.06em; }
+.profile-avatar, .account-brand > span { display:grid; place-items:center; width:36px; height:36px; border-radius:50%; background:linear-gradient(145deg,#ffe58a,#a765e3 70%,#351653); color:#180a25; font-weight:1000; box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),0 0 18px rgba(167,101,227,.35); }
+.account-backdrop { z-index:10020; }
+.account-modal { width:min(520px,calc(100vw - 28px)); max-height:calc(100vh - 28px); overflow:auto; position:relative; padding:30px; border:1px solid rgba(255,229,138,.38); border-radius:24px; color:#fff; background:radial-gradient(circle at 20% 0,rgba(154,77,224,.24),transparent 38%),linear-gradient(150deg,#1b0b28,#08040e 70%); box-shadow:0 35px 100px #000,0 0 60px rgba(154,77,224,.18); }
+.account-modal .close { position:absolute; top:14px; right:16px; }
+.account-brand { display:flex; align-items:center; gap:15px; padding-right:28px; }
+.account-brand > span { width:52px; height:52px; font-size:17px; flex:none; }
+.account-brand small { color:#e5b93f; letter-spacing:.17em; font-weight:900; }
+.account-brand h2 { margin:3px 0; font-size:25px; }
+.account-brand p { margin:0; color:#a98eb8; font-size:12px; }
+.account-intro { color:#cbbbd3; line-height:1.55; }
+.connection-banner { display:grid; gap:5px; margin:18px 0; padding:13px 15px; border:1px solid rgba(255,193,79,.4); border-radius:12px; background:rgba(110,67,0,.2); }
+.connection-banner strong { color:#ffe58a; }
+.connection-banner span { color:#cfbca8; font-size:12px; line-height:1.4; }
+.account-tabs { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:20px 0 16px; padding:4px; border-radius:12px; background:#0a0610; }
+.account-tabs button { padding:11px; border:0; border-radius:9px; color:#8e789b; background:transparent; font-weight:900; cursor:pointer; }
+.account-tabs button.active { color:#14081e; background:linear-gradient(90deg,#e5b93f,#ffe58a); }
+.account-form, .settings-grid { display:grid; gap:13px; }
+.account-form label, .settings-grid label { display:grid; gap:6px; color:#d8c5e1; font-size:11px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+.account-form input, .settings-grid input[type="text"], .settings-grid input:not([type]) { box-sizing:border-box; width:100%; padding:12px 13px; border:1px solid #47265e; border-radius:10px; outline:0; color:#fff; background:#0c0712; }
+.account-form input:focus, .settings-grid input:focus { border-color:#d291ff; box-shadow:0 0 0 3px rgba(154,77,224,.15); }
+.account-modal .primary, .guest-continue { width:100%; min-height:45px; }
+.account-modal button:disabled { opacity:.42; cursor:not-allowed; }
+.text-button { border:0; color:#c8a8dd; background:none; cursor:pointer; }
+.guest-continue { margin-top:12px; border:1px solid #4a3158; border-radius:11px; color:#ddcbe7; background:transparent; font-weight:900; cursor:pointer; }
+.auth-message { min-height:18px; margin:0; color:#ffe58a; font-size:12px; text-align:center; }
+.account-fineprint,.save-status { color:#7f6e88; font-size:10px; text-align:center; }
+.profile-stats { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:22px 0; }
+.profile-stats article { display:grid; gap:5px; padding:13px; border:1px solid rgba(154,77,224,.22); border-radius:12px; background:rgba(8,4,14,.64); }
+.profile-stats small { color:#a68ab7; font-size:9px; letter-spacing:.12em; }
+.profile-stats strong { color:#ffe58a; font-size:18px; }
+.settings-grid { margin-bottom:18px; }
+.settings-grid .toggle { display:flex; align-items:center; gap:9px; padding:10px 0; }
+.settings-grid .toggle input { accent-color:#b65fff; width:18px; height:18px; }
+.dashboard .cashout { width:100%; margin-top:10px; }
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+
 @media (max-width: 800px) {
   .player-cluster {
     width: 100%;
     justify-content: space-between;
     flex-wrap: wrap;
   }
+  .account-modal { padding:23px 18px; }
 }
