@@ -5,6 +5,7 @@ export interface CasinoActivity {
   readonly game: CasinoGameId;
   readonly amount?: number;
   readonly value?: number;
+  readonly wager?: number;
 }
 
 export interface MissionProgress {
@@ -21,6 +22,9 @@ export interface CasinoProgress {
   readonly totalSpins: number;
   readonly totalBonuses: number;
   readonly biggestWinUnits: number;
+  readonly totalWageredUnits: number;
+  readonly totalWonUnits: number;
+  readonly biggestMultiplier: number;
   readonly favoriteGame: CasinoGameId | "none";
   readonly gameSpins: Partial<Record<CasinoGameId, number>>;
   readonly achievements: readonly string[];
@@ -48,6 +52,9 @@ export const freshCasinoProgress = (): CasinoProgress => ({
   totalSpins: 0,
   totalBonuses: 0,
   biggestWinUnits: 0,
+  totalWageredUnits: 0,
+  totalWonUnits: 0,
+  biggestMultiplier: 0,
   favoriteGame: "none",
   gameSpins: {},
   achievements: [],
@@ -71,6 +78,9 @@ export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): Casino
     totalSpins: Math.max(0, Math.round(Number(value?.totalSpins ?? 0))),
     totalBonuses: Math.max(0, Math.round(Number(value?.totalBonuses ?? 0))),
     biggestWinUnits: Math.max(0, Math.round(Number(value?.biggestWinUnits ?? 0))),
+    totalWageredUnits: Math.max(0, Math.round(Number(value?.totalWageredUnits ?? 0))),
+    totalWonUnits: Math.max(0, Math.round(Number(value?.totalWonUnits ?? 0))),
+    biggestMultiplier: Math.max(0, Number(value?.biggestMultiplier ?? 0)),
     gameSpins,
     favoriteGame,
     achievements: Array.from(new Set(value?.achievements ?? [])),
@@ -98,9 +108,13 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
   let totalBonuses = progress.totalBonuses;
   let xp = progress.xp;
   let biggestWinUnits = progress.biggestWinUnits;
+  let totalWageredUnits = progress.totalWageredUnits;
+  let totalWonUnits = progress.totalWonUnits;
+  let biggestMultiplier = progress.biggestMultiplier;
   const achievements = new Set(progress.achievements);
   if (activity.type === "spin") {
     totalSpins += 1; xp += 10;
+    totalWageredUnits += Math.max(0, activity.wager ?? 0);
     gameSpins[activity.game] = (gameSpins[activity.game] ?? 0) + 1;
     if (totalSpins >= 1) achievements.add("FIRST SPIN");
     if (totalSpins >= 100) achievements.add("CENTURY CLUB");
@@ -108,6 +122,8 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
   if (activity.type === "bonus") { totalBonuses += 1; xp += 100; achievements.add(`FIRST ${activity.game.toUpperCase()} FEATURE`); }
   if (activity.type === "win") {
     biggestWinUnits = Math.max(biggestWinUnits, activity.amount ?? 0);
+    totalWonUnits += Math.max(0, activity.amount ?? 0);
+    biggestMultiplier = Math.max(biggestMultiplier, activity.value ?? 0);
     if ((activity.value ?? 0) >= 50) achievements.add("50× CLUB");
   }
   if (activity.type === "coin" && (activity.value ?? 0) >= 1) achievements.add("VAULT COLLECTOR");
@@ -119,5 +135,5 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
     return { ...mission, progress: Math.min(mission.target, Math.max(mission.progress, amount)) };
   });
   const favoriteGame = (Object.entries(gameSpins).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] ?? "none") as CasinoProgress["favoriteGame"];
-  return { ...progress, xp, totalSpins, totalBonuses, biggestWinUnits, gameSpins, favoriteGame, achievements: [...achievements], missions };
+  return { ...progress, xp, totalSpins, totalBonuses, biggestWinUnits, totalWageredUnits, totalWonUnits, biggestMultiplier, gameSpins, favoriteGame, achievements: [...achievements], missions };
 };

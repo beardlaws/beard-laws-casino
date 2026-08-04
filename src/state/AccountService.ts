@@ -12,6 +12,18 @@ export interface AccountState {
   readonly email: string;
 }
 
+export interface LeaderboardPlayer {
+  readonly display_name: string;
+  readonly casino_level: number;
+  readonly total_spins: number;
+  readonly total_bonuses: number;
+  readonly biggest_multiplier: number;
+  readonly biggest_win_units: number;
+  readonly favorite_game: string;
+  readonly achievement_count: number;
+  readonly updated_at: string;
+}
+
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
@@ -138,6 +150,23 @@ export class AccountService {
     }, 700);
   }
 
+  public async leaderboard(): Promise<LeaderboardPlayer[]> {
+    if (!this.client) return [];
+    const { data, error } = await this.client.from("casino_public_leaderboard").select("*").order("biggest_multiplier", { ascending: false }).limit(50);
+    if (error || !data) return [];
+    return data as LeaderboardPlayer[];
+  }
+
+  public async publishStats(profile: PlayerProfile): Promise<void> {
+    if (!this.client || !this.session) return;
+    await this.client.rpc("publish_casino_stats", {
+      p_display_name: profile.displayName, p_total_spins: profile.casino.totalSpins,
+      p_total_bonuses: profile.casino.totalBonuses, p_biggest_multiplier: profile.casino.biggestMultiplier,
+      p_biggest_win_units: profile.casino.biggestWinUnits, p_xp: profile.casino.xp,
+      p_favorite_game: profile.casino.favoriteGame, p_achievement_count: profile.casino.achievements.length,
+    });
+  }
+
   public async flush(): Promise<void> {
     if (!this.client || !this.session || !this.pendingProfile) return;
     const profile = this.pendingProfile;
@@ -166,7 +195,7 @@ export class AccountService {
       const { error } = await this.client
         .from("casino_profiles")
         .upsert(candidate, { onConflict: conflict });
-      if (!error) return;
+      if (!error) { await this.publishStats(profile); return; }
     }
     console.error(
       "Casino cloud save could not match the casino_profiles schema.",

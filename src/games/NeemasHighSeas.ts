@@ -1,6 +1,7 @@
 type AutoCount = number | "infinite" | null;
 type VoyageRoute = "party" | "casino" | "mystery";
 import type { CasinoActivity } from "../state/CasinoProgression";
+import { casinoRandom } from "../engine/CasinoRandom";
 
 interface SeaSymbol {
   readonly id: string;
@@ -187,7 +188,7 @@ export class NeemasHighSeas {
 
   private pick(): SeaSymbol {
     let roll =
-      Math.random() * SYMBOLS.reduce((sum, symbol) => sum + symbol.weight, 0);
+      casinoRandom() * SYMBOLS.reduce((sum, symbol) => sum + symbol.weight, 0);
     for (const symbol of SYMBOLS) {
       roll -= symbol.weight;
       if (roll < 0) return symbol;
@@ -259,7 +260,7 @@ export class NeemasHighSeas {
       return false;
     }
     this.spinning = true;
-    this.onActivity({ type: "spin", game: "neema" });
+    this.onActivity({ type: "spin", game: "neema", wager: free ? 0 : this.betUnits });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
     else { this.freeSpins -= 1; this.voyageSpinsPlayed += 1; }
     this.message(free ? `FREE SPIN • ${this.freeSpins} REMAIN` : "SAILING...");
@@ -296,7 +297,7 @@ export class NeemasHighSeas {
     const tickets = grid.flat().filter((s) => s.id === "ticket").length;
     const captains = grid.flat().filter((s) => s.id === "captain").length;
     if (free) {
-      const routeBoost = this.route === "casino" ? 1.35 : this.route === "mystery" && Math.random() < .3 ? 2 : 1;
+      const routeBoost = this.route === "casino" ? 1.35 : this.route === "mystery" && casinoRandom() < .3 ? 2 : 1;
       award = Math.round(award * this.bonusMultiplier * routeBoost);
       if (captains > 0) {
         this.voyageStops = Math.min(4, this.voyageStops + captains);
@@ -387,7 +388,7 @@ export class NeemasHighSeas {
       this.setWallet(this.getWallet() + award);
       await this.animateWin(award);
       await this.showWinTier(award);
-      this.onActivity({ type: "win", game: "neema", amount: award, value: award / this.betUnits });
+      this.onActivity({ type: "win", game: "neema", amount: award, value: award / this.betUnits, wager: this.betUnits });
     }
     this.spinning = false;
     this.update();
@@ -400,7 +401,7 @@ export class NeemasHighSeas {
     if (!this.happyHourDeck.length) {
       this.happyHourDeck = ["DOUBLE POUR", "GOLDEN SUNSET", "CAPTAIN'S PICK", "PARTY COVE RUSH", "CALM SEAS", "CALM SEAS", "CALM SEAS"];
       for (let i = this.happyHourDeck.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(casinoRandom() * (i + 1));
         [this.happyHourDeck[i], this.happyHourDeck[j]] = [this.happyHourDeck[j]!, this.happyHourDeck[i]!];
       }
     }
@@ -409,7 +410,7 @@ export class NeemasHighSeas {
   private applyHappyHourEvent(grid: SeaSymbol[][], event: string): SeaSymbol[][] {
     const next = grid.map((reel) => [...reel]);
     const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
-    const place = (id: string): void => { next[Math.floor(Math.random() * REELS)]![Math.floor(Math.random() * ROWS)] = symbol(id); };
+    const place = (id: string): void => { next[Math.floor(casinoRandom() * REELS)]![Math.floor(casinoRandom() * ROWS)] = symbol(id); };
     if (event === "DOUBLE POUR") place("ticket");
     if (event === "GOLDEN SUNSET") { place("wild"); place("wild"); }
     if (event === "CAPTAIN'S PICK") place("captain");
@@ -544,14 +545,14 @@ export class NeemasHighSeas {
       if (typeof localStorage !== "undefined") localStorage.setItem(savedKey, JSON.stringify({ board, respins, total }));
     };
     const makeDrink = (): Drink => {
-      const roll = Math.random();
+      const roll = casinoRandom();
       const multiple = roll < .56 ? 1 : roll < .78 ? 2 : roll < .9 ? 3 : roll < .965 ? 5 : 10;
       const kind: Drink["kind"] = roll < .62 ? "cash" : roll < .7 ? "ice" : roll < .77 ? "cranberry" : roll < .83 ? "vodka" : roll < .88 ? "neema" : roll < .93 ? "bell" : roll < .98 ? "wheel" : "jackpot";
       return { kind, value: this.betUnits * (kind === "jackpot" ? 10 : multiple) };
     };
     const emptyIndices = (): number[] => board.map((v, i) => v ? -1 : i).filter((i) => i >= 0);
     for (let i = board.filter(Boolean).length; i < Math.min(startingDrinks, 20); i += 1) {
-      const empty = emptyIndices(); const at = empty[Math.floor(Math.random() * empty.length)]!;
+      const empty = emptyIndices(); const at = empty[Math.floor(casinoRandom() * empty.length)]!;
       const drink = makeDrink(); board[at] = drink; total += drink.value;
     }
     render();
@@ -561,8 +562,8 @@ export class NeemasHighSeas {
         go.textContent = `AUTO RESPIN • ${respins} LEFT`;
         host.classList.add("shaking"); await this.wait(520); host.classList.remove("shaking");
         const empty = emptyIndices();
-        const hitCount = Math.random() < .5 ? 0 : Math.random() < .82 ? 1 : 2;
-        const hits = empty.sort(() => Math.random() - .5).slice(0, hitCount);
+        const hitCount = casinoRandom() < .5 ? 0 : casinoRandom() < .82 ? 1 : 2;
+        const hits = empty.sort(() => casinoRandom() - .5).slice(0, hitCount);
         if (!hits.length) respins -= 1;
         for (const at of hits) {
           const drink = makeDrink(); board[at] = drink; total += drink.value;
@@ -591,7 +592,7 @@ export class NeemasHighSeas {
     return await new Promise<VoyageRoute>((resolve) => overlay.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => button.addEventListener("click", () => { const route = button.dataset.route as VoyageRoute; overlay.remove(); resolve(route); }, { once: true })));
   }
   private async playLastCall(): Promise<number> {
-    const choices = [0.08, 0.12, 0.18].sort(() => Math.random() - 0.5);
+    const choices = [0.08, 0.12, 0.18].sort(() => casinoRandom() - 0.5);
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic sea-cinematic last-call";
     overlay.innerHTML = `<small>VOYAGE FINALE</small><h2>LAST CALL</h2><p>PICK A COCKTAIL</p><div>${choices.map((_, i) => `<button data-pick="${i}">🍹<span>POUR ${i + 1}</span></button>`).join("")}</div>`;

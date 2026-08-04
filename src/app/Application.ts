@@ -1,5 +1,4 @@
-import { Application as PixiApplication, Assets, Color } from "pixi.js";
-import { GameScene } from "../scenes/GameScene";
+import { Application as PixiApplication } from "pixi.js";
 import {
   LocalPlayerProfileRepository,
   type PlayerProfile,
@@ -12,33 +11,8 @@ import { MeghsCosmicJam } from "../games/MeghsCosmicJam";
 import { AccountService } from "../state/AccountService";
 import { applyActivity, rankForXp, type CasinoActivity } from "../state/CasinoProgression";
 import { CasinoAudio } from "../graphics/CasinoAudio";
+import { BeardBankDOM } from "../games/BeardBank/BeardBankDOM";
 
-const cabinetAssetUrl = new URL(
-  "../../assets/beard-bank-2040-cabinet.png",
-  import.meta.url,
-).href;
-const mobileCabinetAssetUrl = new URL(
-  "../../assets/beard-bank-mobile-vault.png",
-  import.meta.url,
-).href;
-const symbolAssetUrls = [
-  "beard-coin",
-  "oil",
-  "crown",
-  "comb",
-  "vernon",
-  "vault-door",
-  "gold-crest",
-].map(
-  (name) =>
-    new URL(`../../assets/concept-symbols/${name}.png`, import.meta.url).href,
-);
-const finishedSymbolAssetUrls = ["balm", "razor", "vault-crest", "luxury-kit"]
-  .map(
-    (name) =>
-      new URL(`../../assets/generated/${name}.png`, import.meta.url).href,
-  )
-  .concat(new URL("../../assets/key.svg", import.meta.url).href);
 type GameId =
   | "beard-bank"
   | "blackjack"
@@ -216,7 +190,7 @@ export class Application {
       <section class="casino-shell">
         <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "CLOUD PLAYER" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>RANK ${rank.level}</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><div class="wallet-pill"><small>CASINO WALLET</small><strong>${this.money()}</strong></div></div></header>
         <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><button class="atm-button" data-atm>VISIT ATM <span>+</span></button></div>
-        <section class="casino-dashboard"><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Biggest win ${this.money(this.profile.casino.biggestWinUnits)}</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button></section>
+        <section class="casino-dashboard"><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Best ${this.profile.casino.biggestMultiplier.toFixed(1)}×</span></button><button data-leaderboard><small>CASINO LEADERBOARD</small><strong>THE BEARD BOARD</strong><span>Players • records • recent legends</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button></section>
         <div class="floor-label"><span>CASINO FLOOR</span><span>Fictional credits • No real money</span></div>
         <div class="game-grid">
           ${this.gameCard("beard-bank", "FLAGSHIP SLOT", "BEARD BANK", "Crack the Living Vault", "live gold")}
@@ -236,6 +210,7 @@ export class Application {
     this.appRoot.querySelector("[data-missions]")?.addEventListener("click", () => this.showProgress("missions"));
     this.appRoot.querySelectorAll("[data-stats]").forEach((node) => node.addEventListener("click", () => this.showProgress("stats")));
     this.appRoot.querySelector("[data-daily]")?.addEventListener("click", () => this.showProgress("daily"));
+    this.appRoot.querySelector("[data-leaderboard]")?.addEventListener("click", () => { void this.showLeaderboard(); });
     this.appRoot
       .querySelectorAll<HTMLElement>("[data-game]")
       .forEach((card) =>
@@ -243,6 +218,21 @@ export class Application {
           this.openGame(card.dataset.game as GameId),
         ),
       );
+  }
+
+  private async showLeaderboard(): Promise<void> {
+    const modal = document.createElement("div"); modal.className = "modal-backdrop";
+    modal.innerHTML = `<section class="progress-modal leaderboard-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V60</small><h2>The Beard Board</h2><p>Loading public Casino Cards…</p></section>`; document.body.appendChild(modal);
+    modal.querySelector("[data-close]")?.addEventListener("click", () => modal.remove());
+    const players = await this.accounts.leaderboard();
+    const rows = players.length ? players.map((p,i)=>`<button class="leader-row" data-card="${i}"><b>${i+1}</b><span><strong>${p.display_name}</strong><small>${p.favorite_game.replaceAll("-"," ").toUpperCase()} • ${p.total_spins} PLAYS</small></span><em>${Number(p.biggest_multiplier).toFixed(1)}×</em></button>`).join("") : `<div class="leader-empty"><strong>THE FLOOR IS WAITING</strong><p>Run the V60 database setup once, then registered players will appear here automatically. Guest profiles remain private.</p></div>`;
+    modal.querySelector("section")!.innerHTML = `<button class="close" data-close>×</button><small>BEARD LAWS CASINO • V60</small><h2>The Beard Board</h2><div class="leader-tabs"><span>BIGGEST MULTIPLIER</span><span>ALL TIME</span></div><div class="leader-list">${rows}</div><p class="privacy-note">Public cards show display names and game records only. Emails and wallet balances never appear.</p>`;
+    modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
+    modal.querySelectorAll<HTMLElement>("[data-card]").forEach((node)=>node.addEventListener("click",()=>{const p=players[Number(node.dataset.card)]!;this.showCasinoCard(p);}));
+  }
+
+  private showCasinoCard(p: import("../state/AccountService").LeaderboardPlayer): void {
+    const card=document.createElement("div");card.className="modal-backdrop";card.innerHTML=`<section class="casino-card"><button class="close" data-close>×</button><small>OFFICIAL CASINO CARD</small><h2>${p.display_name}</h2><div class="casino-card-rank">LEVEL ${p.casino_level}</div><div><p><span>BEST WIN</span><b>${Number(p.biggest_multiplier).toFixed(1)}×</b></p><p><span>PLAYS</span><b>${p.total_spins}</b></p><p><span>FEATURES</span><b>${p.total_bonuses}</b></p><p><span>ACHIEVEMENTS</span><b>${p.achievement_count}</b></p></div><strong>FAVORITE • ${p.favorite_game.replaceAll("-"," ").toUpperCase()}</strong></section>`;document.body.appendChild(card);card.querySelector("[data-close]")?.addEventListener("click",()=>card.remove());
   }
 
   private showProgress(tab: "missions" | "stats" | "daily"): void {
@@ -437,44 +427,10 @@ export class Application {
   }
 
   private async openBeardBank(): Promise<void> {
-    const startingCharges = this.profile.beardBank.livingVaultCharges;
-    this.appRoot.innerHTML = `<main class="beard-bank-stage v56-vault v58-vault"><div class="beard-bank-native-bar"><button data-beard-floor>← CASINO FLOOR</button><span>BEARD BANK <b>V59</b></span><button data-beard-info>PAYTABLE</button></div><header class="vault-native-header"><small>BEARD LAWS CASINO • 243 WAYS</small><h1>BEARD BANK</h1><p>BUILD THE VAULT. WAKE THE GUARDIAN. BREAK THE BANK.</p></header><div class="vault-native-chase"><span>3 COINS • HEIST</span><strong>THE LIVING VAULT</strong><span>STACKED DOORS • VERNON</span></div><div class="vault-pressure"><span><small>VAULT PRESSURE</small><b data-vault-pressure>${startingCharges} / 30 COINS</b></span><i><em data-vault-pressure-fill style="width:${startingCharges / 30 * 100}%"></em></i></div><div class="beard-bank-canvas" data-beard-canvas></div></main>`;
-    const canvasHost = this.appRoot.querySelector<HTMLElement>("[data-beard-canvas]")!;
-    this.pixi = new PixiApplication();
-    await Promise.all([
-      this.pixi.init({
-        resizeTo: canvasHost,
-        background: new Color(0x12081f),
-        antialias: true,
-        autoDensity: true,
-        resolution: Math.min(window.devicePixelRatio || 1, 3),
-      }),
-      Assets.load([
-        cabinetAssetUrl,
-        mobileCabinetAssetUrl,
-        ...symbolAssetUrls,
-        ...finishedSymbolAssetUrls,
-      ]),
-    ]);
-    canvasHost.appendChild(this.pixi.canvas);
-    const scene = new GameScene(
-      this.pixi,
-      this.walletUnits,
-      this.profile.beardBank,
-      (units) => this.saveWallet(units),
-      (charges, lifetimeCoins) => {
-        this.saveBeardBankProgress(charges, lifetimeCoins);
-        const label = this.appRoot.querySelector<HTMLElement>("[data-vault-pressure]");
-        const fill = this.appRoot.querySelector<HTMLElement>("[data-vault-pressure-fill]");
-        if (label) label.textContent = charges >= 30 ? "VAULT READY TO CRACK" : `${charges} / 30 COINS`;
-        if (fill) fill.style.width = `${Math.min(100, charges / 30 * 100)}%`;
-      },
-      () => this.showLobby(),
-      (activity) => this.recordActivity(activity),
-    );
-    scene.initialize();
-    this.appRoot.querySelector("[data-beard-floor]")?.addEventListener("click", () => scene.requestExit());
-    this.appRoot.querySelector("[data-beard-info]")?.addEventListener("click", () => scene.showRules());
+    this.destroyPixi();
+    new BeardBankDOM(this.appRoot, this.profile.beardBank, () => this.walletUnits,
+      (units) => this.saveWallet(units), (charges, coins) => this.saveBeardBankProgress(charges, coins),
+      () => this.showLobby(), (activity) => this.recordActivity(activity)).open();
   }
 
   private openBlackjack(): void {

@@ -2,6 +2,7 @@ type AutoCount = number | "infinite" | null;
 type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
 type CosmicEvent = "UFO SCAN" | "AMPLIFIER OVERLOAD" | "MYSTERY SIGNAL" | "STAGGERED REEL RUSH" | "GOAT STAMPEDE" | "COSMIC COLLISION" | "COSMIC WEATHER CLEAR";
 import type { CasinoActivity } from "../state/CasinoProgression";
+import { casinoRandom } from "../engine/CasinoRandom";
 interface JamSymbol {
   id: string;
   label: string;
@@ -141,7 +142,7 @@ export class MeghsCosmicJam {
 
   private pick(): JamSymbol {
     const totalWeight = SYMBOLS.reduce((s, x) => s + this.symbolWeight(x), 0);
-    let roll = Math.random() * totalWeight;
+    let roll = casinoRandom() * totalWeight;
     for (const symbol of SYMBOLS) {
       roll -= this.symbolWeight(symbol);
       if (roll < 0) return symbol;
@@ -228,7 +229,7 @@ export class MeghsCosmicJam {
       return false;
     }
     this.spinning = true;
-    this.onActivity({ type: "spin", game: "megh" });
+    this.onActivity({ type: "spin", game: "megh", wager: free ? 0 : this.betUnits });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
     else { this.freeDrops -= 1; this.featureDropsPlayed += 1; }
     if (!free) {
@@ -344,7 +345,7 @@ export class MeghsCosmicJam {
     }
     if (total > 0) {
       this.setWallet(this.getWallet() + total);
-      this.onActivity({ type: "win", game: "megh", amount: total, value: total / this.betUnits });
+      this.onActivity({ type: "win", game: "megh", amount: total, value: total / this.betUnits, wager: this.betUnits });
       callout.hidden = false;
       callout.textContent = `TOTAL COSMIC WIN • $${(total / 100).toFixed(2)}`;
       await this.animateWin(total);
@@ -425,7 +426,7 @@ export class MeghsCosmicJam {
     if (!this.surgeDeck.length) {
       this.surgeDeck = ["UFO SCAN", "AMPLIFIER OVERLOAD", "MYSTERY SIGNAL", "STAGGERED REEL RUSH", "GOAT STAMPEDE", "COSMIC COLLISION", "COSMIC WEATHER CLEAR"];
       for (let i = this.surgeDeck.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(casinoRandom() * (i + 1));
         [this.surgeDeck[i], this.surgeDeck[j]] = [this.surgeDeck[j]!, this.surgeDeck[i]!];
       }
     }
@@ -435,19 +436,19 @@ export class MeghsCosmicJam {
     const next = grid.map((row) => [...row]);
     const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
     if (event === "UFO SCAN") {
-      for (let i = 0; i < 2; i += 1) next[Math.floor(Math.random() * ROWS)]![Math.floor(Math.random() * COLS)] = symbol("wild");
+      for (let i = 0; i < 2; i += 1) next[Math.floor(casinoRandom() * ROWS)]![Math.floor(casinoRandom() * COLS)] = symbol("wild");
     } else if (event === "AMPLIFIER OVERLOAD") {
-      const col = Math.floor(Math.random() * COLS);
+      const col = Math.floor(casinoRandom() * COLS);
       [1, 2, 3].forEach((row) => { next[row]![col] = symbol("amp"); });
     } else if (event === "MYSTERY SIGNAL") {
-      const chosen = ["strawberry", "amp", "guitar", "vinyl", "goat"][Math.floor(Math.random() * 5)]!;
-      for (let i = 0; i < 3; i += 1) next[Math.floor(Math.random() * ROWS)]![Math.floor(Math.random() * COLS)] = symbol(chosen);
+      const chosen = ["strawberry", "amp", "guitar", "vinyl", "goat"][Math.floor(casinoRandom() * 5)]!;
+      for (let i = 0; i < 3; i += 1) next[Math.floor(casinoRandom() * ROWS)]![Math.floor(casinoRandom() * COLS)] = symbol(chosen);
     } else if (event === "GOAT STAMPEDE") {
-      const row = Math.floor(Math.random() * ROWS);
+      const row = Math.floor(casinoRandom() * ROWS);
       [1, 2, 3, 4].forEach((col) => { next[row]![col] = symbol("goat"); });
     } else if (event === "COSMIC COLLISION") {
-      const row = Math.floor(Math.random() * (ROWS - 1));
-      const col = Math.floor(Math.random() * (COLS - 1));
+      const row = Math.floor(casinoRandom() * (ROWS - 1));
+      const col = Math.floor(casinoRandom() * (COLS - 1));
       const chosen = next[row]![col]!;
       next[row]![col + 1] = chosen; next[row + 1]![col] = chosen; next[row + 1]![col + 1] = chosen;
     }
@@ -636,7 +637,7 @@ export class MeghsCosmicJam {
       { name: "NEON AXE", icon: "⚡", copy: "MULTIPLY THE ENCORE", factor: .22 },
       { name: "COSMIC BASS", icon: "🛸", copy: "COLLECT MULTIPLIER TILES", factor: .15 },
       { name: "STARBREAKER", icon: "★", copy: "FIVE FINAL POWER CHORDS", factor: .1 },
-    ].sort(() => Math.random() - 0.5);
+    ].sort(() => casinoRandom() - 0.5);
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic cosmic-cinematic guitar-smash";
     overlay.innerHTML = `<small>ENCORE FINALE</small><h2>GUITAR SMASH</h2><p>CHOOSE YOUR WEAPON</p><div>${guitars.map((g, i) => `<button data-guitar="${i}"><i>${g.icon}</i><b>${g.name}</b><span>${g.copy}</span></button>`).join("")}</div>`;
