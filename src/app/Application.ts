@@ -17,6 +17,10 @@ const cabinetAssetUrl = new URL(
   "../../assets/beard-bank-2040-cabinet.png",
   import.meta.url,
 ).href;
+const mobileCabinetAssetUrl = new URL(
+  "../../assets/beard-bank-mobile-vault.png",
+  import.meta.url,
+).href;
 const symbolAssetUrls = [
   "beard-coin",
   "oil",
@@ -72,7 +76,7 @@ export class Application {
     applyMotion();
     button.addEventListener("click", () => {
       const modal=document.createElement("div");modal.className="modal-backdrop";
-      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V51</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});};
+      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});};
       render();document.body.appendChild(modal);
     }); document.body.appendChild(button);
   }
@@ -138,7 +142,7 @@ export class Application {
       const report = runBeardBankMathLab(1_000_000);
       const oneIn = (frequency: number): string =>
         frequency > 0 ? `1 in ${(1 / frequency).toFixed(1)}` : "Not observed";
-      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V38 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
+      modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD BANK V52 • 1,000,000 SPINS</small><h2>Verified Complete Math</h2><div class="math-report-grid">
         <p><span>Total RTP</span><strong>${(report.totalRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Base RTP</span><strong>${(report.baseRtp * 100).toFixed(2)}%</strong></p>
         <p><span>Vault Heist RTP</span><strong>${(report.vaultHeistRtp * 100).toFixed(2)}%</strong></p>
@@ -247,7 +251,7 @@ export class Application {
     modal.className = "modal-backdrop";
     const missions = this.profile.casino.missions.map((m) => `<li class="${m.progress >= m.target ? "complete" : ""}"><div><b>${m.label}</b><span>${m.progress} / ${m.target}</span></div><strong>+$${(m.reward / 100).toFixed(2)}</strong></li>`).join("");
     const achievements = this.profile.casino.achievements.length ? this.profile.casino.achievements.map((a) => `<span>${a}</span>`).join("") : "<p>Trigger a feature or chase a 50× win to earn your first stamp.</p>";
-    modal.innerHTML = `<section class="progress-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V51</small><h2>${tab === "missions" ? "Daily Missions" : tab === "daily" ? "Daily Beard Pass" : "Casino Passport"}</h2>${tab === "missions" ? `<ul class="mission-list">${missions}</ul><p>Complete missions by playing. Finished rewards are added automatically when all three are complete.</p>` : tab === "daily" ? `<div class="beard-pass">${Array.from({length:7},(_,i)=>`<span class="${i < this.profile.casino.dailyStreak ? "active" : ""}"><b>DAY ${i+1}</b><i>${i===6?"BONUS PICK":`$${(2+i).toFixed(2)}`}</i></span>`).join("")}</div><p>One visit per UTC day advances the pass. No purchases, no fake countdown, no nonsense.</p>` : `<div class="passport-stats"><p><span>RANK</span><b>${rank.name}</b></p><p><span>XP</span><b>${this.profile.casino.xp}</b></p><p><span>TOTAL SPINS</span><b>${this.profile.casino.totalSpins}</b></p><p><span>FEATURES</span><b>${this.profile.casino.totalBonuses}</b></p><p><span>BIGGEST WIN</span><b>${this.money(this.profile.casino.biggestWinUnits)}</b></p><p><span>FAVORITE</span><b>${this.profile.casino.favoriteGame.toUpperCase()}</b></p></div><div class="passport-stamps">${achievements}</div>`}<button class="primary" data-close>RETURN TO CASINO</button></section>`;
+    modal.innerHTML = `<section class="progress-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>${tab === "missions" ? "Daily Missions" : tab === "daily" ? "Daily Beard Pass" : "Casino Passport"}</h2>${tab === "missions" ? `<ul class="mission-list">${missions}</ul><p>Complete missions by playing. Finished rewards are added automatically when all three are complete.</p>` : tab === "daily" ? `<div class="beard-pass">${Array.from({length:7},(_,i)=>`<span class="${i < this.profile.casino.dailyStreak ? "active" : ""}"><b>DAY ${i+1}</b><i>${i===6?"BONUS PICK":`$${(2+i).toFixed(2)}`}</i></span>`).join("")}</div><p>One visit per UTC day advances the pass. No purchases, no fake countdown, no nonsense.</p>` : `<div class="passport-stats"><p><span>RANK</span><b>${rank.name}</b></p><p><span>XP</span><b>${this.profile.casino.xp}</b></p><p><span>TOTAL SPINS</span><b>${this.profile.casino.totalSpins}</b></p><p><span>FEATURES</span><b>${this.profile.casino.totalBonuses}</b></p><p><span>BIGGEST WIN</span><b>${this.money(this.profile.casino.biggestWinUnits)}</b></p><p><span>FAVORITE</span><b>${this.profile.casino.favoriteGame.toUpperCase()}</b></p></div><div class="passport-stamps">${achievements}</div>`}<button class="primary" data-close>RETURN TO CASINO</button></section>`;
     document.body.appendChild(modal);
     modal.querySelectorAll("[data-close]").forEach((node) => node.addEventListener("click", () => modal.remove()));
   }
@@ -257,9 +261,9 @@ export class Application {
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     if (state.session) {
-      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V38</small><h2>Cloud Player</h2><p class="account-email">${state.email}</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p>Your login and casino profile are saved across devices.</p><button class="primary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
+      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>Cloud Player</h2><p class="account-email">${state.email}</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p>Your login and casino profile are saved across devices.</p><button class="primary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
     } else {
-      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V38</small><h2>Player Account</h2><p>${state.connected ? "Sign in to restore your private cloud wallet." : "Cloud accounts need the Supabase connection in your .env file before building."}</p><p class="account-message" data-account-message>${message}</p><label>Email<input data-email type="email" autocomplete="email"></label><label>Password<input data-password type="password" minlength="6" autocomplete="current-password"></label><button class="primary" data-signin ${state.connected ? "" : "disabled"}>SIGN IN</button><button class="account-secondary" data-signup ${state.connected ? "" : "disabled"}>CREATE ACCOUNT</button><button class="cashout" data-reset ${state.connected ? "" : "disabled"}>FORGOT PASSWORD</button></div>`;
+      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>Player Account</h2><p>${state.connected ? "Sign in to restore your private cloud wallet." : "Cloud accounts need the Supabase connection in your .env file before building."}</p><p class="account-message" data-account-message>${message}</p><label>Email<input data-email type="email" autocomplete="email"></label><label>Password<input data-password type="password" minlength="6" autocomplete="current-password"></label><button class="primary" data-signin ${state.connected ? "" : "disabled"}>SIGN IN</button><button class="account-secondary" data-signup ${state.connected ? "" : "disabled"}>CREATE ACCOUNT</button><button class="cashout" data-reset ${state.connected ? "" : "disabled"}>FORGOT PASSWORD</button></div>`;
     }
     document.body.appendChild(modal);
     const close = (): void => modal.remove();
@@ -443,6 +447,7 @@ export class Application {
       }),
       Assets.load([
         cabinetAssetUrl,
+        mobileCabinetAssetUrl,
         ...symbolAssetUrls,
         ...finishedSymbolAssetUrls,
       ]),
