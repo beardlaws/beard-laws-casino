@@ -1,0 +1,27 @@
+/* V50 premium feel pass: one visual language across slots and tables. */
+:root{--casino-gold:#ffd76b;--casino-violet:#a957f2;--casino-ink:#050208;--casino-mint:#72ffc0}
+button{transition:transform .14s ease,filter .14s ease,box-shadow .14s ease}button:not(:disabled):active{transform:translateY(2px) scale(.985)}
+.casino-shell{width:min(1420px,95vw)}.casino-header{position:sticky;top:0;z-index:40;padding:14px 4px;background:linear-gradient(#09040eee,#09040ed8);backdrop-filter:blur(16px)}
+.hero{position:relative;overflow:hidden;border-color:#9f6dbe;background:radial-gradient(circle at 84% 20%,#7130a877,transparent 35%),linear-gradient(115deg,#271033,#09050d)}
+.hero:after{content:"";position:absolute;inset:-100%;pointer-events:none;background:linear-gradient(110deg,transparent 46%,#fff1 50%,transparent 54%);animation:v50Sweep 8s linear infinite}
+.game-card{border-color:#765287;background:radial-gradient(circle at 80% 18%,#a34de933,transparent 38%),linear-gradient(145deg,#24102f,#08040c);box-shadow:inset 0 1px #ffffff12,0 18px 42px #000a}
+.game-card:hover{border-color:#e2b7ff;box-shadow:inset 0 1px #ffffff25,0 22px 55px #000c,0 0 30px #aa52ed33}.game-card h3{text-wrap:balance}.enter{color:var(--casino-gold)}
+.sound-toggle{box-shadow:0 10px 28px #0008!important;backdrop-filter:blur(12px)}
+.neema-machine,.megh-machine{isolation:isolate}.neema-machine:after,.megh-machine:after{pointer-events:none}
+.neema-message,.megh-message{min-height:34px;display:grid;place-items:center;text-shadow:0 0 14px currentColor}
+.neema-controls,.megh-controls{filter:drop-shadow(0 12px 20px #0008)}
+.neema-controls button:not(:disabled):hover,.megh-controls button:not(:disabled):hover,.roulette-controls button:not(:disabled):hover,.papa-controls button:not(:disabled):hover{filter:brightness(1.18)}
+.roulette-bet-panel{background:linear-gradient(145deg,#0e0913f2,#050307f2);box-shadow:inset 0 1px #ffffff12,0 24px 65px #000c}.number-grid button,.outside-bets button{box-shadow:inset 0 1px #ffffff20,0 4px 8px #0008}.number-grid button:hover,.outside-bets button:hover{filter:brightness(1.25);transform:translateY(-1px)}
+.roulette-spin{min-height:58px;box-shadow:inset 0 2px #fff7ba,0 7px 0 #76500f,0 0 30px #ffd56566}.roulette-spin:active{box-shadow:inset 0 2px #fff7ba,0 2px 0 #76500f}
+.papa-felt{isolation:isolate}.playing-card{transform-origin:50% 100%}.blackjack-hand.active{animation:v50Decision 1.7s ease-in-out infinite}.papa-controls button:disabled{filter:grayscale(.7)}
+.win-tier,.feature-cinematic{backdrop-filter:blur(12px)}
+@keyframes v50Sweep{to{transform:translateX(55%)}}@keyframes v50Decision{50%{box-shadow:0 0 0 2px #ff9c3a77,0 0 44px #ffcf4f77}}
+@media(max-width:800px){
+  .casino-shell{width:100%;padding:0 12px 60px}.casino-header{margin:0 -12px;padding:12px}.casino-header h1{font-size:34px}.hero{padding:28px 22px;margin:14px 0;border-radius:20px}.hero h2{font-size:38px}
+  .game-card{min-height:205px;padding:22px;border-radius:18px}.game-card h3{font-size:34px}
+  .neema-room,.megh-room,.papa-room,.royal-roulette{padding-left:8px;padding-right:8px}
+  .neema-machine,.megh-machine{border-radius:24px}.neema-controls,.megh-controls{bottom:max(4px,env(safe-area-inset-bottom))}
+  .roulette-bet-panel{padding:12px;border-radius:16px}.roulette-chips{position:sticky;top:58px;z-index:8;padding:7px;background:#07040bea;border-radius:14px;backdrop-filter:blur(10px)}
+  .papa-controls{position:sticky;bottom:max(4px,env(safe-area-inset-bottom));z-index:20;padding:8px;border:1px solid #51dfff55;border-radius:16px;background:#03101bef;backdrop-filter:blur(12px)}
+}
+.reduced-motion *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}

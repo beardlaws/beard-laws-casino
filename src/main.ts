@@ -7,6 +7,7 @@ import "./neema.css";
 import "./megh.css";
 import "./megh-fixes.css";
 import "./progression.css";
+import "./v50-polish.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {
