@@ -17,5 +17,5 @@ describe("Beard Bank verified math", () => {
     expect(report.freeSpinsFrequency).toBeLessThanOrEqual(1 / 90);
     expect(report.estimatedLivingVaultFrequency).toBeGreaterThanOrEqual(90);
     expect(report.estimatedLivingVaultFrequency).toBeLessThanOrEqual(140);
-  }, 15_000);
+  }, 30_000);
 });

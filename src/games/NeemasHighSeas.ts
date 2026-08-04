@@ -1,4 +1,6 @@
 type AutoCount = number | "infinite" | null;
+type VoyageRoute = "party" | "casino" | "mystery";
+import type { CasinoActivity } from "../state/CasinoProgression";
 
 interface SeaSymbol {
   readonly id: string;
@@ -96,6 +98,8 @@ export class NeemasHighSeas {
   private bonusWin = 0;
   private lastDisplayedWin = 0;
   private betIndex = 1;
+  private route: VoyageRoute | null = null;
+  private voyageStops = 0;
   private get betUnits(): number {
     return BET_LEVELS[this.betIndex]!;
   }
@@ -105,13 +109,14 @@ export class NeemasHighSeas {
     private readonly getWallet: () => number,
     private readonly setWallet: (units: number) => void,
     private readonly onExit: () => void,
+    private readonly onActivity: (activity: CasinoActivity) => void = () => {},
   ) {}
 
   public open(): void {
     this.root.innerHTML = `<main class="neema-room">
       <button class="back" data-neema-home>← CASINO LOBBY</button><div class="table-wallet">WALLET <b data-neema-wallet></b></div>
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
-      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>HAPPY HOUR WILDS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
+      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>HAPPY HOUR WILDS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
         <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
         <div class="neema-feature-bar"><span>HAPPY HOUR WILDS</span><span>CABIN UPGRADES</span><span>LAST CALL</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div><div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
@@ -244,6 +249,7 @@ export class NeemasHighSeas {
       return false;
     }
     this.spinning = true;
+    this.onActivity({ type: "spin", game: "neema" });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
     else this.freeSpins -= 1;
     this.message(free ? `FREE SPIN • ${this.freeSpins} REMAIN` : "SAILING...");
@@ -266,8 +272,16 @@ export class NeemasHighSeas {
     const result = this.evaluate(grid);
     let award = result.award;
     const tickets = grid.flat().filter((s) => s.id === "ticket").length;
+    const captains = grid.flat().filter((s) => s.id === "captain").length;
     if (free) {
-      award = Math.round(award * this.bonusMultiplier);
+      const routeBoost = this.route === "casino" ? 1.35 : this.route === "mystery" && Math.random() < .3 ? 2 : 1;
+      award = Math.round(award * this.bonusMultiplier * routeBoost);
+      if (captains > 0) {
+        this.voyageStops = Math.min(4, this.voyageStops + captains);
+        this.onActivity({ type: "voyage", game: "neema", value: this.voyageStops });
+        if (this.voyageStops === 2) { this.freeSpins += 2; this.message("GOLDEN PORT • +2 FREE SPINS"); }
+        if (this.voyageStops === 3) { this.bonusMultiplier += 1; this.message("MYSTERY ISLE • MULTIPLIER UPGRADE"); }
+      }
       if (this.freeSpins > 0 && this.freeSpins % 2 === 0) {
         this.cabin = Math.min(4, this.cabin + 1);
         this.bonusMultiplier = 1 + this.cabin;
@@ -279,7 +293,8 @@ export class NeemasHighSeas {
     }
     if (tickets >= 3) {
       const retrigger = free;
-      this.freeSpins += retrigger ? 5 : 10;
+      if (!retrigger) this.route = await this.chooseVoyageRoute();
+      this.freeSpins += retrigger ? 5 : this.route === "party" ? 14 : 10;
       this.cabin = Math.min(4, this.cabin + 1);
       this.bonusMultiplier = 1 + this.cabin;
       this.message(
@@ -288,6 +303,7 @@ export class NeemasHighSeas {
           : "ALL ABOARD • 10 FREE SPINS",
       );
       await this.showVoyageIntro(retrigger);
+      this.onActivity({ type: "bonus", game: "neema" });
     } else if (award > 0)
       this.message(
         award >= this.betUnits * 10 ? "SUITE-SIZED WIN!" : "CHEERS, NEEMA!",
@@ -299,6 +315,8 @@ export class NeemasHighSeas {
       this.cabin = 0;
       this.bonusMultiplier = 1;
       this.bonusWin = 0;
+      this.route = null;
+      this.voyageStops = 0;
     } else this.message(free ? "THE ENCORE CONTINUES" : "WELCOME ABOARD");
     this.renderGrid(grid, result.winners);
     const callout = this.root.querySelector<HTMLElement>(
@@ -313,6 +331,7 @@ export class NeemasHighSeas {
       this.setWallet(this.getWallet() + award);
       await this.animateWin(award);
       await this.showWinTier(award);
+      this.onActivity({ type: "win", game: "neema", amount: award, value: award / this.betUnits });
     }
     this.spinning = false;
     this.update();
@@ -396,12 +415,19 @@ export class NeemasHighSeas {
   private async showVoyageIntro(retrigger: boolean): Promise<void> {
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic sea-cinematic";
-    overlay.innerHTML = `<div class="sea-ship">🚢</div><small>${retrigger ? "THE PARTY CONTINUES" : "CABIN UPGRADE FEATURE"}</small><h2>${retrigger ? "RETRIGGER!" : "ALL ABOARD"}</h2><p>${retrigger ? "5 MORE FREE SPINS" : `10 FREE SPINS • ${this.bonusMultiplier}× STARTING MULTIPLIER`}</p><div class="voyage-route">${CABINS.map((c, i) => `<span class="${i <= this.cabin ? "reached" : ""}">${c}</span>`).join("")}</div></div>`;
+    overlay.innerHTML = `<div class="sea-ship">🚢</div><small>${retrigger ? "THE PARTY CONTINUES" : `${(this.route ?? "premier").toUpperCase()} ROUTE`}</small><h2>${retrigger ? "RETRIGGER!" : "ALL ABOARD"}</h2><p>${retrigger ? "5 MORE FREE SPINS" : `${this.freeSpins} FREE SPINS • ${this.bonusMultiplier}× STARTING MULTIPLIER`}</p><div class="voyage-route">${CABINS.map((c, i) => `<span class="${i <= this.cabin ? "reached" : ""}">${c}</span>`).join("")}</div></div>`;
     this.root.appendChild(overlay);
     await this.wait(2200);
     overlay.classList.add("leaving");
     await this.wait(420);
     overlay.remove();
+  }
+  private async chooseVoyageRoute(): Promise<VoyageRoute> {
+    const overlay = document.createElement("div");
+    overlay.className = "feature-cinematic sea-cinematic voyage-choice";
+    overlay.innerHTML = `<small>CAPTAIN NEEMA'S PREMIER VOYAGE</small><h2>CHOOSE YOUR ROUTE</h2><p>Every route changes the feature.</p><div><button data-route="party"><b>PARTY DECK</b><span>14 spins • smoother voyage</span></button><button data-route="casino"><b>CASINO DECK</b><span>10 spins • 35% bigger wins</span></button><button data-route="mystery"><b>MYSTERY ISLAND</b><span>10 spins • surprise 2× hits</span></button></div>`;
+    this.root.appendChild(overlay);
+    return await new Promise<VoyageRoute>((resolve) => overlay.querySelectorAll<HTMLButtonElement>("[data-route]").forEach((button) => button.addEventListener("click", () => { const route = button.dataset.route as VoyageRoute; overlay.remove(); resolve(route); }, { once: true })));
   }
   private async playLastCall(): Promise<number> {
     const choices = [0.08, 0.12, 0.18].sort(() => Math.random() - 0.5);
@@ -480,6 +506,7 @@ export class NeemasHighSeas {
     this.root
       .querySelectorAll<HTMLElement>("[data-cabin]")
       .forEach((node, i) => node.classList.toggle("active", i <= this.cabin));
+    this.root.querySelectorAll<HTMLElement>("[data-port]").forEach((node, i) => node.classList.toggle("active", i <= this.voyageStops));
     const feature = this.root.querySelector<HTMLElement>(
       "[data-neema-feature]",
     )!;

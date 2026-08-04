@@ -4,6 +4,7 @@ import {
   type SupabaseClient,
 } from "@supabase/supabase-js";
 import { freshProfile, type PlayerProfile } from "./PlayerProfileStore";
+import { normalizeCasinoProgress } from "./CasinoProgression";
 
 export interface AccountState {
   readonly connected: boolean;
@@ -117,11 +118,13 @@ export class AccountService {
       displayName?: string;
       walletUnits?: number;
       beardBank?: PlayerProfile["beardBank"];
+      casino?: PlayerProfile["casino"];
       updatedAtIso?: string;
     } = {};
     if (typeof row.display_name === "string") flat.displayName = row.display_name;
     if (typeof row.wallet_units === "number") flat.walletUnits = row.wallet_units;
     if (row.beard_bank && typeof row.beard_bank === "object") flat.beardBank = row.beard_bank as PlayerProfile["beardBank"];
+    if (row.casino && typeof row.casino === "object") flat.casino = row.casino as PlayerProfile["casino"];
     if (typeof row.updated_at === "string") flat.updatedAtIso = row.updated_at;
     return this.normalizeCloud(flat, userId);
   }
@@ -154,6 +157,7 @@ export class AccountService {
         display_name: profile.displayName,
         wallet_units: profile.walletUnits,
         beard_bank: profile.beardBank,
+        casino: profile.casino,
         updated_at: new Date().toISOString(),
       },
     ];
@@ -199,6 +203,7 @@ export class AccountService {
           Math.round(Number(value.beardBank?.lifetimeCoinsCollected ?? 0)),
         ),
       },
+      casino: normalizeCasinoProgress(value.casino),
       updatedAtIso: String(value.updatedAtIso || new Date().toISOString()),
     };
   }

@@ -10,6 +10,8 @@ import { runBeardBankMathLab } from "../games/BeardBank/BeardBankMathLab";
 import { NeemasHighSeas } from "../games/NeemasHighSeas";
 import { MeghsCosmicJam } from "../games/MeghsCosmicJam";
 import { AccountService } from "../state/AccountService";
+import { applyActivity, rankForXp, type CasinoActivity } from "../state/CasinoProgression";
+import { CasinoAudio } from "../graphics/CasinoAudio";
 
 const cabinetAssetUrl = new URL(
   "../../assets/beard-bank-2040-cabinet.png",
@@ -48,9 +50,11 @@ export class Application {
   private profile: PlayerProfile = this.profiles.load("guest");
   private walletUnits = this.profile.walletUnits;
   private readonly appRoot = document.getElementById("app")!;
+  private readonly audio = new CasinoAudio();
 
   public async initialize(): Promise<void> {
     this.installDeveloperPanel();
+    this.installSoundControl();
     const account = await this.accounts.restore();
     if (account.session) {
       const cloud = await this.accounts.loadProfile();
@@ -60,6 +64,12 @@ export class Application {
       }
     }
     this.showLobby();
+  }
+
+  private installSoundControl(): void {
+    const button = document.createElement("button"); button.className = "sound-toggle";
+    const update = (): void => { button.textContent = this.audio.isEnabled() ? "SOUND ON" : "SOUND OFF"; };
+    update(); button.addEventListener("click", () => { this.audio.toggle(); update(); }); document.body.appendChild(button);
   }
 
   private installDeveloperPanel(): void {
@@ -173,12 +183,31 @@ export class Application {
     return `$${(units / 100).toFixed(2)}`;
   }
 
+  private recordActivity(activity: CasinoActivity): void {
+    this.audio.activity(activity);
+    let casino = applyActivity(this.profile.casino, activity);
+    const readyRewards = casino.missions.filter((mission) => mission.progress >= mission.target && !mission.claimed);
+    let walletUnits = this.walletUnits;
+    if (readyRewards.length === casino.missions.length && readyRewards.length > 0) {
+      walletUnits += readyRewards.reduce((sum, mission) => sum + mission.reward, 0);
+      casino = { ...casino, missions: casino.missions.map((mission) => ({ ...mission, claimed: true })) };
+    }
+    this.walletUnits = walletUnits;
+    this.profile = { ...this.profile, walletUnits, casino, updatedAtIso: new Date().toISOString() };
+    this.profiles.save(this.profile);
+    this.accounts.saveProfile(this.profile);
+  }
+
   private showLobby(): void {
     this.destroyPixi();
+    const rank = rankForXp(this.profile.casino.xp);
+    const rankPercent = rank.next > this.profile.casino.xp ? Math.min(100, Math.round((this.profile.casino.xp / rank.next) * 100)) : 100;
+    const completed = this.profile.casino.missions.filter((mission) => mission.progress >= mission.target).length;
     this.appRoot.innerHTML = `
       <section class="casino-shell">
-        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "CLOUD PLAYER" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><div class="wallet-pill"><small>CASINO WALLET</small><strong>${this.money()}</strong></div></div></header>
+        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "CLOUD PLAYER" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>RANK ${rank.level}</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><div class="wallet-pill"><small>CASINO WALLET</small><strong>${this.money()}</strong></div></div></header>
         <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><button class="atm-button" data-atm>VISIT ATM <span>+</span></button></div>
+        <section class="casino-dashboard"><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Biggest win ${this.money(this.profile.casino.biggestWinUnits)}</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button></section>
         <div class="floor-label"><span>CASINO FLOOR</span><span>Fictional credits • No real money</span></div>
         <div class="game-grid">
           ${this.gameCard("beard-bank", "FLAGSHIP SLOT", "BEARD BANK", "Crack the Living Vault", "live gold")}
@@ -195,6 +224,9 @@ export class Application {
     this.appRoot
       .querySelector("[data-profile]")
       ?.addEventListener("click", () => this.showAccount());
+    this.appRoot.querySelector("[data-missions]")?.addEventListener("click", () => this.showProgress("missions"));
+    this.appRoot.querySelectorAll("[data-stats]").forEach((node) => node.addEventListener("click", () => this.showProgress("stats")));
+    this.appRoot.querySelector("[data-daily]")?.addEventListener("click", () => this.showProgress("daily"));
     this.appRoot
       .querySelectorAll<HTMLElement>("[data-game]")
       .forEach((card) =>
@@ -202,6 +234,17 @@ export class Application {
           this.openGame(card.dataset.game as GameId),
         ),
       );
+  }
+
+  private showProgress(tab: "missions" | "stats" | "daily"): void {
+    const rank = rankForXp(this.profile.casino.xp);
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    const missions = this.profile.casino.missions.map((m) => `<li class="${m.progress >= m.target ? "complete" : ""}"><div><b>${m.label}</b><span>${m.progress} / ${m.target}</span></div><strong>+$${(m.reward / 100).toFixed(2)}</strong></li>`).join("");
+    const achievements = this.profile.casino.achievements.length ? this.profile.casino.achievements.map((a) => `<span>${a}</span>`).join("") : "<p>Trigger a feature or chase a 50× win to earn your first stamp.</p>";
+    modal.innerHTML = `<section class="progress-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V39</small><h2>${tab === "missions" ? "Daily Missions" : tab === "daily" ? "Daily Beard Pass" : "Casino Passport"}</h2>${tab === "missions" ? `<ul class="mission-list">${missions}</ul><p>Complete missions by playing. Finished rewards are added automatically when all three are complete.</p>` : tab === "daily" ? `<div class="beard-pass">${Array.from({length:7},(_,i)=>`<span class="${i < this.profile.casino.dailyStreak ? "active" : ""}"><b>DAY ${i+1}</b><i>${i===6?"BONUS PICK":`$${(2+i).toFixed(2)}`}</i></span>`).join("")}</div><p>One visit per UTC day advances the pass. No purchases, no fake countdown, no nonsense.</p>` : `<div class="passport-stats"><p><span>RANK</span><b>${rank.name}</b></p><p><span>XP</span><b>${this.profile.casino.xp}</b></p><p><span>TOTAL SPINS</span><b>${this.profile.casino.totalSpins}</b></p><p><span>FEATURES</span><b>${this.profile.casino.totalBonuses}</b></p><p><span>BIGGEST WIN</span><b>${this.money(this.profile.casino.biggestWinUnits)}</b></p><p><span>FAVORITE</span><b>${this.profile.casino.favoriteGame.toUpperCase()}</b></p></div><div class="passport-stamps">${achievements}</div>`}<button class="primary" data-close>RETURN TO CASINO</button></section>`;
+    document.body.appendChild(modal);
+    modal.querySelectorAll("[data-close]").forEach((node) => node.addEventListener("click", () => modal.remove()));
   }
 
   private showAccount(message = ""): void {
@@ -371,6 +414,7 @@ export class Application {
         () => this.walletUnits,
         (units) => this.saveWallet(units),
         () => this.showLobby(),
+        (activity) => this.recordActivity(activity),
       ).open();
       return;
     }
@@ -379,6 +423,7 @@ export class Application {
       () => this.walletUnits,
       (units) => this.saveWallet(units),
       () => this.showLobby(),
+      (activity) => this.recordActivity(activity),
     ).open();
   }
 
@@ -406,6 +451,7 @@ export class Application {
       (charges, lifetimeCoins) =>
         this.saveBeardBankProgress(charges, lifetimeCoins),
       () => this.showLobby(),
+      (activity) => this.recordActivity(activity),
     ).initialize();
   }
 

@@ -764,7 +764,7 @@ export class Cabinet extends Container {
     this.infoLabel = new Text({ text: "i  PAYTABLE", style: { fontFamily: "Arial Black, Arial", fontSize: 17, fontWeight: "bold", fill: GOLD } });
     this.infoLabel.anchor.set(0.5); this.infoLabel.position.set(1542, 44);
     this.headerLayer.addChild(this.homeButton, this.homeLabel, this.infoButton, this.infoLabel);
-    this.buildBadge = new Text({ text: "BEARD BANK V38", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
+    this.buildBadge = new Text({ text: "BEARD BANK V39", style: { fontFamily: "Arial Black, Arial", fontSize: 12, fontWeight: "bold", fill: 0x9dffdb, letterSpacing: 2 } });
     this.buildBadge.anchor.set(0.5); this.buildBadge.position.set(836, 382); this.headerLayer.addChild(this.buildBadge);
   }
 
@@ -778,13 +778,13 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(113, 45);
     this.infoButton.clear().roundRect(512, 18, 190, 54, 14).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(607, 45);
-    this.buildBadge.text = "BEARD BANK V38"; this.buildBadge.position.set(360, 86);
+    this.buildBadge.text = "BEARD BANK V39"; this.buildBadge.position.set(360, 86);
 
     // The readouts are drawn with landscape-local coordinates. Translate them
     // into one clean row below the reels instead of letting them overlap it.
-    this.creditContainer.position.set(-132, -2);
-    this.betContainer.position.set(-192, -2);
-    this.winContainer.position.set(-252, -2);
+    this.creditContainer.position.set(-90, 227);
+    this.betContainer.position.set(-64, 227);
+    this.winContainer.position.set(-38, 227);
     this.creditContainer.scale.set(0.75);
     this.betContainer.scale.set(0.75);
     this.winContainer.scale.set(0.75);
@@ -796,7 +796,7 @@ export class Cabinet extends Container {
     this.betMinusText.position.set(96, 1052); this.betMinusText.style.fontSize = 48;
     this.betPlusButton.clear().roundRect(566, 1000, 116, 104, 22).fill({ color: 0x351044 }).stroke({ color: 0xd898ff, width: 4 });
     this.betPlusText.position.set(624, 1052); this.betPlusText.style.fontSize = 44;
-    this.spinButton.clear().circle(360, 1052, 86).fill({ color: 0xffc744 }).stroke({ color: 0xffef9d, width: 7 });
+    this.spinButton.clear().circle(360, 1052, 82).fill({ color: 0xffc744 }).stroke({ color: 0xffef9d, width: 7 });
     this.spinText.position.set(360, 1052); this.spinText.style.fontSize = 30;
     this.autoButton.clear().roundRect(188, 1000, 108, 104, 22).fill({ color: 0x301041 }).stroke({ color: 0xd898ff, width: 4 });
     this.autoText.position.set(242, 1052); this.autoText.style.fontSize = 16;
@@ -824,7 +824,7 @@ export class Cabinet extends Container {
     this.homeLabel.position.set(105, 44);
     this.infoButton.clear().roundRect(1432, 20, 220, 48, 12).fill({ color: 0x13051f }).stroke({ color: GOLD, width: 3 });
     this.infoLabel.position.set(1542, 44);
-    this.buildBadge.text = "BEARD BANK V38"; this.buildBadge.position.set(836, 382);
+    this.buildBadge.text = "BEARD BANK V39"; this.buildBadge.position.set(836, 382);
   }
 
   private readout(label: string, initial: string, x: number, y: number, width: number): { container: Container; value: Text } {

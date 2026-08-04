@@ -14,6 +14,7 @@ import {
 } from "../games/BeardBank/BeardBankConfig";
 import { Cabinet } from "../graphics/Cabinet";
 import { formatCreditUnits } from "../types/Money";
+import type { CasinoActivity } from "../state/CasinoProgression";
 
 const BET_LEVELS = [50, 100, 200, 300, 500, 1000] as const;
 
@@ -38,6 +39,7 @@ export class GameScene {
     private readonly onBalanceChange: (units: number) => void = () => {},
     private readonly onProgressChange: (charges: number, lifetimeCoins: number) => void = () => {},
     private readonly onExit: () => void = () => {},
+    private readonly onActivity: (activity: CasinoActivity) => void = () => {},
   ) {
     this.gameState = { ...initialBeardBankGameState, ...initialProgress };
     this.wallet = new WalletManager(
@@ -120,6 +122,7 @@ export class GameScene {
 
       const wagerUnits = BET_LEVELS[this.betIndex]!;
       const result = this.coordinator.executeSpin(wagerUnits, this.gameState);
+      this.onActivity({ type: "spin", game: "beard-bank" });
       this.gameState = result.featureResolution.finalGameState;
       const coins = result.grid.matrix.flat().filter((symbol) => symbol === "beard-coin").length;
       const vaultDoors = result.grid.matrix.flat().filter((symbol) => symbol === "vault-door").length;
@@ -133,6 +136,7 @@ export class GameScene {
       await this.cabinet.prepareAnticipation(coins, vaultDoors);
       await this.cabinet.spinTo(result.grid.matrix);
       if (coins > 0) await this.cabinet.collectCoins(coins);
+      if (coins > 0) this.onActivity({ type: "coin", game: "beard-bank", value: coins });
 
       if (result.totalAwardUnits > 0) {
         this.cabinet.setStatus(`${result.wayWins.length} WIN${result.wayWins.length === 1 ? "" : "S"}`);
@@ -142,12 +146,14 @@ export class GameScene {
         this.cabinet.setWin(`$${formatCreditUnits(result.totalAwardUnits)}`);
         this.cabinet.setStatus("WINNER");
         await this.cabinet.celebrateWin(result.totalAwardUnits, wagerUnits);
+        this.onActivity({ type: "win", game: "beard-bank", amount: result.totalAwardUnits, value: result.totalAwardUnits / wagerUnits });
       } else {
         this.cabinet.setStatus("READY");
       }
       const meterFilled = previousCharges < 30 && this.gameState.livingVaultCharges >= 30;
       let featureAward = 0;
       if (coins >= 3) {
+        this.onActivity({ type: "bonus", game: "beard-bank" });
         featureTriggered = true;
         this.cabinet.setStatus("BONUS!");
         const bonusAward = await this.cabinet.playVaultHeist(wagerUnits, coins);

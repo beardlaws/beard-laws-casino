@@ -1,5 +1,6 @@
 type AutoCount = number | "infinite" | null;
 type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
+import type { CasinoActivity } from "../state/CasinoProgression";
 interface JamSymbol {
   id: string;
   label: string;
@@ -58,6 +59,7 @@ export class MeghsCosmicJam {
     private readonly getWallet: () => number,
     private readonly setWallet: (units: number) => void,
     private readonly onExit: () => void,
+    private readonly onActivity: (activity: CasinoActivity) => void = () => {},
   ) {}
 
   public open(): void {
@@ -211,6 +213,7 @@ export class MeghsCosmicJam {
       return false;
     }
     this.spinning = true;
+    this.onActivity({ type: "spin", game: "megh" });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
     else this.freeDrops -= 1;
     if (!free) {
@@ -266,6 +269,7 @@ export class MeghsCosmicJam {
     const ufos = grid.flat().filter((s) => s.id === "ufo").length;
     if (ufos >= 3 || (!free && this.encore >= 4)) {
       feature = true;
+      this.onActivity({ type: "bonus", game: "megh" });
       if (free) {
         const added = ufos >= 5 ? 5 : ufos >= 4 ? 4 : 3;
         this.freeDrops += added;
@@ -295,6 +299,7 @@ export class MeghsCosmicJam {
     }
     if (total > 0) {
       this.setWallet(this.getWallet() + total);
+      this.onActivity({ type: "win", game: "megh", amount: total, value: total / this.betUnits });
       callout.hidden = false;
       callout.textContent = `TOTAL COSMIC WIN • $${(total / 100).toFixed(2)}`;
       await this.animateWin(total);
@@ -457,6 +462,7 @@ export class MeghsCosmicJam {
     if (nextLevel <= this.stageLevel) return;
     const gained = nextLevel - this.stageLevel;
     this.stageLevel = nextLevel;
+    this.onActivity({ type: "stage", game: "megh", value: this.stageLevel });
     this.multiplier += gained;
     this.message(`${this.stageName()} UNLOCKED • MULTIPLIER +${gained}`);
     this.root.querySelector("[data-megh-reels]")?.classList.add("stage-upgrade");
