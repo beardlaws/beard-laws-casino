@@ -35,6 +35,7 @@ const SYMBOLS: readonly JamSymbol[] = [
 ];
 const COLS = 6;
 const ROWS = 5;
+const SOUNDCHECK_TARGET = 50;
 const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 
 export class MeghsCosmicJam {
@@ -48,6 +49,7 @@ export class MeghsCosmicJam {
   private encoreMode: EncoreMode | null = null;
   private stageEnergy = 0;
   private stageLevel = 0;
+  private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
   private betIndex = 1;
   private get betUnits(): number {
@@ -65,7 +67,7 @@ export class MeghsCosmicJam {
   public open(): void {
     this.root.innerHTML = `<main class="megh-room"><button class="back" data-megh-home>← CASINO LOBBY</button>
       <header><small>BEARD LAWS CASINO • CASCADE FEATURE SLOT</small><h1>MEGH'S COSMIC JAM</h1><p>Space goats came for the strawberries. They stayed to melt faces.</p><button class="game-rules cosmic-rules-button" data-megh-rules>RULES &amp; PAYTABLE</button></header>
-      <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="megh-top">
+      <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
         <div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="megh-feature"><span>6+ MATCHING SYMBOLS WIN</span><span>WINS VANISH &amp; TUMBLE</span><span>4 CASCADES LAUNCH ENCORE</span></div>
@@ -267,8 +269,17 @@ export class MeghsCosmicJam {
       host.classList.remove("tumbling");
     }
     const ufos = grid.flat().filter((s) => s.id === "ufo").length;
-    if (ufos >= 3 || (!free && this.encore >= 4)) {
+    if (!free) {
+      this.soundcheck = Math.min(SOUNDCHECK_TARGET, this.soundcheck + 1 + ufos);
+      this.writeProgress("megh-soundcheck", this.soundcheck);
+    }
+    const guaranteedEncore = !free && this.soundcheck >= SOUNDCHECK_TARGET;
+    if (ufos >= 3 || (!free && this.encore >= 4) || guaranteedEncore) {
       feature = true;
+      if (!free) {
+        this.soundcheck = 0;
+        this.writeProgress("megh-soundcheck", 0);
+      }
       this.onActivity({ type: "bonus", game: "megh" });
       if (free) {
         const added = ufos >= 5 ? 5 : ufos >= 4 ? 4 : 3;
@@ -380,6 +391,10 @@ export class MeghsCosmicJam {
       `${this.multiplier}×`;
     this.root.querySelector<HTMLElement>("[data-megh-encore]")!.textContent =
       `${Math.min(4, this.encore)} / 4`;
+    const soundcheckLabel = this.root.querySelector<HTMLElement>("[data-soundcheck-label]");
+    const soundcheckFill = this.root.querySelector<HTMLElement>("[data-soundcheck-fill]");
+    if (soundcheckLabel) soundcheckLabel.textContent = `SOUNDCHECK ${this.soundcheck} / ${SOUNDCHECK_TARGET}`;
+    if (soundcheckFill) soundcheckFill.style.width = `${(this.soundcheck / SOUNDCHECK_TARGET) * 100}%`;
     const spin =
       this.root.querySelector<HTMLButtonElement>("[data-megh-spin]")!;
     spin.disabled =
@@ -524,7 +539,7 @@ export class MeghsCosmicJam {
   private showRules(): void {
     const modal = document.createElement("div");
     modal.className = "slot-rules-backdrop";
-    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Three, four or five UFOs award 8, 12 or 16 free drops.</li><li>Choose Long Set, Power Chords or UFO Storm before the feature.</li><li>The multiplier persists throughout the Encore.</li><li>Winning cascades charge the amp and upgrade the stage.</li><li>UFOs can retrigger up to 5 additional drops.</li><li>The final Guitar Smash adds a player-picked finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">Awards scale with the selected fictional-credit wager.</p></section>`;
+    modal.innerHTML = `<section class="slot-rules cosmic-rules"><button data-close>×</button><small>MEGH'S COSMIC JAM</small><h2>HOW TO PLAY</h2><p>Clusters of 6 or more matching symbols pay anywhere. Winning symbols are tractor-beamed away and new symbols tumble into the empty spaces.</p><h3>INTERGALACTIC ENCORE</h3><ul><li>Three, four or five UFOs award 8, 12 or 16 free drops.</li><li>Paid drops and landed UFOs fill Soundcheck; a full meter guarantees the Encore.</li><li>Choose Long Set, Power Chords or UFO Storm before the feature.</li><li>The multiplier persists throughout the Encore.</li><li>Winning cascades charge the amp and upgrade the stage.</li><li>UFOs can retrigger up to 5 additional drops.</li><li>The final Guitar Smash adds a player-picked finale award.</li></ul><h3>TOP SYMBOLS</h3><p>Megh • Rock Goat • Wild Note • Vinyl</p><p class="rules-note">Awards scale with the selected fictional-credit wager.</p></section>`;
     document.body.appendChild(modal);
     modal
       .querySelector("[data-close]")
@@ -532,5 +547,15 @@ export class MeghsCosmicJam {
     modal.addEventListener("click", (event) => {
       if (event.target === modal) modal.remove();
     });
+  }
+
+  private readProgress(key: string, fallback: number): number {
+    if (typeof localStorage === "undefined") return fallback;
+    const value = Number(localStorage.getItem(`beard-laws-${key}`));
+    return Number.isFinite(value) ? Math.max(0, value) : fallback;
+  }
+
+  private writeProgress(key: string, value: number): void {
+    if (typeof localStorage !== "undefined") localStorage.setItem(`beard-laws-${key}`, String(value));
   }
 }

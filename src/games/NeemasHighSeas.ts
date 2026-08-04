@@ -72,6 +72,7 @@ const SYMBOLS: readonly SeaSymbol[] = [
 ];
 const REELS = 5;
 const ROWS = 3;
+const DEPARTURE_TARGET = 50;
 const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 const LINES = [
   [0, 0, 0, 0, 0],
@@ -100,6 +101,7 @@ export class NeemasHighSeas {
   private betIndex = 1;
   private route: VoyageRoute | null = null;
   private voyageStops = 0;
+  private departureMiles = this.readProgress("neema-departure", 0);
   private get betUnits(): number {
     return BET_LEVELS[this.betIndex]!;
   }
@@ -116,13 +118,13 @@ export class NeemasHighSeas {
     this.root.innerHTML = `<main class="neema-room">
       <button class="back" data-neema-home>← CASINO LOBBY</button><div class="table-wallet">WALLET <b data-neema-wallet></b></div>
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
-      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>HAPPY HOUR WILDS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
+      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>HAPPY HOUR WILDS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS SAIL NOW • METER GUARANTEES THE NEXT VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
         <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
         <div class="neema-feature-bar"><span>HAPPY HOUR WILDS</span><span>CABIN UPGRADES</span><span>LAST CALL</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div><div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
           <button data-neema-auto>AUTO</button><button class="neema-spin" data-neema-spin>SPIN</button></div>
         <div class="neema-auto-menu" data-neema-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
-      </section><p class="neema-disclaimer">Fictional credits only • Three Cruise Tickets award 8 free spins • Cabin upgrades increase the multiplier</p>
+      </section><p class="neema-disclaimer">Fictional credits only • Three Cruise Tickets sail immediately; the Departure meter guarantees a voyage • Cabin upgrades increase the multiplier</p>
     </main>`;
     this.root
       .querySelector("[data-neema-home]")
@@ -291,8 +293,17 @@ export class NeemasHighSeas {
       }
       this.bonusWin += award;
     }
-    if (tickets >= 3) {
+    if (!free) {
+      this.departureMiles = Math.min(DEPARTURE_TARGET, this.departureMiles + 1 + tickets);
+      this.writeProgress("neema-departure", this.departureMiles);
+    }
+    const guaranteedDeparture = !free && this.departureMiles >= DEPARTURE_TARGET;
+    if (tickets >= 3 || guaranteedDeparture) {
       const retrigger = free;
+      if (!retrigger) {
+        this.departureMiles = 0;
+        this.writeProgress("neema-departure", 0);
+      }
       if (!retrigger) this.route = await this.chooseVoyageRoute();
       this.freeSpins += retrigger ? 5 : this.route === "party" ? 14 : 10;
       this.cabin = Math.min(4, this.cabin + 1);
@@ -300,7 +311,9 @@ export class NeemasHighSeas {
       this.message(
         retrigger
           ? "CRUISE TICKET RETRIGGER • +5 SPINS"
-          : "ALL ABOARD • 10 FREE SPINS",
+          : guaranteedDeparture
+            ? "CAPTAIN'S INVITATION • GUARANTEED VOYAGE"
+            : "ALL ABOARD • 10 FREE SPINS",
       );
       await this.showVoyageIntro(retrigger);
       this.onActivity({ type: "bonus", game: "neema" });
@@ -335,7 +348,7 @@ export class NeemasHighSeas {
     }
     this.spinning = false;
     this.update();
-    return tickets >= 3;
+    return tickets >= 3 || guaranteedDeparture;
   }
   private toggleAuto(): void {
     if (this.auto !== null) {
@@ -507,6 +520,10 @@ export class NeemasHighSeas {
       .querySelectorAll<HTMLElement>("[data-cabin]")
       .forEach((node, i) => node.classList.toggle("active", i <= this.cabin));
     this.root.querySelectorAll<HTMLElement>("[data-port]").forEach((node, i) => node.classList.toggle("active", i <= this.voyageStops));
+    const departureLabel = this.root.querySelector<HTMLElement>("[data-departure-label]");
+    const departureFill = this.root.querySelector<HTMLElement>("[data-departure-fill]");
+    if (departureLabel) departureLabel.textContent = `DEPARTURE ${this.departureMiles} / ${DEPARTURE_TARGET}`;
+    if (departureFill) departureFill.style.width = `${(this.departureMiles / DEPARTURE_TARGET) * 100}%`;
     const feature = this.root.querySelector<HTMLElement>(
       "[data-neema-feature]",
     )!;
@@ -521,7 +538,7 @@ export class NeemasHighSeas {
   private showRules(): void {
     const modal = document.createElement("div");
     modal.className = "slot-rules-backdrop";
-    modal.innerHTML = `<section class="slot-rules sea-rules"><button data-close>×</button><small>NEEMA'S HIGH SEAS HAPPY HOUR</small><h2>HOW TO PLAY</h2><p>Five fixed paylines pay left to right. Sunset substitutes for every paying symbol. Three or more Cruise Tickets anywhere launch 10 free spins.</p><h3>CABIN UPGRADE BONUS</h3><ul><li>Begin in the Interior Cabin and upgrade during the voyage.</li><li>Each cabin raises the free-spin multiplier up to 5×.</li><li>Three Tickets during free spins retrigger 5 more.</li><li>Last Call adds a finale award when the voyage ends.</li></ul><h3>TOP SYMBOLS</h3><p>Captain Neema • Sunset Wild • Ship Wheel • Buffalo Helmet</p><p class="rules-note">Five displayed lines share the $1.00 wager. Fictional credits only.</p></section>`;
+    modal.innerHTML = `<section class="slot-rules sea-rules"><button data-close>×</button><small>NEEMA'S HIGH SEAS HAPPY HOUR</small><h2>HOW TO PLAY</h2><p>Five fixed paylines pay left to right. Sunset substitutes for every paying symbol. Three or more Cruise Tickets anywhere launch the voyage immediately. Paid spins and landed Tickets also fill the persistent Departure meter; a full meter guarantees the next voyage.</p><h3>CABIN UPGRADE BONUS</h3><ul><li>Begin in the Interior Cabin and upgrade during the voyage.</li><li>Each cabin raises the free-spin multiplier up to 5×.</li><li>Party Cove and later ports unlock inside free spins when Captain Neema lands.</li><li>Ocean View through Captain&apos;s Deck are cabin multiplier upgrades.</li><li>Three Tickets during free spins retrigger 5 more.</li><li>Last Call adds a finale award when the voyage ends.</li></ul><h3>TOP SYMBOLS</h3><p>Captain Neema • Sunset Wild • Ship Wheel • Buffalo Helmet</p><p class="rules-note">Five displayed lines share the $1.00 wager. Fictional credits only.</p></section>`;
     document.body.appendChild(modal);
     modal
       .querySelector("[data-close]")
@@ -529,5 +546,15 @@ export class NeemasHighSeas {
     modal.addEventListener("click", (event) => {
       if (event.target === modal) modal.remove();
     });
+  }
+
+  private readProgress(key: string, fallback: number): number {
+    if (typeof localStorage === "undefined") return fallback;
+    const value = Number(localStorage.getItem(`beard-laws-${key}`));
+    return Number.isFinite(value) ? Math.max(0, value) : fallback;
+  }
+
+  private writeProgress(key: string, value: number): void {
+    if (typeof localStorage !== "undefined") localStorage.setItem(`beard-laws-${key}`, String(value));
   }
 }
