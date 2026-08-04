@@ -1,0 +1,27 @@
+/* V59: reel-first mobile composition and honest feature presentation. */
+.bonus-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(560px,90vw);margin:18px auto 0}
+.bonus-summary-grid span{display:grid;padding:10px;border:1px solid #8356a5;border-radius:10px;background:#08030dcc;color:#bfa9ce;font-size:11px;letter-spacing:.08em}
+.bonus-summary-grid span b{margin-top:4px;color:#fff0a4;font-size:20px}
+.bonus-summary-grid strong{grid-column:1/-1;padding:14px;border:2px solid #ffe075;border-radius:12px;background:#35114b;color:#fff0a4;font-size:24px;box-shadow:0 0 28px #b64eff88}
+.v58-vault .beard-bank-canvas{background:radial-gradient(ellipse at 50% 36%,#37104a 0,#08020d 65%);box-shadow:inset 0 0 24px #000,0 8px 30px #000,0 0 30px #c25cff55}
+.v58-vault .beard-bank-canvas canvas{filter:none!important;image-rendering:auto;transform:translateZ(0);backface-visibility:hidden}
+@media(max-width:540px){
+  .beard-bank-stage.v58-vault{grid-template-rows:46px auto auto minmax(0,1fr)}
+  .v58-vault .vault-native-header{display:flex;align-items:baseline;justify-content:center;gap:8px;padding:5px 8px 4px}
+  .v58-vault .vault-native-header small,.v58-vault .vault-native-header p{display:none}
+  .v58-vault .vault-native-header h1{margin:0;font-size:27px;line-height:1}
+  .v58-vault .vault-native-chase{grid-template-columns:1fr 1.35fr 1fr;margin:2px 5px;padding:4px 5px;font-size:6px}
+  .v58-vault .vault-native-chase strong{font-size:12px}
+  .v58-vault .vault-pressure{margin:1px 5px 3px;padding:3px 6px}
+  .v58-vault .beard-bank-canvas{margin:0 3px 3px;border-width:2px;border-radius:12px}
+  .v58-vault .beard-bank-canvas:before,.v58-vault .beard-bank-canvas:after{width:4px;top:5px;bottom:5px}
+  .megh-room header,.neema-room header{padding-bottom:4px}
+  .megh-machine,.neema-machine{width:min(100%,620px)}
+  .megh-reels{min-height:52vh}
+  .neema-reels{min-height:48vh}
+}
+@media(prefers-reduced-motion:no-preference){
+  .jam-symbol,.sea-symbol{will-change:transform,opacity;backface-visibility:hidden}
+  .jam-symbol.winner,.sea-symbol.winner{animation:v59SymbolHit .55s cubic-bezier(.2,1.5,.45,1) infinite alternate}
+  @keyframes v59SymbolHit{to{transform:translateY(-5px) scale(1.07);filter:brightness(1.38) saturate(1.25);box-shadow:0 0 26px #ffe785cc}}
+}

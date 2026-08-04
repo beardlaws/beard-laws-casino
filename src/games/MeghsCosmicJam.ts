@@ -37,6 +37,8 @@ const SYMBOLS: readonly JamSymbol[] = [
 const COLS = 6;
 const ROWS = 5;
 const SOUNDCHECK_TARGET = 50;
+const MAX_FEATURE_DROPS = 100;
+const MAX_RETRIGGER_DROPS = 40;
 const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 
 export class MeghsCosmicJam {
@@ -47,6 +49,10 @@ export class MeghsCosmicJam {
   private multiplier = 1;
   private encore = 0;
   private freeDrops = 0;
+  private featureDropsPlayed = 0;
+  private featureDropsAwarded = 0;
+  private retriggerDropsAwarded = 0;
+  private featureRetriggers = 0;
   private encoreWin = 0;
   private encoreMode: EncoreMode | null = null;
   private stageEnergy = 0;
@@ -224,7 +230,7 @@ export class MeghsCosmicJam {
     this.spinning = true;
     this.onActivity({ type: "spin", game: "megh" });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
-    else this.freeDrops -= 1;
+    else { this.freeDrops -= 1; this.featureDropsPlayed += 1; }
     if (!free) {
       this.multiplier = 1;
       this.encore = 0;
@@ -291,16 +297,30 @@ export class MeghsCosmicJam {
       }
       this.onActivity({ type: "bonus", game: "megh" });
       if (free) {
-        const added = ufos >= 5 ? 5 : ufos >= 4 ? 4 : 3;
-        this.freeDrops += added;
-        this.message(`ENCORE RETRIGGER • +${added} FREE DROPS`);
-        await this.showEncoreIntro(true, added);
+        const requested = ufos >= 5 ? 5 : ufos >= 4 ? 4 : 3;
+        const roomInFeature = Math.max(0, MAX_FEATURE_DROPS - this.featureDropsPlayed - this.freeDrops);
+        const roomInRetriggers = Math.max(0, MAX_RETRIGGER_DROPS - this.retriggerDropsAwarded);
+        const added = Math.min(requested, roomInFeature, roomInRetriggers);
+        if (added > 0) {
+          this.freeDrops += added;
+          this.featureDropsAwarded += added;
+          this.retriggerDropsAwarded += added;
+          this.featureRetriggers += 1;
+          this.message(`ENCORE RETRIGGER • +${added} FREE DROPS`);
+          await this.showEncoreIntro(true, added);
+        } else {
+          this.message("MAXIMUM ENCORE REACHED • UFOS PAY AS SYMBOLS");
+        }
       } else {
         const baseDrops = this.cascadeStreak >= 8 ? 50 : ufos >= 5 ? 16 : ufos >= 4 ? 12 : 8;
         this.encoreMode = await this.chooseEncoreMode(baseDrops);
         this.stageEnergy = 0;
         this.stageLevel = 0;
         this.freeDrops += baseDrops + (this.encoreMode === "long-set" ? 4 : 0) + (headliner ? 5 : 0);
+        this.featureDropsPlayed = 0;
+        this.featureDropsAwarded = this.freeDrops;
+        this.retriggerDropsAwarded = 0;
+        this.featureRetriggers = 0;
         if (this.encoreMode === "power-chords") this.multiplier = Math.max(this.multiplier, 3);
         if (headliner) { this.multiplier = Math.max(this.multiplier, 5); this.stageLevel = 3; await this.showHeadlinerIntro(); }
         this.message(`${this.encoreModeLabel()} • ${this.freeDrops} FREE DROPS`);
@@ -309,9 +329,11 @@ export class MeghsCosmicJam {
     }
     if (free) this.encoreWin += total;
     if (free && this.freeDrops === 0 && !feature) {
+      const featureWin = this.encoreWin;
       const finale = await this.playGuitarSmash();
       total += finale;
       this.message(`FINAL GUITAR SMASH • +$${(finale / 100).toFixed(2)}`);
+      await this.showBonusSummary(featureWin, finale);
       this.encoreWin = 0;
       this.multiplier = 1;
       this.encoreMode = null;
@@ -538,7 +560,7 @@ export class MeghsCosmicJam {
     )!;
     feature.hidden = this.freeDrops <= 0;
     this.root.querySelector<HTMLElement>("[data-megh-freedrops]")!.textContent =
-      `${this.freeDrops} FREE DROPS`;
+      this.freeDrops > 0 ? `DROP ${this.featureDropsPlayed + 1} OF ${this.featureDropsAwarded} • ${this.freeDrops} REMAIN` : "";
     this.root.querySelector<HTMLElement>(
       "[data-megh-feature-multi]",
     )!.textContent = `LIVE ${this.multiplier}× • BONUS WIN $${(this.encoreWin / 100).toFixed(2)}`;
@@ -642,12 +664,18 @@ export class MeghsCosmicJam {
   private async showWinTier(award: number): Promise<void> {
     const multiple = award / this.betUnits;
     const tier =
-      multiple >= 50
-        ? "EPIC WIN"
-        : multiple >= 20
-          ? "MEGA WIN"
-          : multiple >= 10
-            ? "BIG WIN"
+      multiple >= 100
+        ? "INTERGALACTIC WIN"
+        : multiple >= 50
+          ? "COLOSSAL WIN"
+          : multiple >= 25
+            ? "EPIC WIN"
+            : multiple >= 10
+              ? "MEGA WIN"
+              : multiple >= 5
+                ? "BIG WIN"
+                : multiple >= 2
+                  ? "NICE WIN"
             : "";
     if (!tier) {
       await this.wait(650);
@@ -658,6 +686,16 @@ export class MeghsCosmicJam {
     overlay.innerHTML = `<strong>${tier}</strong><b>$${(award / 100).toFixed(2)}</b>`;
     this.root.appendChild(overlay);
     await this.wait(1500);
+    overlay.remove();
+  }
+  private async showBonusSummary(baseWin: number, finale: number): Promise<void> {
+    const overlay = document.createElement("div");
+    overlay.className = "feature-cinematic cosmic-cinematic bonus-summary";
+    overlay.innerHTML = `<small>ENCORE COMPLETE</small><h2>FINAL SET LIST</h2><div class="bonus-summary-grid"><span>DROPS PLAYED <b>${this.featureDropsPlayed}</b></span><span>RETRIGGERS <b>${this.featureRetriggers}</b></span><span>HIGHEST MULTIPLIER <b>${this.multiplier}×</b></span><span>CASCADE WIN <b>$${(baseWin / 100).toFixed(2)}</b></span><span>GUITAR SMASH <b>$${(finale / 100).toFixed(2)}</b></span><strong>TOTAL BONUS $${((baseWin + finale) / 100).toFixed(2)}</strong></div>`;
+    this.root.appendChild(overlay);
+    await this.wait(2600);
+    overlay.classList.add("leaving");
+    await this.wait(420);
     overlay.remove();
   }
   private showRules(): void {

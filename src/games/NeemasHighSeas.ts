@@ -74,6 +74,8 @@ const REELS = 5;
 const ROWS = 3;
 const DEPARTURE_TARGET = 50;
 const HAPPY_HOUR_TRIGGER = 3;
+const MAX_VOYAGE_SPINS = 60;
+const MAX_VOYAGE_RETRIGGERS = 6;
 const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 const LINES = [
   [0, 0, 0, 0, 0],
@@ -97,6 +99,9 @@ export class NeemasHighSeas {
   private bonusAutoRunning = false;
   private happyHourDeck: string[] = [];
   private freeSpins = 0;
+  private voyageSpinsPlayed = 0;
+  private voyageSpinsAwarded = 0;
+  private voyageRetriggers = 0;
   private cabin = 0;
   private bonusMultiplier = 1;
   private bonusWin = 0;
@@ -256,7 +261,7 @@ export class NeemasHighSeas {
     this.spinning = true;
     this.onActivity({ type: "spin", game: "neema" });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
-    else this.freeSpins -= 1;
+    else { this.freeSpins -= 1; this.voyageSpinsPlayed += 1; }
     this.message(free ? `FREE SPIN • ${this.freeSpins} REMAIN` : "SAILING...");
     this.update();
     const reels = this.root.querySelector<HTMLElement>("[data-neema-reels]")!;
@@ -296,7 +301,12 @@ export class NeemasHighSeas {
       if (captains > 0) {
         this.voyageStops = Math.min(4, this.voyageStops + captains);
         this.onActivity({ type: "voyage", game: "neema", value: this.voyageStops });
-        if (this.voyageStops === 2) { this.freeSpins += 2; this.message("GOLDEN PORT • +2 FREE SPINS"); }
+        if (this.voyageStops === 2) {
+          const portSpins = Math.min(2, Math.max(0, MAX_VOYAGE_SPINS - this.voyageSpinsPlayed - this.freeSpins));
+          this.freeSpins += portSpins;
+          this.voyageSpinsAwarded = this.voyageSpinsPlayed + this.freeSpins;
+          this.message(portSpins > 0 ? `GOLDEN PORT • +${portSpins} FREE SPINS` : "GOLDEN PORT • MAXIMUM VOYAGE");
+        }
         if (this.voyageStops === 3) { this.bonusMultiplier += 1; this.message("MYSTERY ISLE • MULTIPLIER UPGRADE"); }
       }
       if (this.freeSpins > 0 && this.freeSpins % 2 === 0) {
@@ -325,17 +335,30 @@ export class NeemasHighSeas {
         award += happyHourAward;
         this.bonusWin += happyHourAward;
       }
-      this.freeSpins += retrigger ? 5 : this.route === "party" ? 14 : 10;
+      const requested = retrigger ? 5 : this.route === "party" ? 14 : 10;
+      const added = retrigger
+        ? Math.min(requested, Math.max(0, MAX_VOYAGE_SPINS - this.voyageSpinsPlayed - this.freeSpins))
+        : requested;
+      if (!retrigger) {
+        this.voyageSpinsPlayed = 0;
+        this.voyageRetriggers = 0;
+      }
+      const effectiveAdded = !retrigger || this.voyageRetriggers < MAX_VOYAGE_RETRIGGERS ? added : 0;
+      if (!retrigger || effectiveAdded > 0) {
+        this.freeSpins += effectiveAdded;
+        this.voyageSpinsAwarded = this.voyageSpinsPlayed + this.freeSpins;
+        if (retrigger) this.voyageRetriggers += 1;
+      }
       this.cabin = Math.min(4, this.cabin + 1);
       this.bonusMultiplier = 1 + this.cabin;
       this.message(
         retrigger
-          ? "CRUISE TICKET RETRIGGER • +5 SPINS"
+          ? effectiveAdded > 0 ? `CRUISE TICKET RETRIGGER • +${effectiveAdded} SPINS` : "MAXIMUM VOYAGE REACHED"
           : guaranteedDeparture
             ? "CAPTAIN'S INVITATION • GUARANTEED VOYAGE"
             : "ALL ABOARD • 10 FREE SPINS",
       );
-      await this.showVoyageIntro(retrigger);
+      if (!retrigger || effectiveAdded > 0) await this.showVoyageIntro(retrigger);
       this.onActivity({ type: "bonus", game: "neema" });
     } else if (award > 0)
       this.message(
@@ -659,7 +682,9 @@ export class NeemasHighSeas {
     feature.hidden = this.freeSpins <= 0;
     this.root.querySelector<HTMLElement>(
       "[data-neema-freespins]",
-    )!.textContent = `${this.freeSpins} FREE SPINS`;
+    )!.textContent = this.freeSpins > 0
+      ? `SPIN ${this.voyageSpinsPlayed + 1} OF ${this.voyageSpinsAwarded} • ${this.freeSpins} REMAIN`
+      : "";
     this.root.querySelector<HTMLElement>(
       "[data-neema-multiplier]",
     )!.textContent = `CABIN MULTIPLIER ${this.bonusMultiplier}×`;

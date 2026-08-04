@@ -12,6 +12,7 @@ import "./v53-bonus-revolution.css";
 import "./v54-chaos.css";
 import "./v55-premium.css";
 import "./v58-living-floor.css";
+import "./v59-authenticity.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {
