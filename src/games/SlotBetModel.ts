@@ -22,6 +22,11 @@ export class SlotBetModel {
     this.creditIndex = SLOT_CREDIT_LEVELS.indexOf(valid[next]!);
   }
 
+  public maxBet(): void {
+    const valid = SLOT_CREDIT_LEVELS.filter((credits) => credits * this.denominationUnits <= MAX_SLOT_WAGER_UNITS);
+    this.creditIndex = SLOT_CREDIT_LEVELS.indexOf(valid[valid.length - 1]!);
+  }
+
   private clampCredits(): void {
     while (this.wagerUnits > MAX_SLOT_WAGER_UNITS && this.creditIndex > 0) this.creditIndex -= 1;
   }

@@ -15,6 +15,7 @@ const art = (name: string): string =>
   new URL(`../../assets/neema/${name}.png`, import.meta.url).href;
 
 const SYMBOLS: readonly SeaSymbol[] = [
+  { id: "chocolate-milk", art: new URL("../../assets/neema/chocolate-milk.svg", import.meta.url).href, label: "MORNING CHOCOLATE MILK", weight: 19, pay: [2, 4, 9] },
   {
     id: "cranberry",
     art: art("cocktail"),
@@ -129,9 +130,9 @@ export class NeemasHighSeas {
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
       <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>FROZEN CASH RESPINS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS LAUNCH FROZEN HAPPY HOUR + THE VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
         <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="happy-hour-forecast" data-happy-forecast><small>HAPPY HOUR FORECAST</small><b>CALM SEAS</b></div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
-        <div class="neema-feature-bar"><span>6+ DRINKS HOLD &amp; RESPIN</span><span>FILL 20 FOR GRAND</span><span>VOYAGE + LAST CALL</span></div>
+        <div class="neema-feature-bar"><span>6+ DRINKS HOLD &amp; RESPIN</span><span>FILL 20 FOR GRAND</span><span>CHOCOLATE MILK EVERY MORNING</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div>${denominationMarkup("neema")}<div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET • <i data-neema-credits></i> CR</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
-          <button data-neema-auto>AUTO</button><button class="neema-spin" data-neema-spin>SPIN</button></div>
+          <button data-neema-max>MAX BET</button><button data-neema-auto>AUTO</button><button class="neema-spin" data-neema-spin>SPIN</button></div>
         <div class="neema-auto-menu" data-neema-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
       </section><p class="neema-disclaimer">Fictional credits only • Three Cruise Tickets sail immediately; the Departure meter guarantees a voyage • Cabin upgrades increase the multiplier</p>
     </main>`;
@@ -157,6 +158,7 @@ export class NeemasHighSeas {
       ?.addEventListener("click", () => this.changeBet(1));
     this.root.querySelector("[data-neema-denom-down]")?.addEventListener("click", () => this.changeDenom(-1));
     this.root.querySelector("[data-neema-denom-up]")?.addEventListener("click", () => this.changeDenom(1));
+    this.root.querySelector("[data-neema-max]")?.addEventListener("click", () => this.setMaxBet());
     this.root
       .querySelectorAll<HTMLElement>("[data-auto]")
       .forEach((button) =>
@@ -209,7 +211,7 @@ export class NeemasHighSeas {
       .flatMap((reel, reelIndex) =>
         reel.map(
           (symbol, row) =>
-            `<div class="sea-symbol s-${symbol.id}${winners.has(`${reelIndex}:${row}`) ? " winner" : ""}" style="grid-column:${reelIndex + 1};grid-row:${row + 1};--reel:${reelIndex}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')"><small>${symbol.label}</small></div>`,
+            `<div class="sea-symbol s-${symbol.id}${winners.has(`${reelIndex}:${row}`) ? " winner" : ""}" data-reel="${reelIndex + 1}" style="grid-column:${reelIndex + 1};grid-row:${row + 1};--reel:${reelIndex}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')"><small>${symbol.label}</small></div>`,
         ),
       )
       .join("");
@@ -286,9 +288,16 @@ export class NeemasHighSeas {
       await this.wait(850);
     }
     for (let stopped = 0; stopped < REELS; stopped += 1) {
-      this.renderGrid(grid);
+      for (let cycle = 0; cycle < 3; cycle += 1) {
+        const moving = this.makeGrid();
+        for (let locked = 0; locked < stopped; locked += 1) moving[locked] = grid[locked]!;
+        this.renderGrid(moving);
+        reels.dataset.stopped = String(stopped);
+        await this.wait(105 + stopped * 18);
+      }
+      this.renderGrid(grid.map((reel, index) => index <= stopped ? reel : this.makeGrid()[index]!));
       reels.dataset.stopped = String(stopped + 1);
-      await this.wait(150 + stopped * 38);
+      await this.wait(210 + stopped * 55);
     }
     reels.classList.remove("spinning");
     reels.classList.remove("ticket-anticipation");
@@ -494,6 +503,13 @@ export class NeemasHighSeas {
   private changeDenom(direction: number): void {
     if (this.spinning || this.freeSpins > 0) return;
     this.betModel.changeDenomination(direction); this.lastDisplayedWin = 0; this.update();
+  }
+  private setMaxBet(): void {
+    if (this.spinning || this.freeSpins > 0) return;
+    this.betModel.maxBet();
+    this.lastDisplayedWin = 0;
+    this.message(`MAX BET SELECTED • $${(this.betUnits / 100).toFixed(2)} • PRESS SPIN`);
+    this.update();
   }
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, ms));

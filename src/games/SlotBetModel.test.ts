@@ -17,4 +17,11 @@ describe("SlotBetModel", () => {
     expect(model.credits).toBe(credits);
     expect(model.wagerUnits).toBe(credits * 2);
   });
+
+  it("selects max bet without spinning or exceeding the cap", () => {
+    const model = new SlotBetModel();
+    model.changeDenomination(3);
+    model.maxBet();
+    expect(model.wagerUnits).toBe(25_000);
+  });
 });

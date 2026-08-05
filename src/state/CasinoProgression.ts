@@ -99,8 +99,8 @@ export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): Casino
 
 export const rankForXp = (xp: number): { name: string; level: number; next: number } => {
   const ranks = [
-    ["FIVE O'CLOCK SHADOW", 0], ["SCRUFFY REGULAR", 500], ["FULL BEARD", 1500],
-    ["LEGENDARY BEARD", 3500], ["VAULTMASTER", 7000],
+    ["BRONZE BEARD", 0], ["SILVER BEARD", 500], ["GOLD BEARD", 1500],
+    ["PLATINUM BEARD", 3500], ["LEGENDARY BEARD", 7000],
   ] as const;
   let index = 0;
   ranks.forEach((rank, i) => { if (xp >= rank[1]) index = i; });
@@ -119,8 +119,10 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
   let biggestMultiplier = progress.biggestMultiplier;
   const achievements = new Set(progress.achievements);
   if (activity.type === "spin") {
-    totalSpins += 1; xp += 10;
-    totalWageredUnits += Math.max(0, activity.wager ?? 0);
+    totalSpins += 1;
+    const wager = Math.max(0, activity.wager ?? 0);
+    totalWageredUnits += wager;
+    xp += Math.floor(wager / 100);
     gameSpins[activity.game] = (gameSpins[activity.game] ?? 0) + 1;
     if (totalSpins >= 1) achievements.add("FIRST SPIN");
     if (totalSpins >= 100) achievements.add("CENTURY CLUB");

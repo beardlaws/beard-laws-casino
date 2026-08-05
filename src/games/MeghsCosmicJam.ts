@@ -86,7 +86,7 @@ export class MeghsCosmicJam {
         <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="invasion-ladder"><small>INVASION CHAIN</small>${Array.from({length:8},(_,i)=>`<i data-chain="${i+1}">${i+1}</i>`).join("")}<b data-chain-prize>4 CASCADES = ENCORE • 8 = 50 DROPS</b></div><div class="megh-ledger" aria-label="Game totals"><span><small>ACCOUNT</small><b data-megh-ledger-credit>$0.00</b></span><span><small>LAST WIN</small><b data-megh-ledger-win>$0.00</b></span><span><small>BONUS WIN</small><b data-megh-ledger-bonus>$0.00</b></span></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div>${denominationMarkup("megh")}<div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET • <i data-megh-credits></i> CR</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
-          <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
+          <button data-megh-max>MAX BET</button><button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
         <div class="megh-auto-menu" data-megh-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
       </section><p class="megh-disclaimer">Fictional credits only • Shared casino wallet • Auto stops before feature play</p></main>`;
     this.root
@@ -111,6 +111,7 @@ export class MeghsCosmicJam {
       ?.addEventListener("click", () => this.changeBet(1));
     this.root.querySelector("[data-megh-denom-down]")?.addEventListener("click", () => this.changeDenom(-1));
     this.root.querySelector("[data-megh-denom-up]")?.addEventListener("click", () => this.changeDenom(1));
+    this.root.querySelector("[data-megh-max]")?.addEventListener("click", () => this.setMaxBet());
     this.root
       .querySelectorAll<HTMLElement>("[data-auto]")
       .forEach((button) =>
@@ -381,7 +382,7 @@ export class MeghsCosmicJam {
     this.update();
   }
   private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<JamSymbol[][]> {
-    this.lastSurge = free ? "ENCORE GRAVITY" : this.dealCosmicEvent();
+    this.lastSurge = free ? "ALIEN ENCORE INVASION" : this.dealCosmicEvent();
     const unmodifiedGrid = finalGrid.map((row) => [...row]);
     if (!free) finalGrid = this.applyCosmicEvent(finalGrid, this.lastSurge as CosmicEvent);
     const surge = this.root.querySelector<HTMLElement>("[data-megh-surge]")!;
@@ -403,7 +404,7 @@ export class MeghsCosmicJam {
               ? `<i class="goat-stampede">🐐 🐐 🐐</i><b>GOATS CHARGE THE GRID</b>`
               : this.lastSurge === "COSMIC COLLISION"
                 ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
-            : free ? `<i class="gravity-well">◎</i><b>ENCORE GRAVITY</b>` : "";
+            : free ? `<i class="invasion-ufo">🛸</i><i class="invasion-beam"></i><i class="invasion-targets">✦ ✦ ✦</i><b>ALIEN ENCORE INVASION • TRACTOR BEAM LOCKED</b>` : "";
     const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
     if (effect.innerHTML) machine.appendChild(effect);
     const flashes = free ? 3 : 5;
@@ -536,6 +537,13 @@ export class MeghsCosmicJam {
   private changeDenom(direction: number): void {
     if (this.spinning || this.freeDrops > 0) return;
     this.betModel.changeDenomination(direction); this.lastDisplayedWin = 0; this.update();
+  }
+  private setMaxBet(): void {
+    if (this.spinning || this.freeDrops > 0) return;
+    this.betModel.maxBet();
+    this.lastDisplayedWin = 0;
+    this.message(`MAX BET ARMED • $${(this.betUnits / 100).toFixed(2)} • PRESS DROP`);
+    this.update();
   }
   private update(): void {
     const credit = this.root.querySelector<HTMLElement>("[data-megh-credit]");

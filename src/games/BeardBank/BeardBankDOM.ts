@@ -60,7 +60,7 @@ export class BeardBankDOM {
         <div class="bb60-status" data-status>VAULT SECURED • READY</div>
         <div class="bb60-reels" data-reels></div>
         <div class="bb60-chase"><span>🪙 COIN HEIST</span><span>🚪 VERNON FREE SPINS</span><span>🔑 LIVING VAULT</span></div>
-        <footer><div><small>CREDIT</small><b data-credit></b></div>${denominationMarkup("bb")}<div class="bb60-bet"><button data-minus>−</button><span><small>BET • <i data-credits></i> CR</small><b data-bet></b></span><button data-plus>+</button></div><div><small>WIN</small><b data-win>$0.00</b></div><button data-auto>AUTO</button><button class="bb60-spin" data-spin>SPIN</button></footer>
+        <footer><div><small>CREDIT</small><b data-credit></b></div>${denominationMarkup("bb")}<div class="bb60-bet"><button data-minus>−</button><span><small>BET • <i data-credits></i> CR</small><b data-bet></b></span><button data-plus>+</button></div><div><small>WIN</small><b data-win>$0.00</b></div><button data-max>MAX BET</button><button data-auto>AUTO</button><button class="bb60-spin" data-spin>SPIN</button></footer>
       </section></main>`;
     this.root.querySelector("[data-home]")?.addEventListener("click", () => { if (!this.spinning) this.onExit(); });
     this.root.querySelector("[data-rules]")?.addEventListener("click", () => this.rules());
@@ -69,6 +69,7 @@ export class BeardBankDOM {
     this.root.querySelector("[data-plus]")?.addEventListener("click", () => this.bet(1));
     this.root.querySelector("[data-bb-denom-down]")?.addEventListener("click", () => this.denom(-1));
     this.root.querySelector("[data-bb-denom-up]")?.addEventListener("click", () => this.denom(1));
+    this.root.querySelector("[data-max]")?.addEventListener("click", () => this.setMaxBet());
     this.root.querySelector("[data-auto]")?.addEventListener("click", () => this.toggleAuto());
     this.render(this.reels.generate(beardBankConfig).matrix); this.update();
   }
@@ -178,6 +179,7 @@ export class BeardBankDOM {
   private async autoLoop():Promise<void>{ while(this.auto!==null && (this.auto==="infinite"||this.auto>0)){const feature=await this.spin();if(feature){this.auto=null;break;}if(typeof this.auto==="number")this.auto-=1;await wait(450);}this.update(); }
   private bet(direction:number):void{if(this.spinning||this.auto!==null)return;this.betModel.changeCredits(direction);this.update();}
   private denom(direction:number):void{if(this.spinning||this.auto!==null)return;this.betModel.changeDenomination(direction);this.update();}
+  private setMaxBet():void{if(this.spinning||this.auto!==null)return;this.betModel.maxBet();this.say(`MAX BET SELECTED • $${(this.betModel.wagerUnits/100).toFixed(2)} • PRESS SPIN`);this.update();}
   private say(text:string):void{const node=this.root.querySelector<HTMLElement>("[data-status]");if(node)node.textContent=text;}
   private update():void{const money=(n:number)=>`$${(n/100).toFixed(2)}`; const set=(q:string,v:string)=>{const n=this.root.querySelector<HTMLElement>(q);if(n)n.textContent=v;}; set("[data-credit]",money(this.getWallet()));set("[data-bet]",money(this.betModel.wagerUnits));set("[data-credits]",String(this.betModel.credits));set("[data-bb-denom]",`${this.betModel.denominationUnits}¢`);set("[data-win]",money(this.win));set("[data-pressure]",this.charges>=30?"VAULT READY":`${this.charges} OF 30 COINS`);set("[data-door] b",this.charges>=30?"CRACK IT":`${this.charges}/30`);const fill=this.root.querySelector<HTMLElement>("[data-fill]");if(fill)fill.style.width=`${this.charges/30*100}%`;const spin=this.root.querySelector<HTMLButtonElement>("[data-spin]");if(spin)spin.disabled=this.spinning;set("[data-auto]",this.auto===null?"AUTO":"STOP");}
   private rules():void{const m=document.createElement("div");m.className="modal-backdrop";m.innerHTML=`<section class="progress-modal"><button class="close" data-close>×</button><small>BEARD BANK • 243 WAYS</small><h2>Break the Bank</h2><p>Matching symbols pay left to right on adjacent reels. Wild crests substitute. Three visible coins launch Vault Heist. A stacked reel of doors launches automatic Vernon Free Spins. Every collected coin charges the Living Vault; 30 opens the automatic hold-and-win finale.</p><button class="primary" data-close>BACK TO GAME</button></section>`;document.body.appendChild(m);m.querySelectorAll("[data-close]").forEach(n=>n.addEventListener("click",()=>m.remove()));}
