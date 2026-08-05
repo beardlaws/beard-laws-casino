@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <defs>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".88"/>
+      <stop offset=".45" stop-color="#d8f2ff" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#7bc9ed" stop-opacity=".18"/>
+    </linearGradient>
+    <linearGradient id="milk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d99a68"/>
+      <stop offset=".5" stop-color="#8a4d2e"/>
+      <stop offset="1" stop-color="#35150f"/>
+    </linearGradient>
+    <radialGradient id="foam" cx="50%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#f6d4aa"/>
+      <stop offset="1" stop-color="#a96138"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="14" stdDeviation="10" flood-color="#000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M76 40h168l-19 230c-2 25-21 41-46 41h-38c-25 0-44-16-46-41z" fill="url(#glass)" stroke="#fff0bd" stroke-width="9"/>
+    <path d="M94 101h132l-14 163c-1 16-13 27-30 27h-44c-17 0-29-11-30-27z" fill="url(#milk)"/>
+    <ellipse cx="160" cy="103" rx="66" ry="19" fill="url(#foam)" stroke="#f5c895" stroke-width="5"/>
+    <ellipse cx="160" cy="99" rx="47" ry="10" fill="#7f4428" opacity=".5"/>
+    <path d="M204 16c-23 38-30 77-26 124" fill="none" stroke="#ff6c80" stroke-width="13" stroke-linecap="round"/>
+    <path d="M195 22c-17 35-21 65-18 92" fill="none" stroke="#ffd7de" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+    <path d="M101 66c18-11 44-16 67-16" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+    <circle cx="126" cy="126" r="7" fill="#f0bc8d" opacity=".55"/>
+    <circle cx="185" cy="145" r="5" fill="#f0bc8d" opacity=".45"/>
+  </g>
+</svg>
