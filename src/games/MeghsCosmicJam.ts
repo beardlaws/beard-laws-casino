@@ -72,6 +72,7 @@ export class MeghsCosmicJam {
     if (detail?.action === "megh-goat") { this.forcedSurge = "GOAT STAMPEDE"; this.message("QA ARMED • GOAT STAMPEDE ON NEXT DROP"); }
     if (detail?.action === "megh-ufo") { this.forcedSurge = "UFO SCAN"; this.message("QA ARMED • UFO SCAN ON NEXT DROP"); }
     if (detail?.action === "megh-encore") { this.forceEncore = true; this.message("QA ARMED • ENCORE ON NEXT DROP"); }
+    if (detail?.action === "megh-headliner") { ["BASS","LEAD","DRUMS","VOCALS","UFO"].forEach((channel)=>this.soundboard.add(channel)); this.forceEncore = true; this.chargeSoundboard([]); this.message("QA ARMED • HEADLINER MODE ON NEXT DROP"); }
   };
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;

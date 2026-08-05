@@ -118,6 +118,8 @@ export class NeemasHighSeas {
     const detail = (event as CustomEvent<{ action?: string }>).detail;
     if (detail?.action === "neema-feature") { this.forceFeature = true; this.message("QA ARMED • FROZEN HAPPY HOUR ON NEXT SPIN"); }
     if (detail?.action === "neema-captain") void this.showCaptainMoment("CAPTAIN NEEMA SAYS CHEERS!");
+    if (detail?.action === "neema-tickets") { this.forceFeature = true; this.message("QA ARMED • THREE TICKETS ON NEXT SPIN"); }
+    if (detail?.action === "neema-voyage") { this.voyageStops = 4; this.cabin = 4; this.update(); void this.showCaptainMoment("CAPTAIN'S DECK • LAST CALL READY!"); }
   };
   private departureMiles = this.readProgress("neema-departure", 0);
   private get betUnits(): number {

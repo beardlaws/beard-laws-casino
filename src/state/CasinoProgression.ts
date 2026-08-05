@@ -19,6 +19,8 @@ export interface MissionProgress {
 
 export interface CasinoProgress {
   readonly xp: number;
+  readonly beardChips: number;
+  readonly unlockedRewards: readonly string[];
   readonly totalSpins: number;
   readonly totalBonuses: number;
   readonly biggestWinUnits: number;
@@ -44,13 +46,15 @@ const previousDayKey = (): string => {
 };
 
 const missionSet = (): MissionProgress[] => [
-  { id: "spins", label: "SPIN ANY SLOT 25 TIMES", target: 25, progress: 0, reward: 500, claimed: false },
-  { id: "bonus", label: "TRIGGER ONE FEATURE", target: 1, progress: 0, reward: 750, claimed: false },
-  { id: "explore", label: "PLAY TWO DIFFERENT GAMES", target: 2, progress: 0, reward: 500, claimed: false },
+  { id: "spins", label: "SPIN ANY SLOT 25 TIMES", target: 25, progress: 0, reward: 50, claimed: false },
+  { id: "bonus", label: "TRIGGER ONE FEATURE", target: 1, progress: 0, reward: 75, claimed: false },
+  { id: "explore", label: "PLAY TWO DIFFERENT GAMES", target: 2, progress: 0, reward: 50, claimed: false },
 ];
 
 export const freshCasinoProgress = (): CasinoProgress => ({
   xp: 0,
+  beardChips: 0,
+  unlockedRewards: [],
   totalSpins: 0,
   totalBonuses: 0,
   biggestWinUnits: 0,
@@ -79,6 +83,8 @@ export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): Casino
     ...base,
     ...value,
     xp: Math.max(0, Math.round(Number(value?.xp ?? 0))),
+    beardChips: Math.max(0, Math.round(Number(value?.beardChips ?? 0))),
+    unlockedRewards: Array.from(new Set(value?.unlockedRewards ?? [])),
     totalSpins: Math.max(0, Math.round(Number(value?.totalSpins ?? 0))),
     totalBonuses: Math.max(0, Math.round(Number(value?.totalBonuses ?? 0))),
     biggestWinUnits: Math.max(0, Math.round(Number(value?.biggestWinUnits ?? 0))),
@@ -114,6 +120,7 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
   let totalBonuses = progress.totalBonuses;
   let xp = progress.xp;
   let biggestWinUnits = progress.biggestWinUnits;
+  let beardChips = progress.beardChips;
   let totalWageredUnits = progress.totalWageredUnits;
   let totalWonUnits = progress.totalWonUnits;
   let biggestMultiplier = progress.biggestMultiplier;
@@ -127,12 +134,13 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
     if (totalSpins >= 1) achievements.add("FIRST SPIN");
     if (totalSpins >= 100) achievements.add("CENTURY CLUB");
   }
-  if (activity.type === "bonus") { totalBonuses += 1; xp += 100; achievements.add(`FIRST ${activity.game.toUpperCase()} FEATURE`); }
+  if (activity.type === "bonus") { totalBonuses += 1; xp += 100; beardChips += 25; achievements.add(`FIRST ${activity.game.toUpperCase()} FEATURE`); }
   if (activity.type === "win") {
     biggestWinUnits = Math.max(biggestWinUnits, activity.amount ?? 0);
     totalWonUnits += Math.max(0, activity.amount ?? 0);
     biggestMultiplier = Math.max(biggestMultiplier, activity.value ?? 0);
-    if ((activity.value ?? 0) >= 50) achievements.add("50× CLUB");
+    if ((activity.value ?? 0) >= 50) { achievements.add("50× CLUB"); beardChips += 10; }
+    if ((activity.value ?? 0) >= 100) beardChips += 25;
   }
   if (activity.type === "coin" && (activity.value ?? 0) >= 1) achievements.add("VAULT COLLECTOR");
   if (activity.type === "stage" && (activity.value ?? 0) >= 3) achievements.add("COSMIC HEADLINER");
@@ -143,5 +151,5 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
     return { ...mission, progress: Math.min(mission.target, Math.max(mission.progress, amount)) };
   });
   const favoriteGame = (Object.entries(gameSpins).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] ?? "none") as CasinoProgress["favoriteGame"];
-  return { ...progress, xp, totalSpins, totalBonuses, biggestWinUnits, totalWageredUnits, totalWonUnits, biggestMultiplier, gameSpins, favoriteGame, achievements: [...achievements], missions };
+  return { ...progress, xp, beardChips, totalSpins, totalBonuses, biggestWinUnits, totalWageredUnits, totalWonUnits, biggestMultiplier, gameSpins, favoriteGame, achievements: [...achievements], missions };
 };

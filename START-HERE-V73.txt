@@ -1,0 +1,5 @@
+1. Open PowerShell in this folder.
+2. Run: powershell -ExecutionPolicy Bypass -File .\VERIFY-V73.ps1
+3. Run: powershell -ExecutionPolicy Bypass -File .\PUBLISH-V73.ps1
+4. After GitHub Pages deploys, press Ctrl+F5.
+5. Open the Beard Vault from the lobby and QA Lab with Ctrl+Shift+D.

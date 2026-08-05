@@ -32,6 +32,7 @@ export class BigBadBarber {
   private lastWin=0;
   private fortressLevels=[0,0,0,0,0];
   private currentGrid:BarberSymbol[][]=[];
+  private forceTwoRazors=false;
   private readonly handleDeveloperAction=(event:Event):void=>{
     const action=(event as CustomEvent<{action?:string}>).detail?.action;
     if(action==="barber-bonus"&&!this.spinning)void this.startShaveDown();
@@ -39,6 +40,8 @@ export class BigBadBarber {
       if(!this.fortressLevels.some(level=>level>0)){this.fortressLevels=[2,1,3,2,1];this.updateFortresses();}
       void this.barberAttack(false);
     }
+    if(action==="barber-two-razors"&&!this.spinning){this.forceTwoRazors=true;this.message("QA ARMED • TWO-RAZOR ANTICIPATION ON NEXT SPIN");}
+    if(action==="barber-max-forts"&&!this.spinning){this.fortressLevels=[4,4,4,4,4];this.updateFortresses();this.message("QA • ALL GOLDEN BEARD CASTLES BUILT");}
   };
   public constructor(private readonly root:HTMLElement,private readonly getWallet:()=>number,private readonly setWallet:(units:number)=>void,private readonly onExit:()=>void,private readonly onActivity:(activity:CasinoActivity)=>void=()=>{}){}
   private get betUnits():number{return this.betModel.wagerUnits;}
@@ -85,7 +88,7 @@ export class BigBadBarber {
     const isBonus=this.bonusSpins>0;
     if(isBonus)this.bonusSpins--;else{this.setWallet(this.getWallet()-this.betUnits);this.onActivity({type:"spin",game:"barber",wager:this.betUnits});}
     this.root.querySelector(".barber-machine")?.classList.add("barber-spinning");this.update();
-    const grid=this.makeGrid();this.currentGrid=grid;const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
+    const grid=this.makeGrid();if(this.forceTwoRazors){const razor=SYMBOLS.find(s=>s.id==="razor")!;grid[1]![0]=razor;grid[1]![2]=razor;grid.forEach((row,y)=>row.forEach((symbol,x)=>{if(symbol.id==="razor"&&!((x===0||x===2)&&y===1))row[x]=SYMBOLS.find(s=>s.id==="wax")!;}));this.forceTwoRazors=false;}this.currentGrid=grid;const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
     const earlyRazors=cols.slice(0,4).flat().filter(s=>s.id==="razor").length;if(earlyRazors>=2)this.message("THE GOLDEN RAZOR IS CIRCLING THE FINAL REEL…");
     await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:2250,stagger:260,fillerRows:28,anticipationReel:earlyRazors>=2?4:-1,anticipationDelay:1250,renderSymbol:s=>this.symbolMarkup(s)});
     this.render(grid);this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");await this.wait(160);
