@@ -1,14 +1,17 @@
 {
   "name": "project-gold-beard",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty",
-    "test": "vitest run"
+    "test": "vitest run",
+    "casino:audit": "node scripts/casino-audit.mjs",
+    "casino:release": "node scripts/casino-release.mjs V77A-PROJECT-BEARD",
+    "casino:benchmark": "vitest run tests/games/BeardBankMathLab.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.0",

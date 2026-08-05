@@ -1,0 +1,11 @@
+BEARD LAWS CASINO V77A — PROJECT BEARD FOUNDATION
+
+1. Open PowerShell in this folder.
+2. Run: npm install
+3. Run: npm run casino:audit
+4. Run: npm run typecheck
+5. Run: npm test
+6. Run: npm run build
+7. Publish with: powershell -ExecutionPolicy Bypass -File .\PUBLISH-V77A.ps1
+
+V77A is an architecture milestone. Gameplay should match V76 while the project becomes safer to evolve.

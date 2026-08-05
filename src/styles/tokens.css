@@ -1,0 +1,20 @@
+:root {
+  --casino-bg: #08040d;
+  --casino-panel: #15091d;
+  --casino-panel-raised: #21102b;
+  --casino-gold: #f4c85a;
+  --casino-gold-bright: #ffe69a;
+  --casino-purple: #8f31c7;
+  --casino-magenta: #d64af0;
+  --casino-green: #9cff63;
+  --casino-danger: #ff5d78;
+  --casino-text: #fff4d2;
+  --casino-muted: #b49db9;
+  --casino-radius-sm: 10px;
+  --casino-radius-md: 18px;
+  --casino-radius-lg: 28px;
+  --casino-shadow-gold: 0 0 24px rgba(244, 200, 90, 0.24);
+  --casino-fast: 140ms;
+  --casino-medium: 280ms;
+  --casino-slow: 650ms;
+}

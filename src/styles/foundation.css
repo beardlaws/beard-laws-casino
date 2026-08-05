@@ -1,0 +1,34 @@
+/* V77A forward-only guardrails. Add shared framework rules here. */
+[data-casino-state] {
+  isolation: isolate;
+}
+
+.casino-character-layer,
+[data-character-layer] {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+}
+
+.casino-particle-layer,
+[data-particle-layer] {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+}
+
+.casino-modal,
+[role="dialog"] {
+  z-index: 1000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
