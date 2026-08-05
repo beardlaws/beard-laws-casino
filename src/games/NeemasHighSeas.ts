@@ -3,6 +3,7 @@ type VoyageRoute = "party" | "casino" | "mystery";
 import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
+import { animateDomReels } from "./DomReelAnimator";
 
 interface SeaSymbol {
   readonly id: string;
@@ -271,11 +272,6 @@ export class NeemasHighSeas {
     this.update();
     const reels = this.root.querySelector<HTMLElement>("[data-neema-reels]")!;
     reels.classList.remove("has-win");
-    reels.classList.add("spinning");
-    for (let frame = 0; frame < 14; frame += 1) {
-      this.renderGrid(this.makeGrid());
-      await this.wait(72 + frame * 15);
-    }
     const event = free ? "VOYAGE BOOST" : this.dealHappyHourEvent();
     const forecast = this.root.querySelector<HTMLElement>("[data-happy-forecast]")!;
     forecast.querySelector("b")!.textContent = event;
@@ -287,22 +283,20 @@ export class NeemasHighSeas {
       reels.classList.add("ticket-anticipation");
       await this.wait(850);
     }
-    for (let stopped = 0; stopped < REELS; stopped += 1) {
-      for (let cycle = 0; cycle < 3; cycle += 1) {
-        const moving = this.makeGrid();
-        for (let locked = 0; locked < stopped; locked += 1) moving[locked] = grid[locked]!;
-        this.renderGrid(moving);
-        reels.dataset.stopped = String(stopped);
-        await this.wait(105 + stopped * 18);
-      }
-      this.renderGrid(grid.map((reel, index) => index <= stopped ? reel : this.makeGrid()[index]!));
-      reels.dataset.stopped = String(stopped + 1);
-      await this.wait(210 + stopped * 55);
-    }
-    reels.classList.remove("spinning");
+    await animateDomReels({
+      host: reels,
+      finalColumns: grid,
+      rows: ROWS,
+      randomSymbol: () => this.pick(),
+      duration: free ? 1500 : 1650,
+      stagger: 185,
+      fillerRows: 13,
+      anticipationReel: earlyTickets >= 2 ? 4 : -1,
+      renderSymbol: (symbol, reel) => `<div class="sea-symbol s-${symbol.id}" data-reel="${reel + 1}" style="--reel:${reel}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false"><small>${symbol.label}</small></div>`,
+    });
+    this.renderGrid(grid);
     reels.classList.remove("ticket-anticipation");
     forecast.classList.remove("active");
-    delete reels.dataset.stopped;
     const result = this.evaluate(grid);
     let award = result.award;
     const tickets = grid.flat().filter((s) => s.id === "ticket").length;

@@ -15,3 +15,20 @@
 .surge-alien-encore-invasion{background:radial-gradient(circle at 50% 0,#baff5766,#30094cdd 45%,#020107f5)!important}.invasion-ufo{position:absolute;top:5%;font-style:normal;font-size:clamp(70px,13vw,150px);filter:drop-shadow(0 0 30px #baff57);animation:v65Mothership 2.1s ease-in-out infinite}.invasion-beam{position:absolute;top:20%;width:52%;height:76%;clip-path:polygon(43% 0,57% 0,100% 100%,0 100%);background:linear-gradient(#d9ff9bcc,#6bffbd22);filter:drop-shadow(0 0 24px #baff57);animation:v65Beam 1.15s ease-in-out infinite alternate}.invasion-targets{position:absolute;top:61%;font-style:normal;font-size:clamp(32px,7vw,70px);color:#ff58d3;letter-spacing:.5em;text-shadow:0 0 22px #baff57;animation:v65Targets .55s ease-in-out infinite alternate}@keyframes v65Mothership{50%{transform:translateX(20%) rotate(5deg)}}@keyframes v65Beam{to{transform:translateX(38%) scaleX(.7);filter:brightness(1.8)}}@keyframes v65Targets{to{transform:scale(1.2);filter:brightness(2)}}
 
 @media(max-width:800px){.neema-controls,.megh-controls,.bb60 footer{grid-template-columns:repeat(4,1fr)!important}.neema-controls>[data-neema-max],.megh-controls>[data-megh-max],.bb60 footer>[data-max]{display:block;min-height:48px}.neema-controls .neema-spin,.megh-controls .megh-spin,.bb60-spin{grid-column:auto}.bb60 footer>div{min-width:0}}
+
+/* V66: independent physical reel strips. No frame-by-frame DOM replacement. */
+.dom-reel-stage{display:grid!important;grid-template-columns:repeat(var(--dom-reels),minmax(0,1fr))!important;grid-template-rows:1fr!important;gap:5px;overflow:hidden;contain:layout paint;transform:translateZ(0)}
+.dom-reel-window{position:relative;overflow:hidden;height:100%;min-width:0;border-radius:8px;box-shadow:inset 0 0 16px #0009;background:#09030d;transform:translateZ(0)}
+.dom-reel-track{position:absolute;inset:0 0 auto;display:block;width:100%;will-change:transform;backface-visibility:hidden}
+.dom-reel-track>.sea-symbol,.dom-reel-track>.bb60-symbol,.dom-reel-track>.jam-symbol{height:var(--dom-cell-height)!important;min-height:var(--dom-cell-height)!important}
+.dom-reel-track>.sea-symbol,.dom-reel-track>.bb60-symbol,.dom-reel-track>.jam-symbol{position:relative!important;grid-column:1!important;grid-row:auto!important;width:100%;height:100%;min-height:0;transform:none!important;opacity:1!important}
+.dom-reels-spinning .dom-reel-window:not(.dom-reel-stopped){box-shadow:inset 0 0 24px #000,0 0 10px #7d4a8d55}
+.dom-reel-window.dom-reel-stopped{animation:v66ReelLock .28s cubic-bezier(.18,1.5,.35,1);box-shadow:inset 0 0 18px #000,0 0 13px #ffe17b55}
+.dom-reels-landed{animation:v66CabinetSettle .2s ease-out}
+@keyframes v66ReelLock{0%{transform:translateY(-8px)}55%{transform:translateY(4px)}100%{transform:none}}
+@keyframes v66CabinetSettle{50%{transform:translateY(2px)}}
+.megh-reels.v66-tumble .jam-symbol{animation:v66TumbleDrop .58s cubic-bezier(.16,.9,.22,1) both;animation-delay:calc(var(--y) * 55ms + var(--x) * 18ms)}
+@keyframes v66TumbleDrop{0%{opacity:0;transform:translateY(-125%) scale(.94);filter:blur(3px)}72%{opacity:1;transform:translateY(7px) scale(1.02);filter:none}100%{transform:none}}
+.sea-symbol.s-chocolate-milk small{font-size:clamp(7px,1vw,10px)!important;line-height:1.05;padding:3px 2px;background:#241006dd;color:#fff2c5!important;text-shadow:0 1px 3px #000}
+.sea-symbol.s-chocolate-milk img{width:94%!important;height:88%!important;object-fit:contain}
+@media(max-width:560px){.dom-reel-stage{gap:3px}.sea-symbol.s-chocolate-milk small{font-size:6px!important;letter-spacing:-.02em}}

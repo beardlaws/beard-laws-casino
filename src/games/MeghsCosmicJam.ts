@@ -4,6 +4,7 @@ type CosmicEvent = "UFO SCAN" | "AMPLIFIER OVERLOAD" | "MYSTERY SIGNAL" | "STAGG
 import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
+import { animateDomReels } from "./DomReelAnimator";
 interface JamSymbol {
   id: string;
   label: string;
@@ -282,9 +283,9 @@ export class MeghsCosmicJam {
       this.multiplier += 1;
       this.render(grid);
       host.classList.remove("beaming");
-      host.classList.add("tumbling");
-      await this.wait(650);
-      host.classList.remove("tumbling");
+      host.classList.add("tumbling", "v66-tumble");
+      await this.wait(850);
+      host.classList.remove("tumbling", "v66-tumble");
     }
     const ufos = grid.flat().filter((s) => s.id === "ufo").length;
     if (!free) {
@@ -407,18 +408,20 @@ export class MeghsCosmicJam {
             : free ? `<i class="invasion-ufo">🛸</i><i class="invasion-beam"></i><i class="invasion-targets">✦ ✦ ✦</i><b>ALIEN ENCORE INVASION • TRACTOR BEAM LOCKED</b>` : "";
     const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
     if (effect.innerHTML) machine.appendChild(effect);
-    const flashes = free ? 3 : 5;
-    for (let pass = 0; pass < flashes; pass += 1) {
-      this.render(this.makeGrid());
-      await this.wait(150 + pass * 55);
-    }
+    const columns = Array.from({ length: COLS }, (_, x) => unmodifiedGrid.map((row) => row[x]!));
+    await animateDomReels({
+      host,
+      finalColumns: columns,
+      rows: ROWS,
+      randomSymbol: () => this.pick(),
+      duration: free ? 1350 : 1550,
+      stagger: this.lastSurge === "STAGGERED REEL RUSH" ? 210 : 145,
+      fillerRows: 12,
+      renderSymbol: (symbol, x, y) => `<div class="jam-symbol s-${symbol.id}" style="--x:${x};--y:${y}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}"><small>${symbol.label}</small></div>`,
+    });
     this.render(unmodifiedGrid);
     host.classList.remove("reel-rushing");
     host.classList.add("dropping", "reel-locking");
-    for (let reel = 0; reel < COLS; reel += 1) {
-      host.dataset.locked = String(reel + 1);
-      await this.wait(this.lastSurge === "STAGGERED REEL RUSH" ? 190 + (reel % 2) * 120 : 175 + reel * 32);
-    }
     if (!free && this.lastSurge !== "COSMIC WEATHER CLEAR") {
       effect.querySelector("b")!.textContent = `${this.lastSurge} • TARGET ACQUIRED`;
       host.classList.add("event-resolving");
