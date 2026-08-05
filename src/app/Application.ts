@@ -255,7 +255,7 @@ export class Application {
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     if (state.session) {
-      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>Cloud Player</h2><p class="account-email">${state.email}</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p>Your login and casino profile are saved across devices.</p><button class="primary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
+      modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V62</small><h2>Player Profile</h2><p class="account-email">${state.email}</p><label>Casino username<input data-display-name maxlength="24" value="${this.escapeAttribute(this.profile.displayName)}" autocomplete="nickname"></label><p class="profile-hint">2–24 letters, numbers, spaces, dashes or underscores. This is the name shown on the Beard Board.</p><div class="account-stat"><span>CASINO WALLET</span><strong>${this.money()}</strong></div><p class="account-message" data-account-message></p><button class="primary" data-save-profile>SAVE PROFILE</button><button class="account-secondary" data-password-reset>SEND PASSWORD RESET</button><button class="account-secondary" data-signout>SIGN OUT</button><button class="cashout" data-guest>SWITCH TO GUEST MODE</button></div>`;
     } else {
       modal.innerHTML = `<div class="atm-modal account-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V52</small><h2>Player Account</h2><p>${state.connected ? "Sign in to restore your private cloud wallet." : "Cloud accounts need the Supabase connection in your .env file before building."}</p><p class="account-message" data-account-message>${message}</p><label>Email<input data-email type="email" autocomplete="email"></label><label>Password<input data-password type="password" minlength="6" autocomplete="current-password"></label><button class="primary" data-signin ${state.connected ? "" : "disabled"}>SIGN IN</button><button class="account-secondary" data-signup ${state.connected ? "" : "disabled"}>CREATE ACCOUNT</button><button class="cashout" data-reset ${state.connected ? "" : "disabled"}>FORGOT PASSWORD</button></div>`;
     }
@@ -276,6 +276,25 @@ export class Application {
       const node = modal.querySelector<HTMLElement>("[data-account-message]");
       if (node) node.textContent = text;
     };
+    modal.querySelector("[data-save-profile]")?.addEventListener("click", async () => {
+      const input = modal.querySelector<HTMLInputElement>("[data-display-name]");
+      const displayName = (input?.value ?? "").trim().replace(/\s+/g, " ");
+      if (!/^[A-Za-z0-9 _-]{2,24}$/.test(displayName)) {
+        status("Use 2–24 letters, numbers, spaces, dashes or underscores.");
+        return;
+      }
+      this.profile = { ...this.profile, displayName, updatedAtIso: new Date().toISOString() };
+      this.profiles.save(this.profile);
+      this.accounts.saveProfile(this.profile);
+      await this.accounts.flush();
+      const publishError = await this.accounts.publishStats(this.profile);
+      status(publishError ?? "Profile saved. The Beard Board has been refreshed.");
+    });
+    modal.querySelector("[data-password-reset]")?.addEventListener("click", async () => {
+      status("SENDING RESET EMAIL…");
+      const error = await this.accounts.resetPassword(state.email);
+      status(error ?? "Password-reset email sent.");
+    });
     modal
       .querySelector("[data-signin]")
       ?.addEventListener("click", async () => {
@@ -350,6 +369,10 @@ export class Application {
   private loadGuest(): void {
     this.profile = this.profiles.load("guest");
     this.walletUnits = this.profile.walletUnits;
+  }
+
+  private escapeAttribute(value: string): string {
+    return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   }
 
   private gameCard(

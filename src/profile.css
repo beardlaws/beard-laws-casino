@@ -34,6 +34,7 @@
 .account-message { min-height: 20px; color: #ffde79 !important; font-weight: 800; }
 .account-stat { display: flex; justify-content: space-between; margin: 22px 0; padding: 16px; border: 1px solid #755187; border-radius: 13px; background: #0d0612; }
 .account-stat strong { color: #7cffb2; font-size: 22px; }
+.profile-hint{margin:6px 0 12px;text-align:left;color:#a995b0;font-size:11px;line-height:1.35}.account-modal .account-message{min-height:18px;color:#ffe081;font-weight:800}
 .account-email { overflow-wrap: anywhere; }
 
 @media (max-width: 800px) {
