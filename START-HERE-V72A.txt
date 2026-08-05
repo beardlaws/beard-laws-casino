@@ -1,0 +1,8 @@
+1. Extract this ZIP.
+2. Open PowerShell inside Beard-Laws-Casino-V72A-ENGINE-FOUNDATION.
+3. Run:
+   powershell -ExecutionPolicy Bypass -File .\VERIFY-V72A.ps1
+4. Publish with:
+   powershell -ExecutionPolicy Bypass -File .\PUBLISH-V72A.ps1
+
+V72A changes the shared engine foundation. Test Neema and Big Bad Barber reel direction and stops first.

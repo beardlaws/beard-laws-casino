@@ -1,14 +1,25 @@
+import { CabinetEffects, type CabinetImpact } from "./animation/CabinetEffects";
+import { CharacterLayer } from "./animation/CharacterLayer";
+import { FeatureTimeline } from "./animation/FeatureTimeline";
+
 export const sleep = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 export class FeatureDirector {
-  public constructor(private readonly cabinet: HTMLElement) {}
+  public readonly timeline = new FeatureTimeline();
+  public readonly characters: CharacterLayer;
+  private readonly cabinetEffects: CabinetEffects;
 
-  public async shake(intensity: "soft" | "medium" | "hard" = "soft", duration = 280): Promise<void> {
-    this.cabinet.classList.remove("cabinet-shake-soft", "cabinet-shake-medium", "cabinet-shake-hard");
-    void this.cabinet.offsetWidth;
-    this.cabinet.classList.add(`cabinet-shake-${intensity}`);
-    await sleep(duration);
-    this.cabinet.classList.remove(`cabinet-shake-${intensity}`);
+  public constructor(cabinet: HTMLElement) {
+    this.cabinetEffects = new CabinetEffects(cabinet);
+    this.characters = new CharacterLayer(cabinet);
+  }
+
+  public shake(intensity: CabinetImpact = "soft", duration = 280): Promise<void> {
+    return this.cabinetEffects.impact(intensity, duration);
+  }
+
+  public pulse(tone: "gold" | "cosmic" | "rose" = "gold", duration = 520): void {
+    this.cabinetEffects.pulse(tone, duration);
   }
 
   public burst(host: HTMLElement, glyph: string, count = 12, className = "feature-particle"): void {
