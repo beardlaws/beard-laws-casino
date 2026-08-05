@@ -3,6 +3,7 @@ type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
 type CosmicEvent = "UFO SCAN" | "AMPLIFIER OVERLOAD" | "MYSTERY SIGNAL" | "STAGGERED REEL RUSH" | "GOAT STAMPEDE" | "COSMIC COLLISION" | "COSMIC WEATHER CLEAR";
 import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
+import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 interface JamSymbol {
   id: string;
   label: string;
@@ -40,7 +41,6 @@ const ROWS = 5;
 const SOUNDCHECK_TARGET = 50;
 const MAX_FEATURE_DROPS = 100;
 const MAX_RETRIGGER_DROPS = 40;
-const BET_LEVELS = [50, 100, 200, 300, 500] as const;
 
 export class MeghsCosmicJam {
   private auto: AutoCount = null;
@@ -65,9 +65,9 @@ export class MeghsCosmicJam {
   private cascadeStreak = 0;
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
-  private betIndex = 1;
+  private readonly betModel = new SlotBetModel();
   private get betUnits(): number {
-    return BET_LEVELS[this.betIndex]!;
+    return this.betModel.wagerUnits;
   }
 
   public constructor(
@@ -85,7 +85,7 @@ export class MeghsCosmicJam {
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
         <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="invasion-ladder"><small>INVASION CHAIN</small>${Array.from({length:8},(_,i)=>`<i data-chain="${i+1}">${i+1}</i>`).join("")}<b data-chain-prize>4 CASCADES = ENCORE • 8 = 50 DROPS</b></div><div class="megh-ledger" aria-label="Game totals"><span><small>ACCOUNT</small><b data-megh-ledger-credit>$0.00</b></span><span><small>LAST WIN</small><b data-megh-ledger-win>$0.00</b></span><span><small>BONUS WIN</small><b data-megh-ledger-bonus>$0.00</b></span></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
         <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
-        <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div><div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
+        <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div>${denominationMarkup("megh")}<div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET • <i data-megh-credits></i> CR</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
         <div class="megh-auto-menu" data-megh-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
       </section><p class="megh-disclaimer">Fictional credits only • Shared casino wallet • Auto stops before feature play</p></main>`;
@@ -109,6 +109,8 @@ export class MeghsCosmicJam {
     this.root
       .querySelector("[data-megh-bet-up]")
       ?.addEventListener("click", () => this.changeBet(1));
+    this.root.querySelector("[data-megh-denom-down]")?.addEventListener("click", () => this.changeDenom(-1));
+    this.root.querySelector("[data-megh-denom-up]")?.addEventListener("click", () => this.changeDenom(1));
     this.root
       .querySelectorAll<HTMLElement>("[data-auto]")
       .forEach((button) =>
@@ -527,12 +529,13 @@ export class MeghsCosmicJam {
   }
   private changeBet(direction: number): void {
     if (this.spinning || this.freeDrops > 0) return;
-    this.betIndex = Math.max(
-      0,
-      Math.min(BET_LEVELS.length - 1, this.betIndex + direction),
-    );
+    this.betModel.changeCredits(direction);
     this.lastDisplayedWin = 0;
     this.update();
+  }
+  private changeDenom(direction: number): void {
+    if (this.spinning || this.freeDrops > 0) return;
+    this.betModel.changeDenomination(direction); this.lastDisplayedWin = 0; this.update();
   }
   private update(): void {
     const credit = this.root.querySelector<HTMLElement>("[data-megh-credit]");
@@ -546,6 +549,8 @@ export class MeghsCosmicJam {
     if (ledgerBonus) ledgerBonus.textContent = `$${(this.encoreWin / 100).toFixed(2)}`;
     this.root.querySelector<HTMLElement>("[data-megh-bet]")!.textContent =
       `$${(this.betUnits / 100).toFixed(2)}`;
+    this.root.querySelector<HTMLElement>("[data-megh-denom]")!.textContent = `${this.betModel.denominationUnits}¢`;
+    this.root.querySelector<HTMLElement>("[data-megh-credits]")!.textContent = String(this.betModel.credits);
     this.root.querySelector<HTMLElement>("[data-megh-multi]")!.textContent =
       `${this.multiplier}×`;
     this.root.querySelector<HTMLElement>("[data-megh-encore]")!.textContent =
@@ -562,7 +567,7 @@ export class MeghsCosmicJam {
       (this.freeDrops === 0 && this.getWallet() < this.betUnits);
     this.root
       .querySelectorAll<HTMLButtonElement>(
-        "[data-megh-bet-down],[data-megh-bet-up]",
+        "[data-megh-bet-down],[data-megh-bet-up],[data-megh-denom-down],[data-megh-denom-up]",
       )
       .forEach((button) => {
         button.disabled = this.spinning || this.freeDrops > 0;

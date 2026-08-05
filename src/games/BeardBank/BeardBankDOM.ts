@@ -5,8 +5,9 @@ import { beardBankConfig } from "./BeardBankConfig";
 import type { BeardBankProgress } from "../../state/PlayerProfileStore";
 import type { CasinoActivity } from "../../state/CasinoProgression";
 import { casinoRandom } from "../../engine/CasinoRandom";
+import { SlotBetModel, denominationMarkup } from "../SlotBetModel";
+import { generateLivingVaultOutcome } from "./LivingVaultMath";
 
-const BET_LEVELS = [25, 50, 75, 100, 150, 200, 300, 500, 1000] as const;
 const LABELS: Record<string, string> = {
   comb: "COMB", razor: "RAZOR", balm: "BALM", oil: "OIL", crown: "CROWN",
   "vault-crest": "VAULT CREST", "luxury-kit": "LUXURY KIT", vernon: "VERNON",
@@ -34,7 +35,7 @@ export class BeardBankDOM {
   private readonly reels = new ReelGenerator(new CryptoRandomSource());
   private readonly evaluator = new WaysEvaluator();
   private spinning = false;
-  private betIndex = 3;
+  private readonly betModel = new SlotBetModel();
   private auto: number | "infinite" | null = null;
   private charges: number;
   private coins: number;
@@ -59,13 +60,15 @@ export class BeardBankDOM {
         <div class="bb60-status" data-status>VAULT SECURED • READY</div>
         <div class="bb60-reels" data-reels></div>
         <div class="bb60-chase"><span>🪙 COIN HEIST</span><span>🚪 VERNON FREE SPINS</span><span>🔑 LIVING VAULT</span></div>
-        <footer><div><small>CREDIT</small><b data-credit></b></div><div class="bb60-bet"><button data-minus>−</button><span><small>BET</small><b data-bet></b></span><button data-plus>+</button></div><div><small>WIN</small><b data-win>$0.00</b></div><button data-auto>AUTO</button><button class="bb60-spin" data-spin>SPIN</button></footer>
+        <footer><div><small>CREDIT</small><b data-credit></b></div>${denominationMarkup("bb")}<div class="bb60-bet"><button data-minus>−</button><span><small>BET • <i data-credits></i> CR</small><b data-bet></b></span><button data-plus>+</button></div><div><small>WIN</small><b data-win>$0.00</b></div><button data-auto>AUTO</button><button class="bb60-spin" data-spin>SPIN</button></footer>
       </section></main>`;
     this.root.querySelector("[data-home]")?.addEventListener("click", () => { if (!this.spinning) this.onExit(); });
     this.root.querySelector("[data-rules]")?.addEventListener("click", () => this.rules());
     this.root.querySelector("[data-spin]")?.addEventListener("click", () => void this.spin());
     this.root.querySelector("[data-minus]")?.addEventListener("click", () => this.bet(-1));
     this.root.querySelector("[data-plus]")?.addEventListener("click", () => this.bet(1));
+    this.root.querySelector("[data-bb-denom-down]")?.addEventListener("click", () => this.denom(-1));
+    this.root.querySelector("[data-bb-denom-up]")?.addEventListener("click", () => this.denom(1));
     this.root.querySelector("[data-auto]")?.addEventListener("click", () => this.toggleAuto());
     this.render(this.reels.generate(beardBankConfig).matrix); this.update();
   }
@@ -77,14 +80,14 @@ export class BeardBankDOM {
 
   private async spin(): Promise<boolean> {
     if (this.spinning) return false;
-    const bet = BET_LEVELS[this.betIndex]!;
+    const bet = this.betModel.wagerUnits;
     if (this.getWallet() < bet) { this.say("VISIT THE ATM"); this.auto = null; return false; }
     this.spinning = true; this.win = 0; this.setWallet(this.getWallet() - bet); this.onActivity({ type: "spin", game: "beard-bank", wager: bet }); this.update();
     const result = this.reels.generate(beardBankConfig);
     const evaluation = this.evaluator.evaluate(result.matrix, beardBankConfig, bet);
     const reelHost = this.root.querySelector<HTMLElement>("[data-reels]")!;
     reelHost.classList.add("spinning"); this.say("VAULT WHEELS IN MOTION");
-    for (let i = 0; i < 6; i += 1) { this.render(this.reels.generate(beardBankConfig).matrix); await wait(90 + i * 25); }
+    for (let i = 0; i < 10; i += 1) { this.render(this.reels.generate(beardBankConfig).matrix); await wait(95 + i * 22); }
     this.render(result.matrix); reelHost.classList.remove("spinning"); reelHost.classList.add("landing"); await wait(420); reelHost.classList.remove("landing");
     const flat = result.matrix.flat(); const newCoins = flat.filter((s) => s === "beard-coin").length;
     const stackedDoors = result.matrix.some((reel) => reel.every((s) => s === "vault-door"));
@@ -109,7 +112,7 @@ export class BeardBankDOM {
 
     // Preserve the certified award distribution. The hold-and-respin board below
     // performs that already-decided award instead of introducing a second RNG payout.
-    const award = Math.round(bet * (12 + casinoRandom() * 38));
+    const award = generateLivingVaultOutcome(bet, casinoRandom).awardUnits;
     const overlay = document.createElement("div");
     overlay.className = "bb-vault-feature";
     overlay.innerHTML = `<div class="bb-vault-sky"><small>30 COINS CRACKED THE VAULT</small><h2>LIVING VAULT RESPINS</h2><p data-vault-message>LOCKED COINS RESET 3 RESPINS</p><div class="bb-vault-hud"><b data-vault-respins>● ● ●</b><strong data-vault-total>$0.00</strong></div><div class="bb-vault-board" data-vault-board></div></div>`;
@@ -170,11 +173,12 @@ export class BeardBankDOM {
     values[values.length - 1] = values[values.length - 1]! + award - values.reduce((total, value) => total + value, 0);
     return values;
   }
-  private async countAward(award:number,label:string):Promise<void>{ const start=this.win; for(let i=1;i<=18;i+=1){this.win=start+Math.round(award*i/18);this.update();await wait(35);} this.setWallet(this.getWallet()+award); this.onActivity({type:"win",game:"beard-bank",amount:award,value:award/BET_LEVELS[this.betIndex]!,wager:BET_LEVELS[this.betIndex]!}); this.say(label); await wait(900); }
+  private async countAward(award:number,label:string):Promise<void>{ const start=this.win; const bet=this.betModel.wagerUnits; const steps=award>=bet*50?55:award>=bet*10?35:22; for(let i=1;i<=steps;i+=1){this.win=start+Math.round(award*i/steps);this.update();await wait(40);} this.setWallet(this.getWallet()+award); this.onActivity({type:"win",game:"beard-bank",amount:award,value:award/bet,wager:bet}); this.say(label); await wait(award>=bet*20?1700:1000); }
   private toggleAuto():void { if(this.auto!==null){this.auto=null;this.say("AUTO STOPS AFTER THIS SPIN");return;} if(this.spinning)return;this.auto=25;void this.autoLoop(); }
   private async autoLoop():Promise<void>{ while(this.auto!==null && (this.auto==="infinite"||this.auto>0)){const feature=await this.spin();if(feature){this.auto=null;break;}if(typeof this.auto==="number")this.auto-=1;await wait(450);}this.update(); }
-  private bet(direction:number):void{if(this.spinning||this.auto!==null)return;this.betIndex=Math.max(0,Math.min(BET_LEVELS.length-1,this.betIndex+direction));this.update();}
+  private bet(direction:number):void{if(this.spinning||this.auto!==null)return;this.betModel.changeCredits(direction);this.update();}
+  private denom(direction:number):void{if(this.spinning||this.auto!==null)return;this.betModel.changeDenomination(direction);this.update();}
   private say(text:string):void{const node=this.root.querySelector<HTMLElement>("[data-status]");if(node)node.textContent=text;}
-  private update():void{const money=(n:number)=>`$${(n/100).toFixed(2)}`; const set=(q:string,v:string)=>{const n=this.root.querySelector<HTMLElement>(q);if(n)n.textContent=v;}; set("[data-credit]",money(this.getWallet()));set("[data-bet]",money(BET_LEVELS[this.betIndex]!));set("[data-win]",money(this.win));set("[data-pressure]",this.charges>=30?"VAULT READY":`${this.charges} OF 30 COINS`);set("[data-door] b",this.charges>=30?"CRACK IT":`${this.charges}/30`);const fill=this.root.querySelector<HTMLElement>("[data-fill]");if(fill)fill.style.width=`${this.charges/30*100}%`;const spin=this.root.querySelector<HTMLButtonElement>("[data-spin]");if(spin)spin.disabled=this.spinning;set("[data-auto]",this.auto===null?"AUTO":"STOP");}
+  private update():void{const money=(n:number)=>`$${(n/100).toFixed(2)}`; const set=(q:string,v:string)=>{const n=this.root.querySelector<HTMLElement>(q);if(n)n.textContent=v;}; set("[data-credit]",money(this.getWallet()));set("[data-bet]",money(this.betModel.wagerUnits));set("[data-credits]",String(this.betModel.credits));set("[data-bb-denom]",`${this.betModel.denominationUnits}¢`);set("[data-win]",money(this.win));set("[data-pressure]",this.charges>=30?"VAULT READY":`${this.charges} OF 30 COINS`);set("[data-door] b",this.charges>=30?"CRACK IT":`${this.charges}/30`);const fill=this.root.querySelector<HTMLElement>("[data-fill]");if(fill)fill.style.width=`${this.charges/30*100}%`;const spin=this.root.querySelector<HTMLButtonElement>("[data-spin]");if(spin)spin.disabled=this.spinning;set("[data-auto]",this.auto===null?"AUTO":"STOP");}
   private rules():void{const m=document.createElement("div");m.className="modal-backdrop";m.innerHTML=`<section class="progress-modal"><button class="close" data-close>×</button><small>BEARD BANK • 243 WAYS</small><h2>Break the Bank</h2><p>Matching symbols pay left to right on adjacent reels. Wild crests substitute. Three visible coins launch Vault Heist. A stacked reel of doors launches automatic Vernon Free Spins. Every collected coin charges the Living Vault; 30 opens the automatic hold-and-win finale.</p><button class="primary" data-close>BACK TO GAME</button></section>`;document.body.appendChild(m);m.querySelectorAll("[data-close]").forEach(n=>n.addEventListener("click",()=>m.remove()));}
 }

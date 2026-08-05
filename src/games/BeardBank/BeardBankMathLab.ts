@@ -2,6 +2,7 @@ import { ReelGenerator } from "../../engine/ReelGenerator";
 import type { RandomSource } from "../../engine/RandomSource";
 import { WaysEvaluator } from "../../engine/WaysEvaluator";
 import { beardBankConfig } from "./BeardBankConfig";
+import { generateLivingVaultOutcome } from "./LivingVaultMath";
 
 export interface BeardBankMathReport {
   readonly spins: number;
@@ -160,19 +161,5 @@ function simulateFreeSpins(wager: number, triggerDoors: number, random: RandomSo
 }
 
 function simulateLivingVault(wager: number, random: RandomSource): number {
-  let open = 15; let lives = 3; let total = 0; let first = true;
-  while (lives > 0 && open > 0) {
-    let hits = 0;
-    for (let index = 0; index < open; index += 1) {
-      if (random.nextInt(0, 9_999) < (first ? 1_200 : 400)) hits += 1;
-    }
-    for (let index = 0; index < hits; index += 1) {
-      const roll = random.nextInt(0, 9_999);
-      const multiple = roll < 0 ? 500 : roll < 1 ? 100 : roll < 11 ? 25 : roll < 61 ? 10 : roll < 8_061 ? 1 : roll < 9_561 ? 2 : roll < 9_937 ? 5 : 10;
-      total += wager * multiple;
-    }
-    open -= hits; first = false; lives = hits > 0 ? 3 : lives - 1;
-  }
-  if (open === 0) total += wager * 500;
-  return total;
+  return generateLivingVaultOutcome(wager, () => random.nextInt(0, 9_999) / 10_000).awardUnits;
 }

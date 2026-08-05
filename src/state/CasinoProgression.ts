@@ -31,6 +31,8 @@ export interface CasinoProgress {
   readonly dailyKey: string;
   readonly dailyStreak: number;
   readonly lastVisitKey: string;
+  readonly dailyRewardKey: string;
+  readonly dailyFreePlayUnits: number;
   readonly missions: readonly MissionProgress[];
 }
 
@@ -61,6 +63,8 @@ export const freshCasinoProgress = (): CasinoProgress => ({
   dailyKey: dayKey(),
   dailyStreak: 1,
   lastVisitKey: dayKey(),
+  dailyRewardKey: "",
+  dailyFreePlayUnits: 0,
   missions: missionSet(),
 });
 
@@ -87,6 +91,8 @@ export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): Casino
     dailyKey: today,
     dailyStreak: sameDay ? Math.max(1, Number(value?.dailyStreak ?? 1)) : value?.lastVisitKey === previousDayKey() ? Math.min(7, Number(value?.dailyStreak ?? 1) + 1) : 1,
     lastVisitKey: today,
+    dailyRewardKey: String(value?.dailyRewardKey ?? ""),
+    dailyFreePlayUnits: Math.max(0, Math.round(Number(value?.dailyFreePlayUnits ?? 0))),
     missions: sameDay && value?.missions?.length ? value.missions.map((m) => ({ ...m })) : missionSet(),
   };
 };
