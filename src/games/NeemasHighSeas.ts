@@ -4,6 +4,7 @@ import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
+import { FeatureDirector } from "../engine/FeatureDirector";
 
 interface SeaSymbol {
   readonly id: string;
@@ -112,6 +113,12 @@ export class NeemasHighSeas {
   private readonly betModel = new SlotBetModel();
   private route: VoyageRoute | null = null;
   private voyageStops = 0;
+  private forceFeature = false;
+  private readonly handleDeveloperAction = (event: Event): void => {
+    const detail = (event as CustomEvent<{ action?: string }>).detail;
+    if (detail?.action === "neema-feature") { this.forceFeature = true; this.message("QA ARMED • FROZEN HAPPY HOUR ON NEXT SPIN"); }
+    if (detail?.action === "neema-captain") void this.showCaptainMoment("CAPTAIN NEEMA SAYS CHEERS!");
+  };
   private departureMiles = this.readProgress("neema-departure", 0);
   private get betUnits(): number {
     return this.betModel.wagerUnits;
@@ -126,10 +133,11 @@ export class NeemasHighSeas {
   ) {}
 
   public open(): void {
+    window.addEventListener("casino:dev", this.handleDeveloperAction as EventListener);
     this.root.innerHTML = `<main class="neema-room">
       <button class="back" data-neema-home>← CASINO LOBBY</button><div class="table-wallet">WALLET <b data-neema-wallet></b></div>
       <header><small>BEARD LAWS CASINO PRESENTS • PREMIER FEATURE SLOT</small><h1>NEEMA'S HIGH SEAS HAPPY HOUR</h1><p>Cruise luxury, football Sundays, comfort food, and absolutely no sensible last call.</p><button class="game-rules" data-neema-rules>RULES &amp; PAYTABLE</button></header>
-      <section class="neema-machine"><div class="ocean-lights"></div><div class="neema-marquee"><span>FROZEN CASH RESPINS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS LAUNCH FROZEN HAPPY HOUR + THE VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
+      <section class="neema-machine"><div class="neema-ocean-atmosphere"><i></i><i></i><i></i><span class="neema-moon"></span><span class="neema-ship-silhouette"></span></div><div class="ocean-lights"></div><div class="neema-marquee"><span>FROZEN CASH RESPINS</span><strong>CAPTAIN NEEMA'S PREMIER VOYAGE</strong><span>LAST CALL FINALE</span></div><div class="departure-meter"><span><b data-departure-label>DEPARTURE 0 / ${DEPARTURE_TARGET}</b><small>3 TICKETS LAUNCH FROZEN HAPPY HOUR + THE VOYAGE</small></span><i><em data-departure-fill></em></i></div><div class="voyage-map"><i data-port="0">SAIL AWAY</i><i data-port="1">PARTY COVE</i><i data-port="2">GOLDEN PORT</i><i data-port="3">MYSTERY ISLE</i><i data-port="4">LAST CALL</i></div><div class="cabin-track">${CABINS.map((name, i) => `<span data-cabin="${i}">${name}</span>`).join("")}</div>
         <div class="neema-message" data-neema-message>WELCOME ABOARD</div><div class="happy-hour-forecast" data-happy-forecast><small>HAPPY HOUR FORECAST</small><b>CALM SEAS</b></div><div class="slot-win-callout neema-win-callout" data-neema-callout hidden></div><div class="feature-readout" data-neema-feature hidden><b data-neema-freespins></b><span data-neema-multiplier></span></div><div class="neema-reels" data-neema-reels></div>
         <div class="neema-feature-bar"><span>6+ DRINKS HOLD &amp; RESPIN</span><span>FILL 20 FOR GRAND</span><span>CHOCOLATE MILK EVERY MORNING</span></div>
         <div class="neema-controls"><div><small>CREDIT</small><b data-neema-credit></b></div>${denominationMarkup("neema")}<div class="bet-selector"><button data-neema-bet-down aria-label="Decrease bet">−</button><span><small>BET • <i data-neema-credits></i> CR</small><b data-neema-bet>$1.00</b></span><button data-neema-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-neema-win>$0.00</b></div>
@@ -139,7 +147,10 @@ export class NeemasHighSeas {
     </main>`;
     this.root
       .querySelector("[data-neema-home]")
-      ?.addEventListener("click", () => this.onExit());
+      ?.addEventListener("click", () => {
+        window.removeEventListener("casino:dev", this.handleDeveloperAction as EventListener);
+        this.onExit();
+      });
     this.root
       .querySelector("[data-neema-rules]")
       ?.addEventListener("click", () => this.showRules());
@@ -276,7 +287,12 @@ export class NeemasHighSeas {
     const forecast = this.root.querySelector<HTMLElement>("[data-happy-forecast]")!;
     forecast.querySelector("b")!.textContent = event;
     forecast.classList.toggle("active", event !== "CALM SEAS");
-    const grid = this.applyHappyHourEvent(this.makeGrid(), event);
+    let grid = this.applyHappyHourEvent(this.makeGrid(), event);
+    if (this.forceFeature) {
+      const ticket = SYMBOLS.find((symbol) => symbol.id === "ticket")!;
+      grid = grid.map((reel, index) => index < 3 ? reel.map((symbol, row) => row === 1 ? ticket : symbol) : reel);
+      this.forceFeature = false;
+    }
     const earlyTickets = grid.slice(0, 4).flat().filter((s) => s.id === "ticket").length;
     if (earlyTickets >= 2) {
       this.message("TWO TICKETS • WATCH THE FINAL REEL");
@@ -335,7 +351,10 @@ export class NeemasHighSeas {
         this.departureMiles = 0;
         this.writeProgress("neema-departure", 0);
       }
-      if (!retrigger) this.route = await this.chooseVoyageRoute();
+      if (!retrigger) {
+        await this.showCaptainMoment(guaranteedDeparture ? "YOUR CAPTAIN'S INVITATION HAS ARRIVED" : "ALL ABOARD FOR FROZEN HAPPY HOUR");
+        this.route = await this.chooseVoyageRoute();
+      }
       if (!retrigger) {
         let happyHourAward = 0;
         try {
@@ -410,6 +429,28 @@ export class NeemasHighSeas {
     }
     return tickets >= 3 || guaranteedDeparture;
   }
+
+  private async showCaptainMoment(message: string): Promise<void> {
+    const machine = this.root.querySelector<HTMLElement>(".neema-machine");
+    if (!machine) return;
+    const director = new FeatureDirector(machine);
+    const rect = machine.getBoundingClientRect();
+    const actor = director.characters.create(
+      "captain-neema-actor",
+      `<div class="captain-neema-card"><img src="${art("captain-neema-v2")}" alt="Captain Neema"><span>🥛</span><b>${message}</b></div>`,
+    );
+    const from = new DOMPoint(rect.width + 180, Math.max(80, rect.height * .18));
+    const to = new DOMPoint(Math.max(18, rect.width - 310), Math.max(70, rect.height * .16));
+    director.characters.position(actor, from.x, from.y);
+    director.pulse("rose", 650);
+    await director.characters.move(actor, from, to, { duration: 760, easing: "cubic-bezier(.16,.85,.28,1)" });
+    actor.classList.add("is-toasting");
+    await this.wait(1350);
+    actor.classList.remove("is-toasting");
+    await director.characters.move(actor, to, new DOMPoint(rect.width + 200, to.y - 40), { duration: 620, easing: "cubic-bezier(.35,.05,.8,.25)" });
+    actor.remove();
+  }
+
   private dealHappyHourEvent(): string {
     if (!this.happyHourDeck.length) {
       this.happyHourDeck = ["DOUBLE POUR", "GOLDEN SUNSET", "CAPTAIN'S PICK", "PARTY COVE RUSH", "CALM SEAS", "CALM SEAS", "CALM SEAS"];

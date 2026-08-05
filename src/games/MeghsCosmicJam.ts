@@ -65,6 +65,14 @@ export class MeghsCosmicJam {
   private lastSurge = "SYSTEMS NOMINAL";
   private surgeDeck: CosmicEvent[] = [];
   private cascadeStreak = 0;
+  private forcedSurge: CosmicEvent | null = null;
+  private forceEncore = false;
+  private readonly handleDeveloperAction = (event: Event): void => {
+    const detail = (event as CustomEvent<{ action?: string }>).detail;
+    if (detail?.action === "megh-goat") { this.forcedSurge = "GOAT STAMPEDE"; this.message("QA ARMED • GOAT STAMPEDE ON NEXT DROP"); }
+    if (detail?.action === "megh-ufo") { this.forcedSurge = "UFO SCAN"; this.message("QA ARMED • UFO SCAN ON NEXT DROP"); }
+    if (detail?.action === "megh-encore") { this.forceEncore = true; this.message("QA ARMED • ENCORE ON NEXT DROP"); }
+  };
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
   private readonly betModel = new SlotBetModel();
@@ -81,6 +89,7 @@ export class MeghsCosmicJam {
   ) {}
 
   public open(): void {
+    window.addEventListener("casino:dev", this.handleDeveloperAction as EventListener);
     this.root.innerHTML = `<main class="megh-room"><button class="back" data-megh-home>← CASINO LOBBY</button>
       <header><small>BEARD LAWS CASINO • CASCADE FEATURE SLOT</small><h1>MEGH'S COSMIC JAM</h1><p>Space goats came for the strawberries. They stayed to melt faces.</p><button class="game-rules cosmic-rules-button" data-megh-rules>RULES &amp; PAYTABLE</button></header>
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
@@ -93,7 +102,10 @@ export class MeghsCosmicJam {
       </section><p class="megh-disclaimer">Fictional credits only • Shared casino wallet • Auto stops before feature play</p></main>`;
     this.root
       .querySelector("[data-megh-home]")
-      ?.addEventListener("click", () => this.onExit());
+      ?.addEventListener("click", () => {
+        window.removeEventListener("casino:dev", this.handleDeveloperAction as EventListener);
+        this.onExit();
+      });
     this.root
       .querySelector("[data-megh-rules]")
       ?.addEventListener("click", () => this.showRules());
@@ -225,6 +237,61 @@ export class MeghsCosmicJam {
     }
     return next;
   }
+
+  private async animateCascadeGravity(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], removed: Set<string>): Promise<void> {
+    const removedNodes = [...removed]
+      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
+      .filter((node): node is HTMLElement => Boolean(node));
+    await Promise.all(removedNodes.map((node, index) => node.animate(
+      [
+        { transform: "scale(1)", opacity: 1, filter: "brightness(1)" },
+        { transform: "scale(.82) rotate(-3deg)", opacity: .72, filter: "brightness(1.7)" },
+        { transform: "scale(.04) translateY(-24px)", opacity: 0, filter: "brightness(2.2) blur(4px)" },
+      ],
+      { duration: 420, delay: index * 34, easing: "cubic-bezier(.3,.05,.6,1)", fill: "forwards" },
+    ).finished.catch(() => undefined)));
+
+    const origins = new Map<JamSymbol, number[]>();
+    for (let x = 0; x < COLS; x += 1) {
+      for (let y = 0; y < ROWS; y += 1) {
+        if (removed.has(`${x}:${y}`)) continue;
+        const symbol = before[y]![x]!;
+        const key = symbol as JamSymbol;
+        const packed = origins.get(key) ?? [];
+        packed.push(y);
+        origins.set(key, packed);
+      }
+    }
+
+    this.render(after);
+    const animations: Promise<unknown>[] = [];
+    for (let x = 0; x < COLS; x += 1) {
+      const used = new Map<JamSymbol, number>();
+      for (let y = 0; y < ROWS; y += 1) {
+        const symbol = after[y]![x]!;
+        const occurrence = used.get(symbol) ?? 0;
+        used.set(symbol, occurrence + 1);
+        const possibleOrigins = origins.get(symbol) ?? [];
+        const originalY = possibleOrigins[occurrence];
+        const isNew = originalY === undefined || originalY > y;
+        const distance = isNew ? y + 2 : Math.max(1, y - originalY);
+        const node = host.querySelector<HTMLElement>(`[data-cell="${x}:${y}"]`);
+        if (!node) continue;
+        node.classList.add(isNew ? "cascade-new-symbol" : "cascade-falling-symbol");
+        animations.push(node.animate(
+          [
+            { transform: `translate3d(0,${-distance * 112}%,0)`, opacity: isNew ? 0 : .72, filter: "blur(3px) brightness(1.35)" },
+            { transform: "translate3d(0,9%,0)", opacity: 1, filter: "blur(0) brightness(1.08)", offset: .82 },
+            { transform: "translate3d(0,0,0)", opacity: 1, filter: "none" },
+          ],
+          { duration: 680 + y * 48, delay: x * 28, easing: "cubic-bezier(.16,.82,.22,1)", fill: "both" },
+        ).finished.catch(() => undefined));
+      }
+    }
+    await Promise.all(animations);
+    await this.wait(110);
+  }
+
   private async spin(): Promise<boolean> {
     if (this.spinning) return false;
     const free = this.freeDrops > 0;
@@ -280,20 +347,19 @@ export class MeghsCosmicJam {
       await this.wait(680);
       host.classList.add("beaming");
       await this.wait(480);
-      grid = this.tumble(grid, removed);
+      const nextGrid = this.tumble(grid, removed);
+      await this.animateCascadeGravity(host, grid, nextGrid, removed);
+      grid = nextGrid;
       this.multiplier += 1;
-      this.render(grid);
       host.classList.remove("beaming");
-      host.classList.add("tumbling", "v66-tumble");
-      await this.wait(850);
-      host.classList.remove("tumbling", "v66-tumble");
     }
     const ufos = grid.flat().filter((s) => s.id === "ufo").length;
     if (!free) {
       this.soundcheck = Math.min(SOUNDCHECK_TARGET, this.soundcheck + 1 + ufos);
       this.writeProgress("megh-soundcheck", this.soundcheck);
     }
-    const guaranteedEncore = !free && this.soundcheck >= SOUNDCHECK_TARGET;
+    const guaranteedEncore = !free && (this.soundcheck >= SOUNDCHECK_TARGET || this.forceEncore);
+    if (this.forceEncore) this.forceEncore = false;
     const headliner = !free && this.soundboard.size >= 5;
     if (ufos >= 3 || (!free && this.encore >= 4) || (!free && this.soundboard.size >= 3) || guaranteedEncore) {
       feature = true;
@@ -447,6 +513,11 @@ export class MeghsCosmicJam {
     return finalGrid;
   }
   private dealCosmicEvent(): CosmicEvent {
+    if (this.forcedSurge) {
+      const forced = this.forcedSurge;
+      this.forcedSurge = null;
+      return forced;
+    }
     if (!this.surgeDeck.length) {
       this.surgeDeck = ["UFO SCAN", "AMPLIFIER OVERLOAD", "MYSTERY SIGNAL", "STAGGERED REEL RUSH", "GOAT STAMPEDE", "COSMIC COLLISION", "COSMIC WEATHER CLEAR"];
       for (let i = this.surgeDeck.length - 1; i > 0; i -= 1) {

@@ -79,7 +79,15 @@ export class Application {
       )
       .join(
         "",
-      )}</div><small>ROULETTE • FORCE NEXT RESULT</small><div class="dev-result"><select data-dev-result><option>0</option><option>00</option>${Array.from({ length: 36 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select><button data-dev-action="roulette-result">ARM RESULT</button></div><p>Only active in the matching game. Normal wagers and payouts still apply.</p></section>`;
+      )}</div><small>FEATURE SLOTS</small><div class="dev-grid">${[
+      ["barber-bonus", "Barber Bonus"],
+      ["barber-attack", "Barber Attack"],
+      ["megh-goat", "Goat Stampede"],
+      ["megh-ufo", "UFO Scan"],
+      ["megh-encore", "Megh Encore"],
+      ["neema-feature", "Frozen Happy Hour"],
+      ["neema-captain", "Captain Moment"],
+    ].map(([action, label]) => `<button data-dev-action="${action}">${label}</button>`).join("")}</div><small>ROULETTE • FORCE NEXT RESULT</small><div class="dev-result"><select data-dev-result><option>0</option><option>00</option>${Array.from({ length: 36 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select><button data-dev-action="roulette-result">ARM RESULT</button></div><p>Only active in the matching game. Normal wagers and payouts still apply.</p></section>`;
     document.body.appendChild(host);
     const panel = host.querySelector<HTMLElement>("[data-dev-panel]")!;
     const toggle = (): void => {

@@ -25,6 +25,7 @@ import "./v71-casino-systems.css";
 import "./v72a-engine-foundation.css";
 import "./v72b-big-bad-barber.css";
 import "./v72c-megh-showcase.css";
+import "./v72d-neema-showcase.css";
 import "./big-bad-barber.css";
 import { Application } from "./app/Application";
 

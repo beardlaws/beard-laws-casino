@@ -1,0 +1,6 @@
+BEARD LAWS CASINO V72D
+
+1. Run VERIFY-V72D.ps1
+2. Run PUBLISH-V72D.ps1
+3. Open the casino and click QA (or press Ctrl+Shift+D)
+4. Force Neema, Megh, and Barber features for visual testing.

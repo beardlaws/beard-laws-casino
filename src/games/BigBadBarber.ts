@@ -32,10 +32,19 @@ export class BigBadBarber {
   private lastWin=0;
   private fortressLevels=[0,0,0,0,0];
   private currentGrid:BarberSymbol[][]=[];
+  private readonly handleDeveloperAction=(event:Event):void=>{
+    const action=(event as CustomEvent<{action?:string}>).detail?.action;
+    if(action==="barber-bonus"&&!this.spinning)void this.startShaveDown();
+    if(action==="barber-attack"&&!this.spinning){
+      if(!this.fortressLevels.some(level=>level>0)){this.fortressLevels=[2,1,3,2,1];this.updateFortresses();}
+      void this.barberAttack(false);
+    }
+  };
   public constructor(private readonly root:HTMLElement,private readonly getWallet:()=>number,private readonly setWallet:(units:number)=>void,private readonly onExit:()=>void,private readonly onActivity:(activity:CasinoActivity)=>void=()=>{}){}
   private get betUnits():number{return this.betModel.wagerUnits;}
 
   public open():void{
+    window.addEventListener("casino:dev",this.handleDeveloperAction as EventListener);
     this.root.innerHTML=`<main class="barber-room"><button class="back" data-barber-home>← CASINO LOBBY</button><section class="barber-machine">
       <div class="barber-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
       <header><small>BEARD LAWS CASINO • PERSISTENT FEATURE SLOT</small><h1>THE BIG BAD BARBER</h1><p>Build legendary beard fortresses. Pray the clippers jam.</p><button class="game-rules" data-barber-rules>RULES &amp; PAYTABLE</button></header>
@@ -51,7 +60,7 @@ export class BigBadBarber {
   }
 
   private bind():void{
-    this.root.querySelector("[data-barber-home]")?.addEventListener("click",()=>{this.stopAuto();this.onExit();});
+    this.root.querySelector("[data-barber-home]")?.addEventListener("click",()=>{this.stopAuto();window.removeEventListener("casino:dev",this.handleDeveloperAction as EventListener);this.onExit();});
     this.root.querySelector("[data-barber-spin]")?.addEventListener("click",()=>{if(this.autoRemaining||this.autoInfinite)this.stopAuto();else void this.spin();});
     this.root.querySelector("[data-barber-auto]")?.addEventListener("click",()=>this.toggleAutoMenu());
     this.root.querySelectorAll<HTMLElement>("[data-auto-count]").forEach(n=>n.addEventListener("click",()=>this.startAuto(Number(n.dataset.autoCount))));
