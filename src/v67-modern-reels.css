@@ -1,0 +1,70 @@
+/* V67 modern reel foundation. This intentionally neutralizes legacy spin
+   animations so only the stable reel track moves. */
+.dom-reel-stage.spinning .sea-symbol,
+.dom-reel-stage.spinning .bb60-symbol,
+.dom-reel-stage.spinning .jam-symbol,
+.dom-reel-stage.dom-reels-spinning .sea-symbol,
+.dom-reel-stage.dom-reels-spinning .bb60-symbol,
+.dom-reel-stage.dom-reels-spinning .jam-symbol{
+  animation:none!important;
+  filter:none!important;
+  opacity:1!important;
+  transform:none!important;
+}
+.dom-reel-stage[data-stopped] .sea-symbol,
+.dom-reel-stage[data-stopped] .bb60-symbol,
+.dom-reel-stage[data-stopped] .jam-symbol{animation:none!important;filter:none!important;transform:none!important}
+.dom-reel-stage{contain:layout paint style;isolation:isolate}
+.dom-reel-window{border-radius:10px;transform:translateZ(0);backface-visibility:hidden;perspective:1000px}
+.dom-reel-motion{position:absolute;inset:0;transform:translateZ(0);will-change:transform}
+.dom-reel-track{transform:translate3d(0,0,0);will-change:transform;backface-visibility:hidden;perspective:1000px}
+.dom-reel-window::before,.dom-reel-window::after{content:"";position:absolute;z-index:5;left:0;right:0;height:16%;pointer-events:none;opacity:.9}
+.dom-reel-window::before{top:0;background:linear-gradient(#02030ceb,transparent)}
+.dom-reel-window::after{bottom:0;background:linear-gradient(transparent,#02030ceb)}
+.dom-reel-window.dom-reel-at-speed::after{box-shadow:inset 0 -6px 12px #04020ba8}
+.dom-reel-window.dom-reel-stopped{animation:none!important;box-shadow:inset 0 0 18px #000,0 0 10px #ffe17b3d}
+.dom-reels-landed{animation:none!important}
+
+/* Chocolate milk: the art carries the idea. No microscopic duplicate label. */
+.sea-symbol.s-chocolate-milk{padding:3px!important}
+.sea-symbol.s-chocolate-milk img{width:100%!important;height:100%!important;max-height:112px;object-fit:contain;transform:scale(1.08);filter:drop-shadow(0 8px 10px #000a)}
+.sea-symbol.s-chocolate-milk>span,.sea-symbol.s-chocolate-milk>small{display:none!important}
+
+/* Frozen Happy Hour rebuilt as a premium feature cabinet instead of a loose
+   empty rectangle. */
+.frozen-happy-hour{display:flex!important;align-items:center;justify-content:center;padding:22px!important;background:radial-gradient(circle at 50% 15%,#2aa9d65c,#071c35f7 48%,#020914fc 100%)!important}
+.frozen-shell{position:relative;width:min(980px,96vw);padding:22px 24px 24px;border:3px solid #a9efff;border-radius:28px;background:linear-gradient(180deg,#103d5df5,#071a31f8 42%,#051429);box-shadow:0 30px 90px #000,0 0 45px #6be5ff66,inset 0 0 45px #28bfff1f;overflow:hidden}
+.frozen-shell::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 35%,#d9fbff18 48%,transparent 58%);animation:frozenSheen 4.5s linear infinite}
+.frozen-topline{position:relative;display:flex;justify-content:space-between;align-items:center;color:#ffd477;font-weight:900;letter-spacing:.18em}
+.frozen-topline b{font-size:11px;color:#a9efff}
+.frozen-happy-hour h2{position:relative;margin:5px 0 4px!important;font-size:clamp(48px,8vw,92px)!important;color:#eafcff!important;text-shadow:0 0 24px #79e7ff,0 7px #164a69!important}
+.frozen-happy-hour p{position:relative;margin:4px 0 12px!important;color:#ffe7a7;font-size:17px!important}
+.frozen-hud{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.frozen-hud>div{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid #7ddcf5;border-radius:13px;background:#06182bcc;box-shadow:inset 0 0 20px #0abff018}
+.frozen-hud small{color:#83dff6!important;letter-spacing:.15em!important}
+.frozen-hud b{font-size:21px;color:#fff1aa}
+.frozen-total b{font-size:28px;color:#7dffda}
+.frozen-board-frame{position:relative;padding:11px;border:3px solid #a9efff;border-radius:20px;background:#031326;box-shadow:inset 0 0 35px #000,0 0 26px #68ddff3d}
+.frozen-board{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(4,minmax(86px,1fr));gap:7px;width:100%;min-height:390px}
+.frozen-drink,.frozen-empty{position:relative;min-width:0;overflow:hidden;border:1px solid #79dff8;border-radius:13px;background:radial-gradient(circle at 50% 25%,#176181,#08233b 68%);box-shadow:inset 0 0 18px #0008,0 0 12px #38d3ff20}
+.frozen-drink{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:5px}
+.frozen-drink i{font-size:34px;font-style:normal;filter:drop-shadow(0 5px 5px #0008)}
+.frozen-drink b{font-size:16px;color:#fff3a8}
+.frozen-drink small{font-size:8px!important;color:#9beaff!important;letter-spacing:.1em!important}
+.frozen-empty{display:block;color:transparent}
+.frozen-cell-strip{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;transform:translate3d(0,-500%,0)}
+.frozen-cell-strip i{display:grid;place-items:center;width:100%;height:100%;min-height:100%;font-style:normal;font-size:34px;filter:blur(1.5px);opacity:.78}
+.frozen-board.respinning .frozen-empty{box-shadow:inset 0 0 22px #000,0 0 18px #6be7ff88}
+.frozen-board.respinning .frozen-cell-strip{animation:frozenCellSpin 1.12s cubic-bezier(.16,.72,.18,1) both;animation-delay:calc(var(--cell,0) * 12ms)}
+.frozen-empty[data-cell="0"]{--cell:0}.frozen-empty[data-cell="1"]{--cell:1}.frozen-empty[data-cell="2"]{--cell:2}.frozen-empty[data-cell="3"]{--cell:3}.frozen-empty[data-cell="4"]{--cell:4}
+.frozen-empty[data-cell="5"]{--cell:5}.frozen-empty[data-cell="6"]{--cell:6}.frozen-empty[data-cell="7"]{--cell:7}.frozen-empty[data-cell="8"]{--cell:8}.frozen-empty[data-cell="9"]{--cell:9}
+.frozen-empty[data-cell="10"]{--cell:10}.frozen-empty[data-cell="11"]{--cell:11}.frozen-empty[data-cell="12"]{--cell:12}.frozen-empty[data-cell="13"]{--cell:13}.frozen-empty[data-cell="14"]{--cell:14}
+.frozen-empty[data-cell="15"]{--cell:15}.frozen-empty[data-cell="16"]{--cell:16}.frozen-empty[data-cell="17"]{--cell:17}.frozen-empty[data-cell="18"]{--cell:18}.frozen-empty[data-cell="19"]{--cell:19}
+.frozen-drink.just-locked{animation:frozenLock .48s cubic-bezier(.2,1.45,.35,1);border-color:#fff2a1;box-shadow:inset 0 0 24px #a8f5ff66,0 0 24px #fff19a}
+.frozen-go{position:relative;margin-top:14px!important;min-width:260px;padding:14px 24px!important;border:2px solid #fff0a1!important;border-radius:13px!important;background:linear-gradient(#ffe38c,#d49125)!important;color:#291304!important;font-size:15px!important;font-weight:1000!important;letter-spacing:.08em;box-shadow:0 7px 0 #6f4214,0 0 20px #ffdc6970}
+.frozen-go:disabled{filter:saturate(.5);opacity:.78}
+@keyframes frozenCellSpin{0%{transform:translate3d(0,0,0)}78%{transform:translate3d(0,-470%,0)}92%{transform:translate3d(0,-505%,0)}100%{transform:translate3d(0,-500%,0)}}
+@keyframes frozenLock{0%{transform:scale(.78);filter:brightness(2)}65%{transform:scale(1.08)}100%{transform:none}}
+@keyframes frozenSheen{to{background-position:1100px 0}}
+
+@media(max-width:700px){.frozen-shell{padding:14px 10px}.frozen-board{min-height:330px;gap:4px}.frozen-drink i,.frozen-cell-strip i{font-size:25px}.frozen-drink b{font-size:12px}.frozen-hud{grid-template-columns:1fr}.frozen-topline b{display:none}}

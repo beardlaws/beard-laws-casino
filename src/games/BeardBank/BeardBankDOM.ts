@@ -94,9 +94,9 @@ export class BeardBankDOM {
       finalColumns: result.matrix,
       rows: 3,
       randomSymbol: () => this.reels.generate(beardBankConfig).matrix[0]![0]!,
-      duration: 1750,
-      stagger: 195,
-      fillerRows: 14,
+      duration: 2050,
+      stagger: 215,
+      fillerRows: 19,
       renderSymbol: (id, reel) => `<div class="bb60-symbol s-${id}" style="--reel:${reel}"><img src="${asset(id)}" alt="${LABELS[id]}"><small>${LABELS[id]}</small></div>`,
     });
     this.render(result.matrix);
@@ -114,7 +114,7 @@ export class BeardBankDOM {
 
   private async collectCoins(count: number): Promise<void> { this.coins += count; this.charges = Math.min(30, this.charges + count); this.onActivity({ type: "coin", game: "beard-bank", value: count }); this.root.querySelector("[data-door]")?.classList.add("charging"); this.say(`COLLECTING ${count} VAULT COIN${count === 1 ? "" : "S"}`); for (let i=0;i<count;i+=1){ await wait(300); this.update(); } this.root.querySelector("[data-door]")?.classList.remove("charging"); }
   private async vaultHeist(bet: number, coins: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.root.querySelector(".bb60-machine")?.classList.add("feature-mode"); this.say("VAULT HEIST • LOCKS ENGAGED"); await wait(1200); const award = Math.round(bet * (3 + coins * 1.5 + casinoRandom() * 8)); await this.countAward(award, "HEIST COMPLETE"); this.root.querySelector(".bb60-machine")?.classList.remove("feature-mode"); }
-  private async vernonSpins(bet: number, spins: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.say(`VERNON FREE SPINS • ${spins} AWARDED`); await wait(1000); let total=0; for(let n=1;n<=spins;n+=1){ const r=this.reels.generate(beardBankConfig); const e=this.evaluator.evaluate(r.matrix,beardBankConfig,bet); this.say(`FREE SPIN ${n} OF ${spins} • 2×`); const host=this.root.querySelector<HTMLElement>("[data-reels]")!; await animateDomReels({host,finalColumns:r.matrix,rows:3,randomSymbol:()=>this.reels.generate(beardBankConfig).matrix[0]![0]!,duration:1250,stagger:135,fillerRows:10,renderSymbol:(id,reel)=>`<div class="bb60-symbol s-${id}" style="--reel:${reel}"><img src="${asset(id)}" alt="${LABELS[id]}"><small>${LABELS[id]}</small></div>`}); this.render(r.matrix); total += e.awardUnits*2; await wait(500); } await this.countAward(total,"VERNON FEATURE COMPLETE"); }
+  private async vernonSpins(bet: number, spins: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.say(`VERNON FREE SPINS • ${spins} AWARDED`); await wait(1000); let total=0; for(let n=1;n<=spins;n+=1){ const r=this.reels.generate(beardBankConfig); const e=this.evaluator.evaluate(r.matrix,beardBankConfig,bet); this.say(`FREE SPIN ${n} OF ${spins} • 2×`); const host=this.root.querySelector<HTMLElement>("[data-reels]")!; await animateDomReels({host,finalColumns:r.matrix,rows:3,randomSymbol:()=>this.reels.generate(beardBankConfig).matrix[0]![0]!,duration:1650,stagger:165,fillerRows:15,renderSymbol:(id,reel)=>`<div class="bb60-symbol s-${id}" style="--reel:${reel}"><img src="${asset(id)}" alt="${LABELS[id]}"><small>${LABELS[id]}</small></div>`}); this.render(r.matrix); total += e.awardUnits*2; await wait(500); } await this.countAward(total,"VERNON FEATURE COMPLETE"); }
   private async livingVault(bet: number): Promise<void> {
     this.onActivity({ type: "bonus", game: "beard-bank" });
     this.root.querySelector("[data-door]")?.classList.add("open");

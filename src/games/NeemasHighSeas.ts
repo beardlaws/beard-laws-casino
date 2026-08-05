@@ -212,7 +212,7 @@ export class NeemasHighSeas {
       .flatMap((reel, reelIndex) =>
         reel.map(
           (symbol, row) =>
-            `<div class="sea-symbol s-${symbol.id}${winners.has(`${reelIndex}:${row}`) ? " winner" : ""}" data-reel="${reelIndex + 1}" style="grid-column:${reelIndex + 1};grid-row:${row + 1};--reel:${reelIndex}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')"><small>${symbol.label}</small></div>`,
+            `<div class="sea-symbol s-${symbol.id}${winners.has(`${reelIndex}:${row}`) ? " winner" : ""}" data-reel="${reelIndex + 1}" style="grid-column:${reelIndex + 1};grid-row:${row + 1};--reel:${reelIndex}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')">${symbol.id === "chocolate-milk" ? "" : `<small>${symbol.label}</small>`}</div>`,
         ),
       )
       .join("");
@@ -288,11 +288,11 @@ export class NeemasHighSeas {
       finalColumns: grid,
       rows: ROWS,
       randomSymbol: () => this.pick(),
-      duration: free ? 1500 : 1650,
-      stagger: 185,
-      fillerRows: 13,
+      duration: free ? 1800 : 1950,
+      stagger: 205,
+      fillerRows: 18,
       anticipationReel: earlyTickets >= 2 ? 4 : -1,
-      renderSymbol: (symbol, reel) => `<div class="sea-symbol s-${symbol.id}" data-reel="${reel + 1}" style="--reel:${reel}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false"><small>${symbol.label}</small></div>`,
+      renderSymbol: (symbol, reel) => `<div class="sea-symbol s-${symbol.id}" data-reel="${reel + 1}" style="--reel:${reel}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false">${symbol.id === "chocolate-milk" ? "" : `<small>${symbol.label}</small>`}</div>`,
     });
     this.renderGrid(grid);
     reels.classList.remove("ticket-anticipation");
@@ -556,7 +556,7 @@ export class NeemasHighSeas {
     }
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic frozen-happy-hour";
-    overlay.innerHTML = `<small>NEEMA'S HIGH SEAS</small><h2>FROZEN HAPPY HOUR</h2><p data-frozen-status>LOCK THE DRINKS • NEW DRINKS RESET 3 RESPINS</p><div class="frozen-hud"><b data-frozen-respins>RESPINS ● ● ●</b><b data-frozen-win>$0.00</b></div><div class="frozen-board" data-frozen-board></div><button class="frozen-go" data-frozen-go disabled>HAPPY HOUR RUNNING</button>`;
+    overlay.innerHTML = `<div class="frozen-shell"><div class="frozen-topline"><small>NEEMA'S HIGH SEAS</small><b>PREMIER HOLD &amp; RESPIN</b></div><h2>FROZEN HAPPY HOUR</h2><p data-frozen-status>LOCK THE DRINKS • NEW DRINKS RESET 3 RESPINS</p><div class="frozen-hud"><div><small>RESPINS</small><b data-frozen-respins>● ● ●</b></div><div class="frozen-total"><small>HAPPY HOUR WIN</small><b data-frozen-win>$0.00</b></div></div><div class="frozen-board-frame"><div class="frozen-board" data-frozen-board></div></div><button class="frozen-go" data-frozen-go disabled>HAPPY HOUR RUNNING</button></div>`;
     this.root.appendChild(overlay);
     const host = overlay.querySelector<HTMLElement>("[data-frozen-board]")!;
     const status = overlay.querySelector<HTMLElement>("[data-frozen-status]")!;
@@ -564,7 +564,7 @@ export class NeemasHighSeas {
     const winNode = overlay.querySelector<HTMLElement>("[data-frozen-win]")!;
     const go = overlay.querySelector<HTMLButtonElement>("[data-frozen-go]")!;
     const render = (): void => {
-      host.innerHTML = board.map((drink, index) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty" data-cell="${index}">+</div>`).join("");
+      host.innerHTML = board.map((drink, index) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty" data-cell="${index}"><div class="frozen-cell-strip"><i>🍹</i><i>🧊</i><i>⚓</i><i>🔔</i><i>🍾</i><i>🍹</i></div></div>`).join("");
       const visibleRespins = Math.max(0, Math.min(4, Math.floor(respins)));
       respinNode.textContent = `RESPINS ${"● ".repeat(visibleRespins)}${"○ ".repeat(Math.max(0, 3 - visibleRespins))}${visibleRespins > 3 ? "+" : ""}`;
       winNode.textContent = `$${(total / 100).toFixed(2)}`;
@@ -588,13 +588,7 @@ export class NeemasHighSeas {
         status.textContent = "THE BAR IS POURING…";
         go.textContent = `AUTO RESPIN • ${respins} LEFT`;
         host.classList.add("respinning");
-        for (let frame = 0; frame < 8; frame += 1) {
-          host.querySelectorAll<HTMLElement>(".frozen-empty").forEach((cell) => {
-            const symbols = ["🍹", "🧊", "⚓", "🔔", "🍾"];
-            cell.textContent = symbols[(frame + Number(cell.dataset.cell ?? 0)) % symbols.length]!;
-          });
-          await this.wait(105 + frame * 18);
-        }
+        await this.wait(1180);
         host.classList.remove("respinning");
         const empty = emptyIndices();
         const locked = 20 - empty.length;

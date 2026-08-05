@@ -17,6 +17,7 @@ import "./v60-foundation.css";
 import "./v61-stability.css";
 import "./v63-authenticity.css";
 import "./v65-casino-club.css";
+import "./v67-modern-reels.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {
