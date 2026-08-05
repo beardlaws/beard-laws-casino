@@ -604,6 +604,7 @@ export class MeghsCosmicJam {
     effect.querySelector("b")?.remove();
 
     if (this.lastSurge === "UFO SCAN" || this.lastSurge === "ALIEN ENCORE INVASION") {
+      window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "ufo" } }));
       effect.remove();
       const actor = director.characters.create(
         "megh-ufo-actor",
@@ -630,6 +631,7 @@ export class MeghsCosmicJam {
         actor.classList.add("is-locking");
         await this.wait(300);
         actor.classList.add("is-firing");
+        window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "beam" } }));
         node.classList.add("abducting-readable");
         await node.animate(
           [
@@ -649,6 +651,7 @@ export class MeghsCosmicJam {
       await director.characters.move(actor, exitFrom, new DOMPoint(machineRect.width + 160, -90), { duration: 760 });
       actor.remove();
     } else if (this.lastSurge === "GOAT STAMPEDE") {
+      window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "goat" } }));
       effect.remove();
       for (let index = 0; index < nodes.length; index += 1) {
         const node = nodes[index]!;
@@ -668,6 +671,7 @@ export class MeghsCosmicJam {
         await this.wait(620);
         actor.classList.remove("is-sniffing");
         actor.classList.add("is-chomping");
+        window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "chomp" } }));
         node.classList.add("goat-eaten-readable");
         director.burst(node, "•", 10, "crumb-particle");
         await director.shake("soft", 180);

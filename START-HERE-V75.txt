@@ -1,0 +1,6 @@
+BEARD LAWS CASINO V75
+1. Run VERIFY-V75.ps1
+2. Run PUBLISH-V75.ps1
+3. Wait for GitHub Pages, then Ctrl+F5.
+4. Click EXPERIENCE to set volume or mute.
+Test Barber anticipation, Goat Stampede, UFO Scan, Frozen Happy Hour and Beard Bank features with the QA Lab.

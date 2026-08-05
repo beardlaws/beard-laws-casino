@@ -107,7 +107,7 @@ export class BigBadBarber {
 
   private async applyBuilders(grid:BarberSymbol[][]):Promise<boolean>{
     const counts=Array.from({length:COLS},(_,x)=>grid.filter(row=>row[x]!.id==="builder").length);if(!counts.some(Boolean))return false;
-    this.message("BEARD BUILDERS ON THE BOARD!");
+    this.message("BEARD BUILDERS ON THE BOARD!");window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"builder"}}));
     for(let x=0;x<COLS;x++){for(let n=0;n<counts[x]!;n++){const old=this.fortressLevels[x]!;if(old<MAX_LEVEL){await this.highlightColumn(x);this.fortressLevels[x]=old+1;this.updateFortresses();await this.pulseFort(x,"upgrade");}}}
     this.message("FORTRESSES UPGRADED • KEEP BUILDING");return true;
   }
@@ -115,15 +115,15 @@ export class BigBadBarber {
   private async payBaseWin(grid:BarberSymbol[][],result:{award:number;winners:Set<string>}):Promise<void>{this.render(grid,result.winners);this.lastWin+=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);const director=new FeatureDirector(this.root.querySelector<HTMLElement>(".barber-machine")!);director.burst(this.root.querySelector<HTMLElement>("[data-barber-reels]")!,"✦",18,"gold-particle");await director.shake(result.award>=this.betUnits*10?"medium":"soft",280);await this.wait(650);}
 
   private async startShaveDown():Promise<void>{
-    this.bonusSpins=8;const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><strong>THE SHAVE DOWN!</strong></div>`;this.root.querySelector(".barber-machine")?.classList.add("bonus-mode");this.message("8 FREE SPINS • BUILD FAST • HE SHAVES AFTER FAILED BUILDS");await this.wait(1900);layer.innerHTML="";this.update();
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));this.bonusSpins=8;const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><strong>THE SHAVE DOWN!</strong></div>`;this.root.querySelector(".barber-machine")?.classList.add("bonus-mode");this.message("8 FREE SPINS • BUILD FAST • HE SHAVES AFTER FAILED BUILDS");await this.wait(1900);layer.innerHTML="";this.update();
   }
 
   private async barberAttack(isBonus:boolean):Promise<void>{
     const built=this.fortressLevels.map((level,index)=>({level,index})).filter(x=>x.level>0);if(!built.length)return;
     const target=built[Math.floor(casinoRandom()*built.length)]!;const level=target.level;const mult=FORT_MULT[level]!;const award=this.betUnits*mult;
-    this.message(`THE BIG BAD BARBER TARGETS FORTRESS ${target.index+1}!`);
+    this.message(`THE BIG BAD BARBER TARGETS FORTRESS ${target.index+1}!`);window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));
     const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber attack" style="--target:${target.index}"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><div class="barber-speech">TIME FOR A TRIM!</div></div>`;
-    await this.wait(750);await this.pulseFort(target.index,"attack");
+    await this.wait(750);window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"clippers"}}));await this.pulseFort(target.index,"attack");
     const fort=this.root.querySelector<HTMLElement>(`[data-fort="${target.index}"]`)!;fort.classList.add("being-shaved");this.spawnShavings(fort);await this.wait(1250);
     fort.classList.remove("being-shaved");this.fortressLevels[target.index]=0;this.updateFortresses();
     if(award>0){this.lastWin+=award;this.setWallet(this.getWallet()+award);this.onActivity({type:"win",game:"barber",amount:award,value:award/this.betUnits,wager:this.betUnits});}

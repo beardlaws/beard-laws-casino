@@ -52,6 +52,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
   } = options;
 
   const reelCount = finalColumns.length;
+  window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "reel-start" } }));
   if (reelCount === 0 || rows <= 0) return;
 
   const lockedHeight = Math.round(host.getBoundingClientRect().height);
@@ -99,6 +100,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
 
   await nextFrame();
 
+  if (anticipationReel >= 0) window.setTimeout(() => window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "anticipation" } })), Math.max(450, duration - 420));
   const start = performance.now();
   const maxStop = Math.max(...stopTimes);
   const accelerationMs = 300;
@@ -134,6 +136,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
             stopped[reel] = true;
             windows[reel]!.classList.add("reel-engine-stopped");
             onReelStop?.(reel);
+            window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "reel-stop", index: reel } }));
           }
           return;
         }

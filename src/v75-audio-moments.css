@@ -1,0 +1,11 @@
+/* V75 Audio + Moment Polish */
+.volume-control{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:14px 16px;border:1px solid rgba(255,215,110,.35);border-radius:14px;background:rgba(9,4,18,.58);font-weight:900;letter-spacing:.08em}.volume-control input{width:100%;accent-color:#ffd56c}.volume-control b{min-width:48px;text-align:right;color:#ffe49a}
+.reel-engine-window[data-reel-phase="decelerating"]{filter:brightness(1.08) saturate(1.08)}
+.reel-engine-window[data-reel-phase="settling"]{filter:brightness(1.18);animation:v75-stop-pulse .14s ease-out}
+@keyframes v75-stop-pulse{0%{box-shadow:inset 0 0 0 rgba(255,221,120,0)}60%{box-shadow:inset 0 0 28px rgba(255,221,120,.28)}100%{box-shadow:inset 0 0 0 rgba(255,221,120,0)}}
+.barber-machine.bonus-mode{animation:v75-barber-breathe 1.5s ease-in-out infinite alternate}
+@keyframes v75-barber-breathe{to{filter:drop-shadow(0 0 22px rgba(255,182,74,.28))}}
+.neema-machine.voyage-mode,.megh-machine.encore-mode,.bb60-machine.feature-mode{animation:v75-feature-glow 1.2s ease-in-out infinite alternate}
+@keyframes v75-feature-glow{to{filter:brightness(1.05) saturate(1.12)}}
+.win-tier,.fort-prize,.feature-cinematic h2{filter:drop-shadow(0 0 18px rgba(255,225,128,.55))}
+html.sound-off .reel-engine-window[data-reel-phase="settling"]{animation:none}

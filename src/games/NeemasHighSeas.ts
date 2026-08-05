@@ -433,6 +433,7 @@ export class NeemasHighSeas {
   }
 
   private async showCaptainMoment(message: string): Promise<void> {
+    window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "captain" } }));
     const machine = this.root.querySelector<HTMLElement>(".neema-machine");
     if (!machine) return;
     const director = new FeatureDirector(machine);
@@ -570,6 +571,7 @@ export class NeemasHighSeas {
     this.lastDisplayedWin = target;
   }
   private async showVoyageIntro(retrigger: boolean): Promise<void> {
+    window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "ship" } }));
     const overlay = document.createElement("div");
     overlay.className = "feature-cinematic sea-cinematic";
     overlay.innerHTML = `<div class="sea-ship">🚢</div><small>${retrigger ? "THE PARTY CONTINUES" : `${(this.route ?? "premier").toUpperCase()} ROUTE`}</small><h2>${retrigger ? "RETRIGGER!" : "ALL ABOARD"}</h2><p>${retrigger ? "5 MORE FREE SPINS" : `${this.freeSpins} FREE SPINS • ${this.bonusMultiplier}× STARTING MULTIPLIER`}</p><div class="voyage-route">${CABINS.map((c, i) => `<span class="${i <= this.cabin ? "reached" : ""}">${c}</span>`).join("")}</div></div>`;
@@ -580,6 +582,7 @@ export class NeemasHighSeas {
     overlay.remove();
   }
   private async playFrozenHappyHour(startingDrinks = 6): Promise<number> {
+    window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "frozen" } }));
     type Drink = { value: number; kind: "cash" | "vodka" | "ice" | "cranberry" | "neema" | "bell" | "wheel" | "jackpot" };
     const savedKey = "beard-laws-neema-frozen-happy-hour";
     const board: Array<Drink | null> = Array(20).fill(null);
