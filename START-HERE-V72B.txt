@@ -1,0 +1,5 @@
+BEARD LAWS CASINO V72B — BIG BAD BARBER SHOWCASE
+
+1. Run VERIFY-V72B.ps1
+2. Run PUBLISH-V72B.ps1
+3. Test Builder crates, fortress persistence, Barber attacks, Golden Razor bonus, Bet, and Auto.
