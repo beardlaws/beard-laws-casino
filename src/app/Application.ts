@@ -14,7 +14,7 @@ import { CasinoAudio } from "../graphics/CasinoAudio";
 import { BeardBankDOM } from "../games/BeardBank/BeardBankDOM";
 import { BigBadBarber } from "../games/BigBadBarber";
 import { CasinoTelemetryStore } from "../state/CasinoTelemetry";
-import { runModelSimulation, simulationCsv, type SimulationReport } from "../state/CasinoSimulationLab";
+import { runProductionSimulation, productionSimulationCsv, type ProductionSimulationReport } from "../state/ProductionCasinoSimulation";
 
 type GameId =
   | "beard-bank"
@@ -61,7 +61,7 @@ export class Application {
     applyMotion();
     button.addEventListener("click", () => {
       const modal=document.createElement("div");modal.className="modal-backdrop";
-      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V76</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER VOLUME</span><input data-volume type="range" min="0" max="100" value="${Math.round(this.audio.getVolume()*100)}"><b data-volume-value>${Math.round(this.audio.getVolume()*100)}%</b></label><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});const volume=modal.querySelector<HTMLInputElement>("[data-volume]");volume?.addEventListener("input",()=>{this.audio.setVolume(Number(volume.value)/100);const value=modal.querySelector<HTMLElement>("[data-volume-value]");if(value)value.textContent=`${volume.value}%`;});};
+      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V77B</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER VOLUME</span><input data-volume type="range" min="0" max="100" value="${Math.round(this.audio.getVolume()*100)}"><b data-volume-value>${Math.round(this.audio.getVolume()*100)}%</b></label><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});const volume=modal.querySelector<HTMLInputElement>("[data-volume]");volume?.addEventListener("input",()=>{this.audio.setVolume(Number(volume.value)/100);const value=modal.querySelector<HTMLElement>("[data-volume-value]");if(value)value.textContent=`${volume.value}%`;});};
       render();document.body.appendChild(modal);
     }); document.body.appendChild(button);
   }
@@ -79,11 +79,11 @@ export class Application {
       return "any";
     };
     const actions = (items: Array<[string, string]>): string => items.map(([action, label]) => `<button data-dev-action="${action}" data-game="${gameForAction(action)}">${label}</button>`).join("");
-    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>CASINO TEST LAB • V76</strong><button data-dev-close>×</button></header>
+    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>CASINO TEST LAB • V77B</strong><button data-dev-close>×</button></header>
       <div class="dev-active"><span>ACTIVE CABINET</span><b data-dev-active>LOBBY</b><i data-dev-state>READY</i></div>
       <div class="dev-status" data-dev-status>QA ready. Open a cabinet, then trigger a test.</div>
       <div class="dev-telemetry" data-dev-summary></div><div class="dev-telemetry-table" data-dev-table></div>
-      <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button><button data-dev-math-all>RUN CASINO MATH</button></div>
+      <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button><button data-dev-math-all>RUN ACTUAL CABINET MATH</button></div>
       <small>BEARD BANK</small><div class="dev-grid">${actions([["vault-heist","Vault Heist"],["free-spins","Free Spins"],["living-vault","Living Vault"],["vault-mini","Mini Coin"],["vault-minor","Minor Coin"],["vault-major","Major Coin"],["vault-grand","Grand Coin"],["vault-full","Full Vault"],["math-report","1M Math Report"]])}</div>
       <small>BIG BAD BARBER</small><div class="dev-grid">${actions([["barber-bonus","Force Shave Down"],["barber-attack","Force Barber Attack"],["barber-two-razors","Two-Razor Near Miss"],["barber-max-forts","Max Fortresses"]])}</div>
       <small>MEGH'S COSMIC JAM</small><div class="dev-grid">${actions([["megh-goat","Goat Stampede"],["megh-ufo","UFO Scan"],["megh-encore","Force Encore"],["megh-headliner","Headliner Mode"]])}</div>
@@ -112,7 +112,7 @@ export class Application {
     host.querySelector<HTMLSelectElement>("[data-dev-speed]")?.addEventListener("change", (event) => { const speed = Number((event.target as HTMLSelectElement).value); this.telemetry.setAnimationSpeed(speed); setStatus(`Animation speed set to ${speed}×.`, "ok"); });
     host.querySelector("[data-dev-pause]")?.addEventListener("click", (event) => { document.body.classList.toggle("qa-paused"); (event.currentTarget as HTMLElement).textContent = document.body.classList.contains("qa-paused") ? "RESUME ANIMATIONS" : "PAUSE ANIMATIONS"; });
     host.querySelector("[data-dev-reset-telemetry]")?.addEventListener("click", () => { this.telemetry.reset(); refresh(); setStatus("Telemetry reset.", "ok"); });
-    host.querySelector("[data-dev-math-all]")?.addEventListener("click", () => { setStatus("Running model simulations for Barber, Megh, and Neema…", "running"); panel.hidden = true; this.showCasinoMathReport(); });
+    host.querySelector("[data-dev-math-all]")?.addEventListener("click", () => { setStatus("Running production-rule simulations for Barber, Megh, and Neema…", "running"); panel.hidden = true; this.showCasinoMathReport(); });
     host.querySelectorAll<HTMLElement>("[data-dev-action]").forEach((button) => button.addEventListener("click", () => {
       const action = button.dataset.devAction ?? "";
       if (action === "math-report") { this.showMathReport(); setStatus("Math report launched.", "running"); return; }
@@ -161,17 +161,42 @@ export class Application {
   }
 
   private showCasinoMathReport(): void {
-    const modal=document.createElement("div"); modal.className="modal-backdrop";
-    modal.innerHTML=`<section class="progress-modal casino-math-modal"><small>V76 • CASINO TRUTH LAB</small><h2>Running 100,000-spin cabinet models…</h2><p>Beard Bank keeps its actual reel-strip laboratory. Barber, Megh, and Neema use seeded design models so tuning changes can be compared consistently before production strips are finalized.</p></section>`;
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>V77B • ACTUAL MATH INTEGRATION</small><h2>Running 100,000 production-rule spins…</h2><p>The lab is using the same symbol weights, pay rules, triggers, persistent meters, fortress values, cascade rules, and bonus limits used by the playable cabinets.</p></section>`;
     document.body.appendChild(modal);
-    window.setTimeout(()=>{
-      const reports:SimulationReport[]=[runModelSimulation("barber",100000),runModelSimulation("megh",100000),runModelSimulation("neema",100000)];
-      const oneIn=(f:number)=>f>0?`1 in ${(1/f).toFixed(1)}`:"Not observed";
-      modal.innerHTML=`<section class="progress-modal casino-math-modal"><button class="close" data-close>×</button><small>V76 • CASINO TRUTH LAB</small><h2>Cabinet Tuning Report</h2><div class="math-cards">${reports.map(r=>`<article><h3>${r.game.toUpperCase()}</h3><p><span>MODEL RTP</span><b>${(r.rtp*100).toFixed(2)}%</b></p><p><span>BASE / FEATURE</span><b>${(r.baseRtp*100).toFixed(1)}% / ${(r.featureRtp*100).toFixed(1)}%</b></p><p><span>ANY WIN</span><b>${(r.hitFrequency*100).toFixed(1)}%</b></p><p><span>WIN ≥ BET</span><b>${(r.profitableFrequency*100).toFixed(1)}%</b></p><p><span>FEATURE</span><b>${oneIn(r.featureFrequency)}</b></p><p><span>AVG / MEDIAN FEATURE</span><b>${r.averageFeatureX.toFixed(1)}× / ${r.medianFeatureX.toFixed(1)}×</b></p><p><span>MAX OBSERVED</span><b>${r.maxWinX.toFixed(1)}×</b></p><p><span>LONGEST DRY SPELL</span><b>${r.longestFeatureDrought}</b></p><p><span>VOLATILITY INDEX</span><b>${r.volatility.toFixed(2)}</b></p></article>`).join("")}</div><p class="math-disclaimer">These three are seeded tuning models, not certification claims. They give us stable targets while each cabinet's final reel strips and feature math are hardened.</p><div class="math-actions"><button class="primary" data-download-math>DOWNLOAD CSV</button><button class="account-secondary" data-beardbank-math>RUN ACTUAL BEARD BANK 1M</button><button class="account-secondary" data-close>RETURN</button></div></section>`;
-      modal.querySelectorAll("[data-close]").forEach(n=>n.addEventListener("click",()=>modal.remove()));
-      modal.querySelector("[data-beardbank-math]")?.addEventListener("click",()=>{modal.remove();this.showMathReport();});
-      modal.querySelector("[data-download-math]")?.addEventListener("click",()=>{const blob=new Blob([simulationCsv(reports)],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="beard-laws-casino-v76-math.csv";a.click();URL.revokeObjectURL(a.href);});
-    },40);
+    window.setTimeout(() => {
+      const reports: ProductionSimulationReport[] = [
+        runProductionSimulation("barber", 100000, 7702),
+        runProductionSimulation("megh", 100000, 7702),
+        runProductionSimulation("neema", 100000, 7702),
+      ];
+      const oneIn = (frequency: number): string => frequency > 0 ? `1 in ${(1 / frequency).toFixed(1)}` : "Not observed";
+      modal.innerHTML = `<section class="progress-modal casino-math-modal"><button class="close" data-close>×</button><small>V77B • PRODUCTION RULE LAB</small><h2>Actual Cabinet Math Report</h2><div class="math-cards">${reports.map((report) => `<article><h3>${report.game.toUpperCase()}</h3><p><span>RULE-SET RTP</span><b>${(report.rtp * 100).toFixed(2)}%</b></p><p><span>BASE / FEATURE</span><b>${(report.baseRtp * 100).toFixed(1)}% / ${(report.featureRtp * 100).toFixed(1)}%</b></p><p><span>ANY WIN</span><b>${(report.hitFrequency * 100).toFixed(1)}%</b></p><p><span>WIN ≥ BET</span><b>${(report.profitableFrequency * 100).toFixed(1)}%</b></p><p><span>FEATURE</span><b>${oneIn(report.featureFrequency)}</b></p><p><span>AVG / MEDIAN FEATURE</span><b>${report.averageFeatureX.toFixed(1)}× / ${report.medianFeatureX.toFixed(1)}×</b></p><p><span>MAX OBSERVED</span><b>${report.maxWinX.toFixed(1)}×</b></p><p><span>LONGEST FEATURE DROUGHT</span><b>${report.longestFeatureDrought}</b></p><p><span>NEAR MISS</span><b>${(report.nearMissFrequency * 100).toFixed(2)}%</b></p><p><span>VOLATILITY INDEX</span><b>${report.volatility.toFixed(2)}</b></p></article>`).join("")}</div><p class="math-disclaimer"><b>These are now production-rule simulations.</b> They directly import each cabinet's live symbol weights and constants. Interactive player choices are simulated uniformly and presentation-only events are excluded. They are engineering reports, not regulatory certification.</p><div class="math-actions"><button class="primary" data-download-math>DOWNLOAD ACTUAL CSV</button><button class="account-secondary" data-run-million>RUN 1,000,000 EACH</button><button class="account-secondary" data-beardbank-math>RUN BEARD BANK 1M</button><button class="account-secondary" data-close>RETURN</button></div></section>`;
+      modal.querySelectorAll("[data-close]").forEach((node) => node.addEventListener("click", () => modal.remove()));
+      modal.querySelector("[data-beardbank-math]")?.addEventListener("click", () => { modal.remove(); this.showMathReport(); });
+      modal.querySelector("[data-download-math]")?.addEventListener("click", () => {
+        const blob = new Blob([productionSimulationCsv(reports)], { type: "text/csv" });
+        const anchor = document.createElement("a");
+        anchor.href = URL.createObjectURL(blob);
+        anchor.download = "beard-laws-casino-v77b-production-math.csv";
+        anchor.click();
+        URL.revokeObjectURL(anchor.href);
+      });
+      modal.querySelector("[data-run-million]")?.addEventListener("click", () => {
+        modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>V77B • DEEP RUN</small><h2>Running 3,000,000 production-rule spins…</h2><p>This can take several seconds. The casino accountant has requested snacks.</p></section>`;
+        window.setTimeout(() => {
+          const million = [runProductionSimulation("barber", 1000000, 7712), runProductionSimulation("megh", 1000000, 7712), runProductionSimulation("neema", 1000000, 7712)];
+          const blob = new Blob([productionSimulationCsv(million)], { type: "text/csv" });
+          const anchor = document.createElement("a");
+          anchor.href = URL.createObjectURL(blob);
+          anchor.download = "beard-laws-casino-v77b-production-math-1m.csv";
+          anchor.click();
+          URL.revokeObjectURL(anchor.href);
+          modal.remove();
+        }, 50);
+      });
+    }, 40);
   }
 
   private saveWallet(units: number): void {

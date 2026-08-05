@@ -23,6 +23,16 @@ const COLS=5, ROWS=3, MAX_LEVEL=4;
 const FORT_NAMES=["EMPTY LOT","STUBBLE SHACK","LUMBER BEARD CABIN","VIKING BEARD HALL","GOLDEN BEARD CASTLE"];
 const FORT_MULT=[0,3,8,20,75];
 
+export const BARBER_PRODUCTION_MATH = {
+  cols: COLS,
+  rows: ROWS,
+  maxFortressLevel: MAX_LEVEL,
+  fortressMultipliers: FORT_MULT,
+  bonusSpins: 8,
+  attackChance: 0.48,
+  symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
+} as const;
+
 export class BigBadBarber {
   private spinning=false;
   private autoRemaining=0;

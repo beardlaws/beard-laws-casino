@@ -88,6 +88,18 @@ const LINES = [
   [0, 1, 2, 1, 0],
   [2, 1, 0, 1, 2],
 ] as const;
+
+export const NEEMA_PRODUCTION_MATH = {
+  reels: REELS,
+  rows: ROWS,
+  departureTarget: DEPARTURE_TARGET,
+  happyHourTrigger: HAPPY_HOUR_TRIGGER,
+  maxVoyageSpins: MAX_VOYAGE_SPINS,
+  maxVoyageRetriggers: MAX_VOYAGE_RETRIGGERS,
+  linePayScale: 0.59,
+  lines: LINES,
+  symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
+} as const;
 const CABINS = [
   "INTERIOR CABIN",
   "OCEAN VIEW",

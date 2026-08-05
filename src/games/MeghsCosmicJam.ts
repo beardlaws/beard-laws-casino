@@ -45,6 +45,18 @@ const SOUNDCHECK_TARGET = 50;
 const MAX_FEATURE_DROPS = 100;
 const MAX_RETRIGGER_DROPS = 40;
 
+export const MEGH_PRODUCTION_MATH = {
+  cols: COLS,
+  rows: ROWS,
+  soundcheckTarget: SOUNDCHECK_TARGET,
+  maxFeatureDrops: MAX_FEATURE_DROPS,
+  maxRetriggerDrops: MAX_RETRIGGER_DROPS,
+  clusterMinimum: 6,
+  maxCascades: 8,
+  cascadePayScale: 3.15,
+  symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
+} as const;
+
 export class MeghsCosmicJam {
   private auto: AutoCount = null;
   private stopRequested = false;
