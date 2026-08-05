@@ -1,0 +1,108 @@
+/* V68 verified reel motion: one compositor transform per reel, no symbol-level
+   shake, bounce, blur, or legacy stop animation. */
+.dom-reel-stage,
+.dom-reel-stage.dom-reels-spinning{
+  overflow:hidden!important;
+  contain:layout paint style!important;
+  transform:none!important;
+  animation:none!important;
+}
+.dom-reel-window{
+  position:relative!important;
+  overflow:hidden!important;
+  height:100%!important;
+  min-width:0!important;
+  border-radius:10px!important;
+  transform:translateZ(0)!important;
+  animation:none!important;
+  backface-visibility:hidden!important;
+}
+.dom-reel-track{
+  position:absolute!important;
+  inset:0 0 auto!important;
+  width:100%!important;
+  display:block!important;
+  will-change:transform!important;
+  transform:translate3d(0,0,0);
+  backface-visibility:hidden!important;
+}
+.dom-reel-track>.sea-symbol,
+.dom-reel-track>.bb60-symbol,
+.dom-reel-track>.jam-symbol{
+  position:relative!important;
+  width:100%!important;
+  height:var(--dom-cell-height)!important;
+  min-height:var(--dom-cell-height)!important;
+  grid-column:1!important;
+  grid-row:auto!important;
+  transform:none!important;
+  animation:none!important;
+  transition:none!important;
+  filter:none!important;
+  opacity:1!important;
+}
+.dom-reel-stage.dom-reels-spinning .sea-symbol,
+.dom-reel-stage.dom-reels-spinning .bb60-symbol,
+.dom-reel-stage.dom-reels-spinning .jam-symbol,
+.dom-reel-stage.dom-reels-spinning[data-stopped] .sea-symbol,
+.dom-reel-stage.dom-reels-spinning[data-stopped] .bb60-symbol,
+.dom-reel-stage.dom-reels-spinning[data-stopped] .jam-symbol{
+  transform:none!important;
+  animation:none!important;
+  transition:none!important;
+  filter:none!important;
+  opacity:1!important;
+}
+.dom-reel-window::before,
+.dom-reel-window::after{
+  content:"";
+  position:absolute;
+  z-index:8;
+  left:0;
+  right:0;
+  height:17%;
+  pointer-events:none;
+}
+.dom-reel-window::before{top:0;background:linear-gradient(#02030cf2,transparent)}
+.dom-reel-window::after{bottom:0;background:linear-gradient(transparent,#02030cf2)}
+.dom-reel-window.dom-reel-at-speed::before,
+.dom-reel-window.dom-reel-at-speed::after{opacity:.96}
+.dom-reel-window.dom-reel-stopped{
+  animation:none!important;
+  transform:translateZ(0)!important;
+  box-shadow:inset 0 0 18px #000,0 0 9px #ffe17b2e!important;
+}
+.dom-reels-landed{animation:none!important;transform:none!important}
+
+/* The glass itself is now the entire chocolate milk symbol. */
+.sea-symbol.s-chocolate-milk{padding:0!important}
+.sea-symbol.s-chocolate-milk img{
+  width:100%!important;
+  height:100%!important;
+  max-height:none!important;
+  object-fit:contain!important;
+  transform:scale(1.12)!important;
+  filter:drop-shadow(0 8px 10px #000a)!important;
+}
+.sea-symbol.s-chocolate-milk>span,
+.sea-symbol.s-chocolate-milk>small{display:none!important}
+
+/* Frozen Happy Hour presentation upgrade. */
+.frozen-happy-hour{padding:18px!important}
+.frozen-shell{width:min(920px,96vw)!important}
+.frozen-board{grid-template-rows:repeat(4,minmax(94px,1fr))!important;min-height:420px!important}
+.frozen-drink,.frozen-empty{border-width:2px!important}
+.frozen-drink i,.frozen-cell-strip i{font-size:42px!important}
+.frozen-drink b{font-size:18px!important}
+.frozen-drink small{font-size:9px!important}
+.frozen-drink.kind-cash{background:radial-gradient(circle at 50% 22%,#2b7898,#071d34 68%)!important}
+.frozen-drink.kind-ice{background:radial-gradient(circle at 50% 22%,#baf7ff,#146a91 58%,#08213c 78%)!important}
+.frozen-drink.kind-vodka{background:radial-gradient(circle at 50% 22%,#f9db87,#765418 58%,#191129 78%)!important}
+.frozen-drink.kind-cranberry{background:radial-gradient(circle at 50% 22%,#ff6b91,#7e173f 58%,#190b27 78%)!important}
+.frozen-drink.kind-neema{background:radial-gradient(circle at 50% 22%,#ffd56f,#7a2f55 58%,#160b2b 78%)!important}
+.frozen-drink.kind-jackpot{border-color:#fff1a4!important;background:radial-gradient(circle,#a97815,#24122d 70%)!important;box-shadow:inset 0 0 28px #ffd86466,0 0 18px #ffd86466!important}
+
+@media(max-width:700px){
+  .frozen-board{grid-template-rows:repeat(4,minmax(72px,1fr))!important;min-height:310px!important}
+  .frozen-drink i,.frozen-cell-strip i{font-size:28px!important}
+}
