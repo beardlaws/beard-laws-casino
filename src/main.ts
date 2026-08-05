@@ -20,6 +20,7 @@ import "./v65-casino-club.css";
 import "./v67-modern-reels.css";
 import "./v68-verified-reels.css";
 import "./v69-feature-moments.css";
+import "./v70-experience.css";
 import "./big-bad-barber.css";
 import { Application } from "./app/Application";
 

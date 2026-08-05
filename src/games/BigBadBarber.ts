@@ -64,16 +64,18 @@ export class BigBadBarber {
   }
   private async spin():Promise<void>{
     if(this.spinning||this.getWallet()<this.betUnits)return;
-    this.spinning=true; this.lastWin=0; this.setWallet(this.getWallet()-this.betUnits); this.onActivity({type:"spin",game:"barber",wager:this.betUnits}); this.update();
+    this.spinning=true; this.lastWin=0; this.setWallet(this.getWallet()-this.betUnits); this.onActivity({type:"spin",game:"barber",wager:this.betUnits}); this.root.querySelector(".barber-machine")?.classList.add("barber-spinning"); this.update();
     const grid=this.makeGrid(); const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;
     const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
-    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:1750,stagger:185,fillerRows:15,renderSymbol:(s)=>`<div class="barber-symbol s-${s.id}"><span>${s.icon}</span><small>${s.label}</small></div>`});
+    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:1950,stagger:215,fillerRows:17,renderSymbol:(s)=>`<div class="barber-symbol s-${s.id}"><span>${s.icon}</span><small>${s.label}</small></div>`});
     this.render(grid);
+    this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");
+    await this.wait(180);
     const result=this.evaluate(grid); const razors=grid.flat().filter(s=>s.id==="razor").length;
     if(result.award>0){this.render(grid,result.winners);this.lastWin=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);await this.wait(900);}
     if(razors>=3){this.onActivity({type:"bonus",game:"barber"});await this.playShaveDown();}
     else if(!result.award)this.message(razors===2?"ONE MORE RAZOR FOR THE SHAVE DOWN":"THE BARBER MISSED • SPIN AGAIN");
-    this.spinning=false; this.update();
+    this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning"); this.spinning=false; this.update();
   }
   private async playShaveDown():Promise<void>{
     const overlay=document.createElement("div");overlay.className="barber-bonus";overlay.innerHTML=`<div class="barber-villain">💇</div><div class="clipper-sparks">✦ ✦ ✦</div><h2>THE SHAVE DOWN</h2><p>THE BIG BAD BARBER ATTACKS THE BEARD FORTRESSES</p><div class="bonus-forts">${Array.from({length:5},(_,i)=>`<button data-bonus-fort="${i}"><span>🧔</span><b>FORT ${i+1}</b></button>`).join("")}</div>`;this.root.appendChild(overlay);await this.wait(900);
