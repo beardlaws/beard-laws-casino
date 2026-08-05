@@ -1,0 +1,10 @@
+BEARD LAWS CASINO V72C
+
+1. Run: powershell -ExecutionPolicy Bypass -File .\VERIFY-V72C.ps1
+2. Run: powershell -ExecutionPolicy Bypass -File .\PUBLISH-V72C.ps1
+3. After GitHub Pages deploys, press Ctrl+F5.
+
+TEST FIRST:
+- Megh Goat Stampede: goat must visibly run to each highlighted tile.
+- UFO Scan: craft must move above each selected tile and abduct it visibly.
+- Board must remain readable throughout both features.

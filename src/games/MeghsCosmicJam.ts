@@ -501,85 +501,117 @@ export class MeghsCosmicJam {
   private async animateCosmicEvent(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], effect: HTMLElement): Promise<void> {
     const changed = this.changedCells(before, after);
     if (!changed.length) return;
-    const director = new FeatureDirector(this.root.querySelector<HTMLElement>(".megh-machine") ?? host);
-    const nodes = changed.map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`)).filter((node): node is HTMLElement => Boolean(node));
+
+    const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
+    const director = new FeatureDirector(machine);
+    const machineRect = machine.getBoundingClientRect();
+    const nodes = changed
+      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
+      .filter((node): node is HTMLElement => Boolean(node));
+
+    const centerInMachine = (node: HTMLElement): DOMPoint => {
+      const rect = node.getBoundingClientRect();
+      return new DOMPoint(
+        rect.left - machineRect.left + rect.width / 2,
+        rect.top - machineRect.top + rect.height / 2,
+      );
+    };
+
     nodes.forEach((node, index) => {
       node.style.setProperty("--event-delay", `${index * 130}ms`);
       node.classList.add("event-target");
     });
 
+    effect.querySelector("b")?.remove();
+
     if (this.lastSurge === "UFO SCAN" || this.lastSurge === "ALIEN ENCORE INVASION") {
-      const rig = effect.querySelector<HTMLElement>(".ufo-rig");
-      const craft = effect.querySelector<HTMLElement>(".ufo-craft,.invasion-ufo");
-      const beam = effect.querySelector<HTMLElement>(".scan-beam,.invasion-beam");
-      const hostRect = host.getBoundingClientRect();
-      effect.classList.add("beam-locked");
-      await this.wait(500);
+      effect.remove();
+      const actor = director.characters.create(
+        "megh-ufo-actor",
+        `<img src="${art("ufo")}" alt="Encore UFO"><i class="megh-ufo-beam"></i>`,
+      );
+      const startPoint = new DOMPoint(machineRect.width * 0.1, -70);
+      director.characters.position(actor, startPoint.x, startPoint.y);
+      await director.characters.move(actor, startPoint, new DOMPoint(machineRect.width * 0.5, 26), { duration: 720 });
+
       for (const node of nodes) {
-        const r = node.getBoundingClientRect();
-        const x = r.left - hostRect.left + r.width / 2;
-        const y = r.top - hostRect.top + r.height / 2;
-        if (rig) {
-          rig.style.setProperty("--beam-x", `${x}px`);
-          rig.style.setProperty("--beam-bottom", `${Math.max(140, y + r.height * .6)}px`);
-        }
-        craft?.classList.add("ufo-travelling");
-        await this.wait(380);
-        craft?.classList.remove("ufo-travelling");
-        beam?.classList.add("beam-firing");
-        node.classList.add("abducting");
-        await director.shake("soft", 220);
-        await this.wait(850);
-        beam?.classList.remove("beam-firing");
+        const target = centerInMachine(node);
+        const hover = new DOMPoint(target.x, Math.max(18, target.y - 150));
+        const current = new DOMPoint(
+          Number(actor.dataset.x ?? machineRect.width * 0.5),
+          Number(actor.dataset.y ?? 26),
+        );
+        await director.characters.move(actor, current, hover, { duration: 520 });
+        actor.dataset.x = String(hover.x);
+        actor.dataset.y = String(hover.y);
+        actor.classList.add("is-locking");
+        await this.wait(300);
+        actor.classList.add("is-firing");
+        node.classList.add("abducting-readable");
+        await node.animate(
+          [
+            { transform: "translate3d(0,0,0) scale(1)", opacity: 1, filter: "brightness(1)" },
+            { transform: "translate3d(0,-45px,0) scale(.82) rotate(4deg)", opacity: .88, filter: "brightness(1.5)" },
+            { transform: "translate3d(0,-125px,0) scale(.18) rotate(18deg)", opacity: 0, filter: "brightness(2)" },
+          ],
+          { duration: 980, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" },
+        ).finished.catch(() => undefined);
+        await director.shake("soft", 180);
+        actor.classList.remove("is-firing", "is-locking");
+        await this.wait(180);
       }
-      director.burst(host, "✦", 16, "cosmic-particle");
-      await this.wait(500);
+
+      director.burst(host, "✦", 18, "cosmic-particle");
+      const exitFrom = new DOMPoint(Number(actor.dataset.x ?? machineRect.width * .5), Number(actor.dataset.y ?? 26));
+      await director.characters.move(actor, exitFrom, new DOMPoint(machineRect.width + 160, -90), { duration: 760 });
+      actor.remove();
     } else if (this.lastSurge === "GOAT STAMPEDE") {
-      const track = effect.querySelector<HTMLElement>(".goat-track");
-      const hostRect = host.getBoundingClientRect();
-      effect.classList.add("stampeding");
+      effect.remove();
       for (let index = 0; index < nodes.length; index += 1) {
         const node = nodes[index]!;
-        const rect = node.getBoundingClientRect();
-        const targetX = rect.left - hostRect.left + rect.width / 2;
-        const targetY = rect.top - hostRect.top + rect.height / 2;
-        const goat = document.createElement("img");
-        goat.className = `feature-goat goat-personality-${index % 4}`;
-        goat.src = art("goat");
-        goat.alt = "Stampeding space goat";
-        goat.style.setProperty("--goat-target-x", `${targetX}px`);
-        goat.style.setProperty("--goat-target-y", `${targetY}px`);
-        track?.appendChild(goat);
-        await this.wait(90);
-        goat.classList.add("goat-running-in");
-        await this.wait(720);
-        goat.classList.add("goat-sniffing");
-        node.classList.add("goat-marked");
-        await this.wait(520);
-        goat.classList.add("goat-chomping");
-        node.classList.add("goat-eaten");
-        director.burst(node, "•", 7, "crumb-particle");
-        await director.shake("soft", 190);
-        await this.wait(650);
-        goat.classList.add("goat-running-out");
-        await this.wait(500);
-        goat.remove();
+        const target = centerInMachine(node);
+        const actor = director.characters.create(
+          `megh-goat-actor goat-variant-${index % 4}`,
+          `<img src="${art("goat")}" alt="Space goat">`,
+        );
+        const entry = new DOMPoint(-125, target.y - 56);
+        const approach = new DOMPoint(Math.max(12, target.x - 105), target.y - 56);
+        director.characters.position(actor, entry.x, entry.y);
+        actor.classList.add("is-running");
+        await director.characters.move(actor, entry, approach, { duration: 900, easing: "cubic-bezier(.18,.72,.24,1)" });
+        actor.classList.remove("is-running");
+        actor.classList.add("is-sniffing");
+        node.classList.add("goat-marked-readable");
+        await this.wait(620);
+        actor.classList.remove("is-sniffing");
+        actor.classList.add("is-chomping");
+        node.classList.add("goat-eaten-readable");
+        director.burst(node, "•", 10, "crumb-particle");
+        await director.shake("soft", 180);
+        await this.wait(820);
+        actor.classList.remove("is-chomping");
+        actor.classList.add("is-running");
+        await director.characters.move(actor, approach, new DOMPoint(machineRect.width + 140, target.y - 56), { duration: 850, easing: "cubic-bezier(.3,.05,.75,.25)" });
+        actor.remove();
+        await this.wait(160);
       }
-      await this.wait(250);
     } else {
       nodes.forEach((node) => node.classList.add("cosmic-mutating"));
       director.burst(host, "✦", 12, "cosmic-particle");
       await director.shake("soft", 220);
       await this.wait(900);
+      effect.remove();
     }
 
     this.render(after);
-    const fresh = changed.map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`)).filter((node): node is HTMLElement => Boolean(node));
+    const fresh = changed
+      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
+      .filter((node): node is HTMLElement => Boolean(node));
     fresh.forEach((node, index) => {
-      node.style.setProperty("--event-delay", `${index * 120}ms`);
-      node.classList.add("event-replacement");
+      node.style.setProperty("--event-delay", `${index * 150}ms`);
+      node.classList.add("event-replacement-v72c");
     });
-    await this.wait(1250);
+    await this.wait(1450);
   }
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));
