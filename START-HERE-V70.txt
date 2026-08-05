@@ -1,0 +1,13 @@
+BEARD LAWS CASINO V70 - CORRECTED PACKAGE
+
+This is the corrected package root. You should see package.json, src, assets,
+PUBLISH-V70.ps1, and VERIFY-V70.ps1 directly inside this folder.
+
+1. Open PowerShell in this folder.
+2. Verify the package:
+   powershell -ExecutionPolicy Bypass -File .\VERIFY-V70.ps1
+3. Publish:
+   powershell -ExecutionPolicy Bypass -File .\PUBLISH-V70.ps1
+
+The publish script builds locally, replaces docs, writes VERSION.txt, commits,
+and pushes. It stops before deployment if npm install or npm run build fails.

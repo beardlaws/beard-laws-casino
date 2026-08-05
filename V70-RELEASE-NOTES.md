@@ -1,11 +1,23 @@
-# Beard Laws Casino V70 — Experience Upgrade
+# Beard Laws Casino V70 - Experience Upgrade
 
-- Goat Stampede now plays inside the reel window with three visible goats and deliberate tile-by-tile eating.
-- Strawberry targets stay readable; only eaten positions disappear and refill.
-- UFO craft and beam now align to the actual selected reel positions.
-- Abductions occur one tile at a time, followed by staggered replacement drops.
-- Full-screen fog and blur removed from Megh feature moments.
-- Feature timing slowed to create anticipation and make cause/effect readable.
-- Big Bad Barber keeps the result grid visible after the reels stop.
-- Barber reel timing made heavier, with cabinet ambience and improved feature transitions.
-- V70 deployment script builds into docs, writes a version fingerprint, force-stages docs, commits, and pushes.
+## Megh's Cosmic Jam
+- In-grid Goat Stampede with three visible goats crossing at staggered heights.
+- Strawberry-first tile targeting with CHOMP highlighting.
+- Only selected tiles are removed and replaced.
+- UFO positioning uses the actual target-cell coordinates.
+- Target symbols rise, shrink, and disappear into the beam one at a time.
+- Replacement symbols visibly drop into only the changed positions.
+- Heavy fullscreen fog and blur are disabled during these feature moments.
+
+## The Big Bad Barber
+- New playable 5x3, 243-ways feature slot.
+- Golden Razors trigger The Shave Down.
+- Persistent beard fortresses upgrade through larger reward tiers.
+- Modern staggered reel animation using the shared DOM reel animator.
+- Added cabinet life, gold dust, scissors motion, and result-settle timing.
+
+## Deployment
+- PUBLISH-V70.ps1 builds the game, replaces docs, writes a V70 fingerprint,
+  force-stages docs, commits, and pushes.
+- VERIFY-V70.ps1 confirms that the V70 feature files and application wiring
+  are present before publishing.
