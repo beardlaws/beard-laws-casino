@@ -101,7 +101,75 @@ export class BeardBankDOM {
   private async collectCoins(count: number): Promise<void> { this.coins += count; this.charges = Math.min(30, this.charges + count); this.onActivity({ type: "coin", game: "beard-bank", value: count }); this.root.querySelector("[data-door]")?.classList.add("charging"); this.say(`COLLECTING ${count} VAULT COIN${count === 1 ? "" : "S"}`); for (let i=0;i<count;i+=1){ await wait(300); this.update(); } this.root.querySelector("[data-door]")?.classList.remove("charging"); }
   private async vaultHeist(bet: number, coins: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.root.querySelector(".bb60-machine")?.classList.add("feature-mode"); this.say("VAULT HEIST • LOCKS ENGAGED"); await wait(1200); const award = Math.round(bet * (3 + coins * 1.5 + casinoRandom() * 8)); await this.countAward(award, "HEIST COMPLETE"); this.root.querySelector(".bb60-machine")?.classList.remove("feature-mode"); }
   private async vernonSpins(bet: number, spins: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.say(`VERNON FREE SPINS • ${spins} AWARDED`); await wait(1000); let total=0; for(let n=1;n<=spins;n+=1){ const r=this.reels.generate(beardBankConfig); const e=this.evaluator.evaluate(r.matrix,beardBankConfig,bet); this.say(`FREE SPIN ${n} OF ${spins} • ${2}×`); this.render(r.matrix); total += e.awardUnits*2; await wait(700); } await this.countAward(total,"VERNON FEATURE COMPLETE"); }
-  private async livingVault(bet: number): Promise<void> { this.onActivity({ type: "bonus", game: "beard-bank" }); this.root.querySelector("[data-door]")?.classList.add("open"); this.say("THE LIVING VAULT IS OPEN"); await wait(1400); const award=Math.round(bet*(12+casinoRandom()*38)); await this.countAward(award,"LIVING VAULT COLLECTED"); this.charges=0; this.root.querySelector("[data-door]")?.classList.remove("open"); }
+  private async livingVault(bet: number): Promise<void> {
+    this.onActivity({ type: "bonus", game: "beard-bank" });
+    this.root.querySelector("[data-door]")?.classList.add("open");
+    this.say("THE LIVING VAULT IS OPEN");
+    await wait(900);
+
+    // Preserve the certified award distribution. The hold-and-respin board below
+    // performs that already-decided award instead of introducing a second RNG payout.
+    const award = Math.round(bet * (12 + casinoRandom() * 38));
+    const overlay = document.createElement("div");
+    overlay.className = "bb-vault-feature";
+    overlay.innerHTML = `<div class="bb-vault-sky"><small>30 COINS CRACKED THE VAULT</small><h2>LIVING VAULT RESPINS</h2><p data-vault-message>LOCKED COINS RESET 3 RESPINS</p><div class="bb-vault-hud"><b data-vault-respins>● ● ●</b><strong data-vault-total>$0.00</strong></div><div class="bb-vault-board" data-vault-board></div></div>`;
+    this.root.appendChild(overlay);
+    const boardNode = overlay.querySelector<HTMLElement>("[data-vault-board]")!;
+    const message = overlay.querySelector<HTMLElement>("[data-vault-message]")!;
+    const respinNode = overlay.querySelector<HTMLElement>("[data-vault-respins]")!;
+    const totalNode = overlay.querySelector<HTMLElement>("[data-vault-total]")!;
+    const board: Array<number | null> = Array(15).fill(null);
+    const pieces = this.splitVaultAward(award, 8);
+    let revealed = 0;
+    let shownTotal = 0;
+    let respins = 3;
+    const renderBoard = (spinning = false): void => {
+      boardNode.innerHTML = board.map((value, index) => value === null
+        ? `<div class="bb-vault-cell${spinning ? " spinning" : ""}" style="--cell:${index}"><i>?</i></div>`
+        : `<div class="bb-vault-cell locked"><i>🪙</i><b>$${(value / 100).toFixed(2)}</b></div>`).join("");
+      respinNode.textContent = `${"● ".repeat(respins)}${"○ ".repeat(3 - respins)}`;
+      totalNode.textContent = `$${(shownTotal / 100).toFixed(2)}`;
+    };
+    renderBoard();
+    await wait(650);
+    while (revealed < pieces.length) {
+      message.textContent = `RESPIN IN MOTION • ${respins} CHANCES`;
+      renderBoard(true);
+      await wait(620);
+      const open = board.map((value, index) => value === null ? index : -1).filter((index) => index >= 0);
+      const at = open[Math.floor(casinoRandom() * open.length)]!;
+      const value = pieces[revealed++]!;
+      board[at] = value;
+      shownTotal += value;
+      respins = 3;
+      message.textContent = revealed === pieces.length ? "FINAL COIN LOCKED" : "NEW COIN • RESPINS RESET";
+      renderBoard();
+      boardNode.children[at]?.classList.add("just-locked");
+      await wait(720);
+      if (revealed > 4 && revealed < pieces.length) {
+        respins = Math.max(1, 3 - Math.floor(casinoRandom() * 3));
+        renderBoard();
+      }
+    }
+    respins = 0;
+    renderBoard();
+    message.textContent = `VAULT CRACKED • $${(award / 100).toFixed(2)}`;
+    overlay.classList.add("complete");
+    await wait(1500);
+    await this.countAward(award, "LIVING VAULT COLLECTED");
+    overlay.classList.add("leaving");
+    await wait(420);
+    overlay.remove();
+    this.charges = 0;
+    this.root.querySelector("[data-door]")?.classList.remove("open");
+  }
+  private splitVaultAward(award: number, pieces: number): number[] {
+    const weights = Array.from({ length: pieces }, () => .7 + casinoRandom() * .9);
+    const sum = weights.reduce((total, value) => total + value, 0);
+    const values = weights.map((weight) => Math.max(1, Math.floor(award * weight / sum)));
+    values[values.length - 1] = values[values.length - 1]! + award - values.reduce((total, value) => total + value, 0);
+    return values;
+  }
   private async countAward(award:number,label:string):Promise<void>{ const start=this.win; for(let i=1;i<=18;i+=1){this.win=start+Math.round(award*i/18);this.update();await wait(35);} this.setWallet(this.getWallet()+award); this.onActivity({type:"win",game:"beard-bank",amount:award,value:award/BET_LEVELS[this.betIndex]!,wager:BET_LEVELS[this.betIndex]!}); this.say(label); await wait(900); }
   private toggleAuto():void { if(this.auto!==null){this.auto=null;this.say("AUTO STOPS AFTER THIS SPIN");return;} if(this.spinning)return;this.auto=25;void this.autoLoop(); }
   private async autoLoop():Promise<void>{ while(this.auto!==null && (this.auto==="infinite"||this.auto>0)){const feature=await this.spin();if(feature){this.auto=null;break;}if(typeof this.auto==="number")this.auto-=1;await wait(450);}this.update(); }

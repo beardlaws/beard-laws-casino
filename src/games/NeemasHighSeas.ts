@@ -551,7 +551,7 @@ export class NeemasHighSeas {
     const winNode = overlay.querySelector<HTMLElement>("[data-frozen-win]")!;
     const go = overlay.querySelector<HTMLButtonElement>("[data-frozen-go]")!;
     const render = (): void => {
-      host.innerHTML = board.map((drink) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty">+</div>`).join("");
+      host.innerHTML = board.map((drink, index) => drink ? `<div class="frozen-drink kind-${drink.kind}"><i>${drink.kind === "vodka" ? "🍾" : drink.kind === "ice" ? "🧊" : drink.kind === "cranberry" ? "💦" : drink.kind === "neema" ? "👩‍✈️" : drink.kind === "bell" ? "🔔" : drink.kind === "wheel" ? "⚓" : drink.kind === "jackpot" ? "★" : "🍹"}</i><b>${drink.kind === "jackpot" ? "MINI" : `$${(drink.value / 100).toFixed(2)}`}</b><small>${drink.kind.toUpperCase()}</small></div>` : `<div class="frozen-empty" data-cell="${index}">+</div>`).join("");
       const visibleRespins = Math.max(0, Math.min(4, Math.floor(respins)));
       respinNode.textContent = `RESPINS ${"● ".repeat(visibleRespins)}${"○ ".repeat(Math.max(0, 3 - visibleRespins))}${visibleRespins > 3 ? "+" : ""}`;
       winNode.textContent = `$${(total / 100).toFixed(2)}`;
@@ -574,7 +574,15 @@ export class NeemasHighSeas {
         roundsPlayed += 1;
         status.textContent = "THE BAR IS POURING…";
         go.textContent = `AUTO RESPIN • ${respins} LEFT`;
-        host.classList.add("shaking"); await this.wait(520); host.classList.remove("shaking");
+        host.classList.add("respinning");
+        for (let frame = 0; frame < 5; frame += 1) {
+          host.querySelectorAll<HTMLElement>(".frozen-empty").forEach((cell) => {
+            const symbols = ["🍹", "🧊", "⚓", "🔔", "🍾"];
+            cell.textContent = symbols[(frame + Number(cell.dataset.cell ?? 0)) % symbols.length]!;
+          });
+          await this.wait(105 + frame * 18);
+        }
+        host.classList.remove("respinning");
         const empty = emptyIndices();
         const hitCount = casinoRandom() < .5 ? 0 : casinoRandom() < .82 ? 1 : 2;
         const hits = empty.sort(() => casinoRandom() - .5).slice(0, hitCount);
@@ -595,7 +603,9 @@ export class NeemasHighSeas {
           if (drink.kind === "wheel") { board.forEach((d) => { if (d && d.value <= this.betUnits * 2) { d.value += this.betUnits; total += this.betUnits; } }); status.textContent = "SHIP WHEEL • SMALL DRINKS UPGRADED"; }
         }
         if (hits.length) respins = Math.min(4, Math.max(respins, 3));
-        render(); await this.wait(850);
+        render();
+        hits.forEach((at) => host.children[at]?.classList.add("just-locked"));
+        await this.wait(900);
     }
     if (roundsPlayed >= MAX_ROUNDS) status.textContent = "LAST CALL • HAPPY HOUR SAFELY CLOSED";
     if (!emptyIndices().length) { total += this.betUnits * 500; status.textContent = "FULL BAR • GRAND 500×!"; }

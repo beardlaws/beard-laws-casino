@@ -380,6 +380,7 @@ export class MeghsCosmicJam {
   }
   private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<JamSymbol[][]> {
     this.lastSurge = free ? "ENCORE GRAVITY" : this.dealCosmicEvent();
+    const unmodifiedGrid = finalGrid.map((row) => [...row]);
     if (!free) finalGrid = this.applyCosmicEvent(finalGrid, this.lastSurge as CosmicEvent);
     const surge = this.root.querySelector<HTMLElement>("[data-megh-surge]")!;
     surge.querySelector("b")!.textContent = this.lastSurge;
@@ -401,20 +402,29 @@ export class MeghsCosmicJam {
               : this.lastSurge === "COSMIC COLLISION"
                 ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
             : free ? `<i class="gravity-well">◎</i><b>ENCORE GRAVITY</b>` : "";
-    if (effect.innerHTML) host.appendChild(effect);
+    const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
+    if (effect.innerHTML) machine.appendChild(effect);
     const flashes = free ? 3 : 5;
     for (let pass = 0; pass < flashes; pass += 1) {
       this.render(this.makeGrid());
       await this.wait(150 + pass * 55);
     }
-    this.render(finalGrid);
-    if (effect.innerHTML) host.appendChild(effect);
+    this.render(unmodifiedGrid);
     host.classList.remove("reel-rushing");
     host.classList.add("dropping", "reel-locking");
     for (let reel = 0; reel < COLS; reel += 1) {
       host.dataset.locked = String(reel + 1);
       await this.wait(this.lastSurge === "STAGGERED REEL RUSH" ? 190 + (reel % 2) * 120 : 175 + reel * 32);
     }
+    if (!free && this.lastSurge !== "COSMIC WEATHER CLEAR") {
+      effect.querySelector("b")!.textContent = `${this.lastSurge} • TARGET ACQUIRED`;
+      host.classList.add("event-resolving");
+      await this.wait(420);
+      this.render(finalGrid);
+      host.classList.add("event-revealed");
+      await this.wait(760);
+      host.classList.remove("event-resolving", "event-revealed");
+    } else this.render(finalGrid);
     await this.wait(380);
     host.classList.remove("dropping", "reel-locking", surgeClass);
     delete host.dataset.locked;

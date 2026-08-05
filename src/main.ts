@@ -15,6 +15,7 @@ import "./v58-living-floor.css";
 import "./v59-authenticity.css";
 import "./v60-foundation.css";
 import "./v61-stability.css";
+import "./v63-authenticity.css";
 import { Application } from "./app/Application";
 
 async function main(): Promise<void> {
