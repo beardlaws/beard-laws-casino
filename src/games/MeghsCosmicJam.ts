@@ -5,6 +5,7 @@ import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
+import { FeatureDirector } from "../engine/FeatureDirector";
 interface JamSymbol {
   id: string;
   label: string;
@@ -394,7 +395,7 @@ export class MeghsCosmicJam {
     const effect = document.createElement("div");
     effect.className = `cosmic-event ${surgeClass}`;
     effect.innerHTML = this.lastSurge === "UFO SCAN"
-      ? `<div class="ufo-rig"><i class="ufo-craft">🛸</i><i class="scan-beam"></i></div><b>SCANNING REELS</b>`
+      ? `<div class="ufo-rig"><img class="ufo-craft" src="${art("ufo")}" alt="Encore UFO"><i class="scan-beam"></i></div><b>SCANNING REELS</b>`
       : this.lastSurge === "AMPLIFIER OVERLOAD"
         ? `<i class="amp-burst">⚡</i><b>WILD REEL CHARGED</b>`
         : this.lastSurge === "MYSTERY SIGNAL"
@@ -402,10 +403,10 @@ export class MeghsCosmicJam {
           : this.lastSurge === "STAGGERED REEL RUSH"
             ? `<i class="rush-arrows">↓ ↓ ↓ ↓ ↓ ↓</i><b>UNSTABLE REEL ORDER</b>`
             : this.lastSurge === "GOAT STAMPEDE"
-              ? `<div class="goat-track"><i class="feature-goat goat-one">🐐</i><i class="feature-goat goat-two">🐐</i><i class="feature-goat goat-three">🐐</i></div><b>GOAT STAMPEDE</b>`
+              ? `<div class="goat-track"></div><b>GOAT STAMPEDE</b>`
               : this.lastSurge === "COSMIC COLLISION"
                 ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
-            : free ? `<div class="ufo-rig invasion-rig"><i class="invasion-ufo">🛸</i><i class="invasion-beam"></i></div><b>ALIEN ENCORE INVASION</b>` : "";
+            : free ? `<div class="ufo-rig invasion-rig"><img class="invasion-ufo" src="${art("ufo")}" alt="Encore UFO"><i class="invasion-beam"></i></div><b>ALIEN ENCORE INVASION</b>` : "";
     if (effect.innerHTML) host.appendChild(effect);
     const columns = Array.from({ length: COLS }, (_, x) => unmodifiedGrid.map((row) => row[x]!));
     await animateDomReels({
@@ -500,6 +501,7 @@ export class MeghsCosmicJam {
   private async animateCosmicEvent(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], effect: HTMLElement): Promise<void> {
     const changed = this.changedCells(before, after);
     if (!changed.length) return;
+    const director = new FeatureDirector(this.root.querySelector<HTMLElement>(".megh-machine") ?? host);
     const nodes = changed.map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`)).filter((node): node is HTMLElement => Boolean(node));
     nodes.forEach((node, index) => {
       node.style.setProperty("--event-delay", `${index * 130}ms`);
@@ -508,36 +510,66 @@ export class MeghsCosmicJam {
 
     if (this.lastSurge === "UFO SCAN" || this.lastSurge === "ALIEN ENCORE INVASION") {
       const rig = effect.querySelector<HTMLElement>(".ufo-rig");
+      const craft = effect.querySelector<HTMLElement>(".ufo-craft,.invasion-ufo");
+      const beam = effect.querySelector<HTMLElement>(".scan-beam,.invasion-beam");
       const hostRect = host.getBoundingClientRect();
-      const centers = nodes.map((node) => {
-        const r = node.getBoundingClientRect();
-        return { x: r.left - hostRect.left + r.width / 2, y: r.top - hostRect.top + r.height / 2 };
-      });
-      const avgX = centers.reduce((sum, p) => sum + p.x, 0) / centers.length;
-      const maxY = Math.max(...centers.map((p) => p.y));
-      if (rig) {
-        rig.style.setProperty("--beam-x", `${avgX}px`);
-        rig.style.setProperty("--beam-bottom", `${Math.max(140, maxY + 70)}px`);
-      }
       effect.classList.add("beam-locked");
-      await this.wait(650);
+      await this.wait(500);
       for (const node of nodes) {
+        const r = node.getBoundingClientRect();
+        const x = r.left - hostRect.left + r.width / 2;
+        const y = r.top - hostRect.top + r.height / 2;
+        if (rig) {
+          rig.style.setProperty("--beam-x", `${x}px`);
+          rig.style.setProperty("--beam-bottom", `${Math.max(140, y + r.height * .6)}px`);
+        }
+        craft?.classList.add("ufo-travelling");
+        await this.wait(380);
+        craft?.classList.remove("ufo-travelling");
+        beam?.classList.add("beam-firing");
         node.classList.add("abducting");
-        await this.wait(190);
+        await director.shake("soft", 220);
+        await this.wait(850);
+        beam?.classList.remove("beam-firing");
       }
-      await this.wait(950);
+      director.burst(host, "✦", 16, "cosmic-particle");
+      await this.wait(500);
     } else if (this.lastSurge === "GOAT STAMPEDE") {
+      const track = effect.querySelector<HTMLElement>(".goat-track");
+      const hostRect = host.getBoundingClientRect();
       effect.classList.add("stampeding");
-      await this.wait(700);
-      for (const node of nodes) {
+      for (let index = 0; index < nodes.length; index += 1) {
+        const node = nodes[index]!;
+        const rect = node.getBoundingClientRect();
+        const targetX = rect.left - hostRect.left + rect.width / 2;
+        const targetY = rect.top - hostRect.top + rect.height / 2;
+        const goat = document.createElement("img");
+        goat.className = `feature-goat goat-personality-${index % 4}`;
+        goat.src = art("goat");
+        goat.alt = "Stampeding space goat";
+        goat.style.setProperty("--goat-target-x", `${targetX}px`);
+        goat.style.setProperty("--goat-target-y", `${targetY}px`);
+        track?.appendChild(goat);
+        await this.wait(90);
+        goat.classList.add("goat-running-in");
+        await this.wait(720);
+        goat.classList.add("goat-sniffing");
         node.classList.add("goat-marked");
-        await this.wait(260);
+        await this.wait(520);
+        goat.classList.add("goat-chomping");
         node.classList.add("goat-eaten");
-        await this.wait(300);
+        director.burst(node, "•", 7, "crumb-particle");
+        await director.shake("soft", 190);
+        await this.wait(650);
+        goat.classList.add("goat-running-out");
+        await this.wait(500);
+        goat.remove();
       }
-      await this.wait(950);
+      await this.wait(250);
     } else {
       nodes.forEach((node) => node.classList.add("cosmic-mutating"));
+      director.burst(host, "✦", 12, "cosmic-particle");
+      await director.shake("soft", 220);
       await this.wait(900);
     }
 
@@ -547,7 +579,7 @@ export class MeghsCosmicJam {
       node.style.setProperty("--event-delay", `${index * 120}ms`);
       node.classList.add("event-replacement");
     });
-    await this.wait(1150);
+    await this.wait(1250);
   }
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));

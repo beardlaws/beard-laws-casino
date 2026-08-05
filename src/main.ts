@@ -21,6 +21,7 @@ import "./v67-modern-reels.css";
 import "./v68-verified-reels.css";
 import "./v69-feature-moments.css";
 import "./v70-experience.css";
+import "./v71-casino-systems.css";
 import "./big-bad-barber.css";
 import { Application } from "./app/Application";
 

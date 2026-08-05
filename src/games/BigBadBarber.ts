@@ -1,6 +1,7 @@
 import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { animateDomReels } from "./DomReelAnimator";
+import { FeatureDirector } from "../engine/FeatureDirector";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 
 type BarberSymbol = { id:string; label:string; icon:string; weight:number; pay:number };
@@ -67,12 +68,14 @@ export class BigBadBarber {
     this.spinning=true; this.lastWin=0; this.setWallet(this.getWallet()-this.betUnits); this.onActivity({type:"spin",game:"barber",wager:this.betUnits}); this.root.querySelector(".barber-machine")?.classList.add("barber-spinning"); this.update();
     const grid=this.makeGrid(); const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;
     const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
-    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:1950,stagger:215,fillerRows:17,renderSymbol:(s)=>`<div class="barber-symbol s-${s.id}"><span>${s.icon}</span><small>${s.label}</small></div>`});
+    const earlyRazors=cols.slice(0,4).flat().filter(s=>s.id==="razor").length;
+    if(earlyRazors>=2)this.message("THE BARBER IS WATCHING THE FINAL REEL…");
+    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:2100,stagger:235,fillerRows:20,anticipationReel:earlyRazors>=2?4:-1,renderSymbol:(s)=>`<div class="barber-symbol s-${s.id}"><span>${s.icon}</span><small>${s.label}</small></div>`});
     this.render(grid);
     this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");
     await this.wait(180);
     const result=this.evaluate(grid); const razors=grid.flat().filter(s=>s.id==="razor").length;
-    if(result.award>0){this.render(grid,result.winners);this.lastWin=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);await this.wait(900);}
+    if(result.award>0){this.render(grid,result.winners);this.lastWin=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);const director=new FeatureDirector(this.root.querySelector<HTMLElement>(".barber-machine")??host);director.burst(host,"✦",14,"gold-particle");await director.shake(result.award>=this.betUnits*10?"medium":"soft",260);await this.wait(900);}
     if(razors>=3){this.onActivity({type:"bonus",game:"barber"});await this.playShaveDown();}
     else if(!result.award)this.message(razors===2?"ONE MORE RAZOR FOR THE SHAVE DOWN":"THE BARBER MISSED • SPIN AGAIN");
     this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning"); this.spinning=false; this.update();
