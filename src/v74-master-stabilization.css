@@ -1,0 +1,25 @@
+/* V74 master stabilization — final override layer. */
+:root{--qa-speed:1}
+.dev-tools [data-dev-panel]{width:min(560px,calc(100vw - 24px));max-height:min(88vh,860px);overflow:auto;padding:16px;overscroll-behavior:contain}
+.dev-tools [data-dev-panel] header{position:sticky;top:-16px;z-index:5;background:#130817;padding:12px 0 10px;border-bottom:1px solid #6b3a75}
+.dev-status{margin:10px 0;padding:10px 12px;border:1px solid #65406f;border-radius:10px;background:#0b0710;color:#d9c7df;font-size:.78rem;min-height:38px}
+.dev-status.ok{border-color:#6fe58d;color:#9ff2b1}.dev-status.error{border-color:#ff6b75;color:#ffabb1}.dev-status.running{border-color:#ffe07a;color:#ffe99c}
+.dev-active{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0 12px;padding:9px 11px;border-radius:10px;background:#24102b;border:1px solid #743f7c}.dev-active b{color:#ffe58d}.dev-active i{font-style:normal;color:#95f3a8}
+.dev-grid button[data-inactive="true"]{opacity:.48;filter:saturate(.45)}
+.dev-qa-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.dev-qa-row label{display:flex;align-items:center;gap:7px;font-size:.72rem}.dev-qa-row select,.dev-qa-row button{min-height:38px;border-radius:8px}
+.dev-telemetry-table{display:grid;gap:6px;margin:10px 0}.dev-telemetry-table p{display:grid;grid-template-columns:1.2fr repeat(4,.72fr);gap:6px;margin:0;padding:7px 8px;border:1px solid #4c2c54;border-radius:8px;font-size:.68rem}.dev-telemetry-table p:first-child{color:#d9b2e8}.dev-telemetry-table b{color:#ffe899}
+.casino-character-layer{position:absolute!important;inset:0!important;overflow:visible!important;z-index:120!important;pointer-events:none!important}.casino-character{position:absolute;left:0;top:0;z-index:2;will-change:transform}
+.megh-machine{isolation:isolate}.megh-reels{isolation:isolate}.megh-ufo-actor{width:92px!important;transform-origin:50% 50%}.megh-ufo-actor .megh-ufo-beam{left:42%!important;width:16%!important;top:66%!important;height:155px!important;clip-path:polygon(40% 0,60% 0,100% 100%,0 100%)!important}.megh-ufo-actor.is-firing .megh-ufo-beam{opacity:.68!important}
+.megh-reels .event-target{z-index:4}.megh-reels .event-hole{visibility:hidden!important}.megh-reels.event-gravity-lock{pointer-events:none}.megh-reels .event-replacement-v74{animation:eventReplacementV74 calc(820ms / var(--qa-speed)) cubic-bezier(.17,.82,.22,1) both}
+@keyframes eventReplacementV74{0%{opacity:0;transform:translate3d(0,-140%,0) scale(.84);filter:blur(5px) brightness(1.6)}78%{opacity:1;transform:translate3d(0,8%,0) scale(1.03);filter:none}100%{opacity:1;transform:none;filter:none}}
+.beard-vault-modal{width:min(1040px,95vw)}.vault-tabs{display:flex;gap:8px;margin:12px 0}.vault-tabs button{flex:1}.trophy-room{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.trophy-card{padding:14px;border:1px solid #5d3d65;border-radius:14px;background:#140a19}.trophy-card.locked{opacity:.42}.trophy-card i{font-size:2rem;font-style:normal}.trophy-card b,.trophy-card span{display:block}.trophy-card span{font-size:.72rem;color:#c8afcf;margin-top:6px}.vault-item.equipped{box-shadow:0 0 0 2px #ffe17d inset,0 0 20px #f0bd3d45}
+body.qa-paused *{animation-play-state:paused!important}
+@media(max-width:650px){.dev-telemetry-table p{grid-template-columns:1fr repeat(2,.7fr)}.dev-telemetry-table p span:nth-child(n+4){display:none}.trophy-room{grid-template-columns:1fr 1fr}}
+/* Purchased Beard Vault cosmetics are now visible in-game. */
+body.reward-skin-gold-barber .barber-machine{box-shadow:0 0 0 3px #ffe47a,0 0 54px #f0ad3255!important}body.reward-skin-gold-barber .barber-machine header{background:radial-gradient(circle at 50% 20%,#6a3b16,#170814 70%)!important}
+body.reward-skin-neema-moon .neema-room{background:radial-gradient(circle at 50% 0,#164a70,#061023 55%,#03050c)!important}body.reward-skin-neema-moon .neema-moon{filter:drop-shadow(0 0 18px #fff) brightness(1.35)}
+body.reward-vault-royal .beard-bank-machine,body.reward-vault-royal .beard-bank-room{--vault-accent:#ffe36e;filter:saturate(1.08)}
+body.reward-goat-golden .megh-goat-actor img{filter:sepia(1) saturate(2.4) hue-rotate(350deg) brightness(1.28) drop-shadow(0 0 14px #ffe66d)}
+body.reward-barber-angry .barber-character img{filter:saturate(1.4) contrast(1.15) drop-shadow(0 0 16px #ff4d35)}
+body.reward-captain-gala .captain-neema-card{box-shadow:0 0 0 3px #ffe58a,0 0 32px #ffe16f66}
+body.reward-spin-beard-burst .slot-win-callout:not([hidden])::after{content:"✦  BEARD BURST  ✦";display:block;color:#ffe77d;animation:v74RewardPulse .7s ease both}@keyframes v74RewardPulse{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.12)}100%{transform:scale(1)}}

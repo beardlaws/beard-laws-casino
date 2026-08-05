@@ -13,6 +13,7 @@ import { applyActivity, rankForXp, type CasinoActivity } from "../state/CasinoPr
 import { CasinoAudio } from "../graphics/CasinoAudio";
 import { BeardBankDOM } from "../games/BeardBank/BeardBankDOM";
 import { BigBadBarber } from "../games/BigBadBarber";
+import { CasinoTelemetryStore } from "../state/CasinoTelemetry";
 
 type GameId =
   | "beard-bank"
@@ -31,9 +32,15 @@ export class Application {
   private walletUnits = this.profile.walletUnits;
   private readonly appRoot = document.getElementById("app")!;
   private readonly audio = new CasinoAudio();
+  private readonly telemetry = new CasinoTelemetryStore();
+  private currentGameId: GameId | "lobby" = "lobby";
 
   public async initialize(): Promise<void> {
     this.installDeveloperPanel();
+    window.addEventListener("casino:state", (event) => {
+      const detail = (event as CustomEvent<{ state?: string }>).detail;
+      if (detail?.state) this.telemetry.setState(detail.state);
+    });
     this.installSoundControl();
     const account = await this.accounts.restore();
     if (account.session) {
@@ -62,26 +69,61 @@ export class Application {
     if (document.querySelector("[data-dev-panel]")) return;
     const host = document.createElement("div");
     host.className = "dev-tools";
-    const actions = (items: Array<[string, string]>): string => items.map(([action, label]) => `<button data-dev-action="${action}">${label}</button>`).join("");
-    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>CASINO TEST LAB • V73</strong><button data-dev-close>×</button></header>
-      <div class="dev-telemetry"><p><span>SESSION SPINS</span><b>${this.profile.casino.totalSpins}</b></p><p><span>FEATURES</span><b>${this.profile.casino.totalBonuses}</b></p><p><span>BEST MULTIPLIER</span><b>${this.profile.casino.biggestMultiplier.toFixed(1)}×</b></p><p><span>BEARD CHIPS</span><b>${this.profile.casino.beardChips}</b></p></div>
+    const gameForAction = (action: string): GameId | "any" => {
+      if (action.startsWith("vault-") || action === "free-spins" || action === "living-vault" || action === "math-report") return "beard-bank";
+      if (action.startsWith("barber-")) return "barber";
+      if (action.startsWith("megh-")) return "megh";
+      if (action.startsWith("neema-")) return "neema";
+      if (action === "roulette-result") return "roulette";
+      return "any";
+    };
+    const actions = (items: Array<[string, string]>): string => items.map(([action, label]) => `<button data-dev-action="${action}" data-game="${gameForAction(action)}">${label}</button>`).join("");
+    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>CASINO TEST LAB • V74</strong><button data-dev-close>×</button></header>
+      <div class="dev-active"><span>ACTIVE CABINET</span><b data-dev-active>LOBBY</b><i data-dev-state>READY</i></div>
+      <div class="dev-status" data-dev-status>QA ready. Open a cabinet, then trigger a test.</div>
+      <div class="dev-telemetry" data-dev-summary></div><div class="dev-telemetry-table" data-dev-table></div>
+      <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button></div>
       <small>BEARD BANK</small><div class="dev-grid">${actions([["vault-heist","Vault Heist"],["free-spins","Free Spins"],["living-vault","Living Vault"],["vault-mini","Mini Coin"],["vault-minor","Minor Coin"],["vault-major","Major Coin"],["vault-grand","Grand Coin"],["vault-full","Full Vault"],["math-report","1M Math Report"]])}</div>
       <small>BIG BAD BARBER</small><div class="dev-grid">${actions([["barber-bonus","Force Shave Down"],["barber-attack","Force Barber Attack"],["barber-two-razors","Two-Razor Near Miss"],["barber-max-forts","Max Fortresses"]])}</div>
       <small>MEGH'S COSMIC JAM</small><div class="dev-grid">${actions([["megh-goat","Goat Stampede"],["megh-ufo","UFO Scan"],["megh-encore","Force Encore"],["megh-headliner","Headliner Mode"]])}</div>
       <small>NEEMA'S HIGH SEAS</small><div class="dev-grid">${actions([["neema-feature","Frozen Happy Hour"],["neema-captain","Captain Moment"],["neema-tickets","Three Tickets"],["neema-voyage","Final Voyage"]])}</div>
-      <small>ROULETTE • FORCE NEXT RESULT</small><div class="dev-result"><select data-dev-result><option>0</option><option>00</option>${Array.from({ length: 36 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select><button data-dev-action="roulette-result">ARM RESULT</button></div>
-      <p>QA actions only affect the matching active game. Production math remains unchanged.</p></section>`;
+      <small>ROULETTE • FORCE NEXT RESULT</small><div class="dev-result"><select data-dev-result><option>0</option><option>00</option>${Array.from({ length: 36 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select><button data-dev-action="roulette-result" data-game="roulette">ARM RESULT</button></div>
+      <p>QA actions never alter production math. They only arm the matching active cabinet.</p></section>`;
     document.body.appendChild(host);
     const panel = host.querySelector<HTMLElement>("[data-dev-panel]")!;
-    const toggle = (): void => { panel.hidden = !panel.hidden; };
+    const status = host.querySelector<HTMLElement>("[data-dev-status]")!;
+    const setStatus = (text: string, tone: "ok" | "error" | "running" = "ok"): void => { status.textContent = text; status.className = `dev-status ${tone}`; };
+    const refresh = (): void => {
+      const snap = this.telemetry.snapshot();
+      host.querySelector<HTMLElement>("[data-dev-active]")!.textContent = this.currentGameId.toUpperCase();
+      host.querySelector<HTMLElement>("[data-dev-state]")!.textContent = snap.gameState;
+      const all = Object.values(snap.games);
+      const spins = all.reduce((n, g) => n + (g?.spins ?? 0), 0);
+      const features = all.reduce((n, g) => n + (g?.features ?? 0), 0);
+      host.querySelector<HTMLElement>("[data-dev-summary]")!.innerHTML = `<p><span>RECORDED SPINS</span><b>${spins}</b></p><p><span>FEATURES</span><b>${features}</b></p><p><span>BEST MULTIPLIER</span><b>${this.profile.casino.biggestMultiplier.toFixed(1)}×</b></p><p><span>BEARD CHIPS</span><b>${this.profile.casino.beardChips}</b></p>`;
+      const games: GameId[] = ["beard-bank","barber","megh","neema","roulette","blackjack","free-drop"];
+      host.querySelector<HTMLElement>("[data-dev-table]")!.innerHTML = `<p><span>GAME</span><span>SPINS</span><span>FEATURES</span><span>DRY</span><span>RTP</span></p>${games.map((game) => { const g = snap.games[game]; const rtp = g && g.totalWagered > 0 ? `${(g.totalWon / g.totalWagered * 100).toFixed(1)}%` : "—"; return `<p><b>${game.toUpperCase()}</b><span>${g?.spins ?? 0}</span><span>${g?.features ?? 0}</span><span>${g ? Math.max(0, g.spins - g.lastFeatureSpin) : 0}</span><span>${rtp}</span></p>`; }).join("")}`;
+      host.querySelectorAll<HTMLElement>("[data-dev-action]").forEach((button) => { const game = button.dataset.game; button.dataset.inactive = String(game !== "any" && game !== this.currentGameId); });
+    };
+    const toggle = (): void => { panel.hidden = !panel.hidden; if (!panel.hidden) refresh(); };
     host.querySelector("[data-dev-toggle]")?.addEventListener("click", toggle);
     host.querySelector("[data-dev-close]")?.addEventListener("click", toggle);
+    host.querySelector<HTMLSelectElement>("[data-dev-speed]")?.addEventListener("change", (event) => { const speed = Number((event.target as HTMLSelectElement).value); this.telemetry.setAnimationSpeed(speed); setStatus(`Animation speed set to ${speed}×.`, "ok"); });
+    host.querySelector("[data-dev-pause]")?.addEventListener("click", (event) => { document.body.classList.toggle("qa-paused"); (event.currentTarget as HTMLElement).textContent = document.body.classList.contains("qa-paused") ? "RESUME ANIMATIONS" : "PAUSE ANIMATIONS"; });
+    host.querySelector("[data-dev-reset-telemetry]")?.addEventListener("click", () => { this.telemetry.reset(); refresh(); setStatus("Telemetry reset.", "ok"); });
     host.querySelectorAll<HTMLElement>("[data-dev-action]").forEach((button) => button.addEventListener("click", () => {
-      if (button.dataset.devAction === "math-report") { panel.hidden = true; this.showMathReport(); return; }
+      const action = button.dataset.devAction ?? "";
+      if (action === "math-report") { this.showMathReport(); setStatus("Math report launched.", "running"); return; }
+      const required = gameForAction(action);
+      if (required !== "any" && required !== this.currentGameId) { setStatus(`Open ${required.toUpperCase()} before using ${button.textContent?.trim()}.`, "error"); refresh(); return; }
       const result = host.querySelector<HTMLSelectElement>("[data-dev-result]")!.value;
-      window.dispatchEvent(new CustomEvent("casino:dev", { detail: { action: button.dataset.devAction, result } }));
-      panel.hidden = true;
+      window.dispatchEvent(new CustomEvent("casino:dev", { detail: { action, result } }));
+      setStatus(`ARMED: ${button.textContent?.trim()} on ${this.currentGameId.toUpperCase()}.`, "running");
+      if (host.querySelector<HTMLInputElement>("[data-dev-close-after]")?.checked) panel.hidden = true;
+      window.setTimeout(refresh, 120);
     }));
+    window.addEventListener("casino:qa-result", (event) => { const detail = (event as CustomEvent<{ message?: string; ok?: boolean }>).detail; setStatus(detail?.message ?? "QA action complete.", detail?.ok === false ? "error" : "ok"); refresh(); });
+    window.addEventListener("casino:state", refresh);
     window.addEventListener("keydown", (event) => { if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "d") toggle(); });
   }
 
@@ -146,6 +188,9 @@ export class Application {
 
   private recordActivity(activity: CasinoActivity): void {
     this.audio.activity(activity);
+    if (activity.type === "spin" || activity.type === "bonus" || activity.type === "win") {
+      this.telemetry.record(activity.game, activity.type, activity.type === "spin" ? (activity.wager ?? 0) : (activity.amount ?? 0));
+    }
     let casino = applyActivity(this.profile.casino, activity);
     const readyRewards = casino.missions.filter((mission) => mission.progress >= mission.target && !mission.claimed);
     let walletUnits = this.walletUnits;
@@ -159,7 +204,15 @@ export class Application {
     this.accounts.saveProfile(this.profile);
   }
 
+  private applyUnlockedRewards(): void {
+    const rewardClasses = ["skin-gold-barber", "goat-golden", "skin-neema-moon", "vault-royal", "spin-beard-burst", "barber-angry", "captain-gala"];
+    rewardClasses.forEach((reward) => document.body.classList.toggle(`reward-${reward}`, this.profile.casino.unlockedRewards.includes(reward)));
+  }
+
   private showLobby(): void {
+    this.currentGameId = "lobby";
+    this.telemetry.setActiveGame("lobby");
+    this.applyUnlockedRewards();
     this.destroyPixi();
     const rank = rankForXp(this.profile.casino.xp);
     const rankPercent = rank.next > this.profile.casino.xp ? Math.min(100, Math.round((this.profile.casino.xp / rank.next) * 100)) : 100;
@@ -242,19 +295,36 @@ export class Application {
 
   private showBeardVault(): void {
     const rewards = [
-      { id: "skin-gold-barber", icon: "✂", name: "GILDED BARBER", copy: "Golden cabinet trim for Big Bad Barber", cost: 150 },
-      { id: "goat-golden", icon: "🐐", name: "GOLDEN GOAT", copy: "Rare cosmetic goat visitor in Cosmic Jam", cost: 225 },
-      { id: "skin-neema-moon", icon: "☾", name: "MOONLIGHT CRUISE", copy: "Night-voyage atmosphere for Neema", cost: 175 },
-      { id: "vault-royal", icon: "♛", name: "ROYAL VAULT DOOR", copy: "Black-and-gold Living Vault skin", cost: 200 },
-      { id: "spin-beard-burst", icon: "✦", name: "BEARD BURST", copy: "Celebration particles on larger wins", cost: 100 },
-      { id: "trophy-founder", icon: "🏆", name: "FOUNDING FAMILY", copy: "Permanent trophy for the family suite", cost: 75 },
+      { id: "skin-gold-barber", icon: "✂", name: "GILDED BARBER", copy: "Golden cabinet trim for Big Bad Barber", cost: 150, category: "CABINET" },
+      { id: "goat-golden", icon: "🐐", name: "GOLDEN GOAT", copy: "Rare cosmetic goat visitor in Cosmic Jam", cost: 225, category: "CHARACTER" },
+      { id: "skin-neema-moon", icon: "☾", name: "MOONLIGHT CRUISE", copy: "Night-voyage atmosphere for Neema", cost: 175, category: "CABINET" },
+      { id: "vault-royal", icon: "♛", name: "ROYAL VAULT DOOR", copy: "Black-and-gold Living Vault skin", cost: 200, category: "CABINET" },
+      { id: "spin-beard-burst", icon: "✦", name: "BEARD BURST", copy: "Celebration particles on larger wins", cost: 100, category: "EFFECT" },
+      { id: "trophy-founder", icon: "🏆", name: "FOUNDING FAMILY", copy: "Permanent trophy for the family suite", cost: 75, category: "TROPHY" },
+      { id: "goat-baby", icon: "🐐", name: "BABY SPACE GOAT", copy: "A tiny follower for future goat events", cost: 125, category: "CHARACTER" },
+      { id: "barber-angry", icon: "😈", name: "RAGING BARBER", copy: "Alternate villain entrance animation", cost: 180, category: "CHARACTER" },
+      { id: "captain-gala", icon: "⚓", name: "CAPTAIN'S GALA", copy: "Formal Captain Neema celebration outfit", cost: 160, category: "CHARACTER" },
+    ];
+    const trophies = [
+      { id: "FIRST SPIN", icon: "🎰", name: "FIRST SPIN", copy: "The casino doors officially opened." },
+      { id: "CENTURY CLUB", icon: "💯", name: "CENTURY CLUB", copy: "Complete 100 spins." },
+      { id: "50× CLUB", icon: "✨", name: "50× CLUB", copy: "Land a 50× or larger win." },
+      { id: "VAULT COLLECTOR", icon: "🔐", name: "VAULT COLLECTOR", copy: "Collect a Beard Bank coin." },
+      { id: "COSMIC HEADLINER", icon: "🛸", name: "COSMIC HEADLINER", copy: "Reach Megh's full stage." },
+      { id: "CAPTAIN'S DECK", icon: "🚢", name: "CAPTAIN'S DECK", copy: "Complete Neema's voyage ladder." },
+      { id: "FIRST BARBER FEATURE", icon: "✂", name: "SHAVE DOWN", copy: "Trigger the Big Bad Barber feature." },
+      { id: "FIRST MEGH FEATURE", icon: "🐐", name: "COSMIC ENCORE", copy: "Trigger Megh's feature." },
+      { id: "FIRST NEEMA FEATURE", icon: "🍹", name: "FROZEN HAPPY HOUR", copy: "Trigger Neema's feature." },
     ];
     const owned = new Set(this.profile.casino.unlockedRewards);
+    let tab: "shop" | "trophies" = "shop";
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
     const render = (): void => {
-      modal.innerHTML = `<section class="progress-modal beard-vault-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • META-GAME</small><h2>The Beard Vault</h2><p>Spend Beard Chips on cosmetics and collectibles. Rewards never change odds, RTP, or payouts.</p><div class="vault-balance"><p><span>BEARD REPUTATION</span><b>${this.profile.casino.xp}</b></p><p><span>SPENDABLE BEARD CHIPS</span><b>${this.profile.casino.beardChips}</b></p><p><span>COLLECTION</span><b>${owned.size} / ${rewards.length}</b></p></div><div class="vault-shop">${rewards.map((reward) => `<button class="vault-item ${owned.has(reward.id) ? "owned" : ""}" data-reward="${reward.id}" ${owned.has(reward.id) ? "disabled" : ""}><i>${reward.icon}</i><strong>${reward.name}</strong><span>${reward.copy}</span><b>${owned.has(reward.id) ? "OWNED" : `${reward.cost} CHIPS`}</b></button>`).join("")}</div><p class="vault-note">Feature triggers award 25 Chips. 50× and 100× wins award bonus Chips. Daily missions now award Chips instead of extra gambling credits.</p><button class="primary" data-close>RETURN TO CASINO</button></section>`;
+      const unlockedTrophies = new Set(this.profile.casino.achievements);
+      modal.innerHTML = `<section class="progress-modal beard-vault-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • FAMILY META-GAME</small><h2>The Beard Vault</h2><p>Every cabinet creates family memories. Reputation never decreases; Beard Chips unlock cosmetics only and never change odds.</p><div class="vault-balance"><p><span>BEARD REPUTATION</span><b>${this.profile.casino.xp}</b></p><p><span>SPENDABLE BEARD CHIPS</span><b>${this.profile.casino.beardChips}</b></p><p><span>COLLECTION</span><b>${owned.size} / ${rewards.length}</b></p><p><span>TROPHIES</span><b>${trophies.filter((t) => unlockedTrophies.has(t.id)).length} / ${trophies.length}</b></p></div><div class="vault-tabs"><button data-vault-tab="shop" class="${tab === "shop" ? "primary" : "account-secondary"}">REWARD SHOP</button><button data-vault-tab="trophies" class="${tab === "trophies" ? "primary" : "account-secondary"}">FAMILY TROPHY ROOM</button></div>${tab === "shop" ? `<div class="vault-shop">${rewards.map((reward) => `<button class="vault-item ${owned.has(reward.id) ? "owned" : ""}" data-reward="${reward.id}" ${owned.has(reward.id) ? "disabled" : ""}><i>${reward.icon}</i><small>${reward.category}</small><strong>${reward.name}</strong><span>${reward.copy}</span><b>${owned.has(reward.id) ? "OWNED" : `${reward.cost} CHIPS`}</b></button>`).join("")}</div><p class="vault-note">Features award Chips. Daily missions, rare wins, and future family challenges add more. Cosmetics never change RTP.</p>` : `<div class="trophy-room">${trophies.map((trophy) => { const unlocked = unlockedTrophies.has(trophy.id); return `<article class="trophy-card ${unlocked ? "" : "locked"}"><i>${unlocked ? trophy.icon : "?"}</i><b>${trophy.name}</b><span>${unlocked ? trophy.copy : "Keep playing to discover this trophy."}</span></article>`; }).join("")}</div>`}<button class="primary" data-close>RETURN TO CASINO</button></section>`;
       modal.querySelectorAll("[data-close]").forEach((node) => node.addEventListener("click", () => modal.remove()));
+      modal.querySelectorAll<HTMLElement>("[data-vault-tab]").forEach((button) => button.addEventListener("click", () => { tab = button.dataset.vaultTab === "trophies" ? "trophies" : "shop"; render(); }));
       modal.querySelectorAll<HTMLButtonElement>("[data-reward]").forEach((button) => button.addEventListener("click", () => {
         const reward = rewards.find((item) => item.id === button.dataset.reward);
         if (!reward || owned.has(reward.id) || this.profile.casino.beardChips < reward.cost) return;
@@ -437,6 +507,9 @@ export class Application {
       this.showAtm();
       return;
     }
+    this.currentGameId = id;
+    this.telemetry.setActiveGame(id);
+    this.applyUnlockedRewards();
     if (id === "beard-bank") {
       void this.openBeardBank();
       return;

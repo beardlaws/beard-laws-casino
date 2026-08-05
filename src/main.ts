@@ -36,3 +36,5 @@ async function main(): Promise<void> {
 }
 
 main();
+
+import "./v74-master-stabilization.css";

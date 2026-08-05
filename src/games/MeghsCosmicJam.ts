@@ -6,6 +6,7 @@ import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
 import { FeatureDirector } from "../engine/FeatureDirector";
+import { GameStateMachine } from "../engine/GameStateMachine";
 interface JamSymbol {
   id: string;
   label: string;
@@ -66,13 +67,14 @@ export class MeghsCosmicJam {
   private surgeDeck: CosmicEvent[] = [];
   private cascadeStreak = 0;
   private forcedSurge: CosmicEvent | null = null;
+  private readonly gameState = new GameStateMachine("megh");
   private forceEncore = false;
   private readonly handleDeveloperAction = (event: Event): void => {
     const detail = (event as CustomEvent<{ action?: string }>).detail;
-    if (detail?.action === "megh-goat") { this.forcedSurge = "GOAT STAMPEDE"; this.message("QA ARMED • GOAT STAMPEDE ON NEXT DROP"); }
-    if (detail?.action === "megh-ufo") { this.forcedSurge = "UFO SCAN"; this.message("QA ARMED • UFO SCAN ON NEXT DROP"); }
-    if (detail?.action === "megh-encore") { this.forceEncore = true; this.message("QA ARMED • ENCORE ON NEXT DROP"); }
-    if (detail?.action === "megh-headliner") { ["BASS","LEAD","DRUMS","VOCALS","UFO"].forEach((channel)=>this.soundboard.add(channel)); this.forceEncore = true; this.chargeSoundboard([]); this.message("QA ARMED • HEADLINER MODE ON NEXT DROP"); }
+    if (detail?.action === "megh-goat") { this.forcedSurge = "GOAT STAMPEDE"; this.message("QA ARMED • GOAT STAMPEDE ON NEXT DROP"); this.qaResult("Goat Stampede armed for the next drop."); }
+    if (detail?.action === "megh-ufo") { this.forcedSurge = "UFO SCAN"; this.message("QA ARMED • UFO SCAN ON NEXT DROP"); this.qaResult("UFO Scan armed for the next drop."); }
+    if (detail?.action === "megh-encore") { this.forceEncore = true; this.message("QA ARMED • ENCORE ON NEXT DROP"); this.qaResult("Encore armed for the next drop."); }
+    if (detail?.action === "megh-headliner") { ["BASS","LEAD","DRUMS","VOCALS","UFO"].forEach((channel)=>this.soundboard.add(channel)); this.forceEncore = true; this.chargeSoundboard([]); this.message("QA ARMED • HEADLINER MODE ON NEXT DROP"); this.qaResult("Headliner Mode armed for the next drop."); }
   };
   private soundcheck = this.readProgress("megh-soundcheck", 0);
   private lastDisplayedWin = 0;
@@ -302,6 +304,8 @@ export class MeghsCosmicJam {
       return false;
     }
     this.spinning = true;
+    this.gameState.transition("SPIN_START", true);
+    this.gameState.transition("SPINNING");
     this.onActivity({ type: "spin", game: "megh", wager: free ? 0 : this.betUnits });
     if (!free) this.setWallet(this.getWallet() - this.betUnits);
     else { this.freeDrops -= 1; this.featureDropsPlayed += 1; }
@@ -315,6 +319,8 @@ export class MeghsCosmicJam {
     let feature = false;
     const host = this.root.querySelector<HTMLElement>("[data-megh-reels]")!;
     grid = await this.playReelRush(host, grid, free);
+    this.gameState.transition("REEL_STOPS", true);
+    this.gameState.transition("EVALUATING");
     const callout = this.root.querySelector<HTMLElement>(
       "[data-megh-callout]",
     )!;
@@ -322,6 +328,7 @@ export class MeghsCosmicJam {
     for (let cascade = 0; cascade < 8; cascade += 1) {
       const matches = this.clusters(grid);
       if (!matches.length) break;
+      this.gameState.transition("CASCADE", true);
       const removed = new Set(matches.flatMap((m) => [...m.cells]));
       const raw = matches.reduce(
         (sum, m) => sum + m.symbol.pay * m.cells.size,
@@ -602,13 +609,17 @@ export class MeghsCosmicJam {
         "megh-ufo-actor",
         `<img src="${art("ufo")}" alt="Encore UFO"><i class="megh-ufo-beam"></i>`,
       );
-      const startPoint = new DOMPoint(machineRect.width * 0.1, -70);
+      const reelRect = host.getBoundingClientRect();
+      const boardTop = reelRect.top - machineRect.top;
+      const startPoint = new DOMPoint(-120, Math.max(24, boardTop - 86));
       director.characters.position(actor, startPoint.x, startPoint.y);
-      await director.characters.move(actor, startPoint, new DOMPoint(machineRect.width * 0.5, 26), { duration: 720 });
+      const boardEntry = new DOMPoint(reelRect.left - machineRect.left + reelRect.width * 0.5 - 46, Math.max(24, boardTop - 86));
+      await director.characters.move(actor, startPoint, boardEntry, { duration: 720 });
+      actor.dataset.x = String(boardEntry.x); actor.dataset.y = String(boardEntry.y);
 
       for (const node of nodes) {
         const target = centerInMachine(node);
-        const hover = new DOMPoint(target.x, Math.max(18, target.y - 150));
+        const hover = new DOMPoint(target.x - 46, Math.max(24, target.y - 142));
         const current = new DOMPoint(
           Number(actor.dataset.x ?? machineRect.width * 0.5),
           Number(actor.dataset.y ?? 26),
@@ -675,15 +686,21 @@ export class MeghsCosmicJam {
       effect.remove();
     }
 
+    host.classList.add("event-gravity-lock");
+    nodes.forEach((node) => node.classList.add("event-hole"));
+    await this.wait(240);
     this.render(after);
     const fresh = changed
       .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
       .filter((node): node is HTMLElement => Boolean(node));
     fresh.forEach((node, index) => {
-      node.style.setProperty("--event-delay", `${index * 150}ms`);
-      node.classList.add("event-replacement-v72c");
+      node.style.setProperty("--event-delay", `${index * 110}ms`);
+      node.style.animationDelay = `${index * 110}ms`;
+      node.classList.add("event-replacement-v74");
     });
-    await this.wait(1450);
+    await this.wait(1050 + fresh.length * 60);
+    host.classList.remove("event-gravity-lock");
+    this.gameState.transition("EVALUATING", true);
   }
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));
@@ -815,6 +832,7 @@ export class MeghsCosmicJam {
     this.root.querySelector<HTMLElement>("[data-megh-stage]")!.textContent =
       `${this.stageName()} • AMP ${Math.min(this.stageEnergy, 60)} / 60`;
   }
+  private qaResult(message: string, ok = true): void { window.dispatchEvent(new CustomEvent("casino:qa-result", { detail: { message, ok } })); }
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
   }

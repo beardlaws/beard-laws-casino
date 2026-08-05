@@ -1,0 +1,11 @@
+BEARD LAWS CASINO V74 — MASTER STABILIZATION
+
+1. Open PowerShell in this folder.
+2. Run:
+   powershell -ExecutionPolicy Bypass -File .\VERIFY-V74.ps1
+3. Publish with:
+   powershell -ExecutionPolicy Bypass -File .\PUBLISH-V74.ps1
+4. After GitHub Pages deploys, press Ctrl + F5.
+5. Open QA with Ctrl + Shift + D.
+
+The QA Lab now stays open, validates the active cabinet, and reports trigger status.
