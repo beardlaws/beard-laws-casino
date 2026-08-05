@@ -1,4 +1,4 @@
-export type CasinoGameId = "beard-bank" | "neema" | "megh" | "blackjack" | "roulette" | "free-drop";
+export type CasinoGameId = "beard-bank" | "neema" | "megh" | "blackjack" | "roulette" | "free-drop" | "barber";
 
 export interface CasinoActivity {
   readonly type: "spin" | "bonus" | "win" | "coin" | "stage" | "voyage";

@@ -170,7 +170,7 @@ export class MeghsCosmicJam {
       .flatMap((row, y) =>
         row.map(
           (symbol, x) =>
-            `<div class="jam-symbol s-${symbol.id}${winners.has(`${x}:${y}`) ? " winner" : ""}" style="grid-column:${x + 1};grid-row:${y + 1};--x:${x};--y:${y}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')"><small>${symbol.label}</small></div>`,
+            `<div data-cell="${x}:${y}" class="jam-symbol s-${symbol.id}${winners.has(`${x}:${y}`) ? " winner" : ""}" style="grid-column:${x + 1};grid-row:${y + 1};--x:${x};--y:${y}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" onload="this.parentElement.classList.add('art-ready')" onerror="this.hidden=true;this.parentElement.classList.add('art-failed')"><small>${symbol.label}</small></div>`,
         ),
       )
       .join("");
@@ -422,13 +422,21 @@ export class MeghsCosmicJam {
     this.render(unmodifiedGrid);
     host.classList.remove("reel-rushing");
     host.classList.add("dropping", "reel-locking");
-    if (!free && this.lastSurge !== "COSMIC WEATHER CLEAR") {
-      effect.querySelector("b")!.textContent = `${this.lastSurge} • TARGET ACQUIRED`;
+    if ((!free && this.lastSurge !== "COSMIC WEATHER CLEAR") || free) {
+      const label = effect.querySelector("b");
+      if (label) label.textContent = `${this.lastSurge} • TARGET ACQUIRED`;
       host.classList.add("event-resolving");
-      await this.wait(420);
-      this.render(finalGrid);
+      if (free) {
+        const invaded = unmodifiedGrid.map((row) => [...row]);
+        const count = 3 + Math.floor(casinoRandom() * 5);
+        const used = new Set<string>();
+        while (used.size < count) used.add(`${Math.floor(casinoRandom() * COLS)}:${Math.floor(casinoRandom() * ROWS)}`);
+        [...used].forEach((key, index) => { const [x = 0, y = 0] = key.split(":").map(Number); invaded[y]![x] = index === 0 ? SYMBOLS.find((item) => item.id === "wild")! : this.pick(); });
+        finalGrid = invaded;
+      }
+      await this.animateCosmicEvent(host, unmodifiedGrid, finalGrid, effect);
       host.classList.add("event-revealed");
-      await this.wait(760);
+      await this.wait(320);
       host.classList.remove("event-resolving", "event-revealed");
     } else this.render(finalGrid);
     await this.wait(380);
@@ -451,17 +459,28 @@ export class MeghsCosmicJam {
   private applyCosmicEvent(grid: JamSymbol[][], event: CosmicEvent): JamSymbol[][] {
     const next = grid.map((row) => [...row]);
     const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
+    const uniqueCells = (count: number): Array<[number, number]> => {
+      const cells: Array<[number, number]> = [];
+      while (cells.length < count) {
+        const cell: [number, number] = [Math.floor(casinoRandom() * COLS), Math.floor(casinoRandom() * ROWS)];
+        if (!cells.some(([x, y]) => x === cell[0] && y === cell[1])) cells.push(cell);
+      }
+      return cells;
+    };
     if (event === "UFO SCAN") {
-      for (let i = 0; i < 2; i += 1) next[Math.floor(casinoRandom() * ROWS)]![Math.floor(casinoRandom() * COLS)] = symbol("wild");
+      const cells = uniqueCells(3 + Math.floor(casinoRandom() * 4));
+      cells.forEach(([x, y], index) => { next[y]![x] = index === 0 ? symbol("wild") : this.pick(); });
     } else if (event === "AMPLIFIER OVERLOAD") {
       const col = Math.floor(casinoRandom() * COLS);
       [1, 2, 3].forEach((row) => { next[row]![col] = symbol("amp"); });
     } else if (event === "MYSTERY SIGNAL") {
       const chosen = ["strawberry", "amp", "guitar", "vinyl", "goat"][Math.floor(casinoRandom() * 5)]!;
-      for (let i = 0; i < 3; i += 1) next[Math.floor(casinoRandom() * ROWS)]![Math.floor(casinoRandom() * COLS)] = symbol(chosen);
+      uniqueCells(3 + Math.floor(casinoRandom() * 3)).forEach(([x, y]) => { next[y]![x] = symbol(chosen); });
     } else if (event === "GOAT STAMPEDE") {
-      const row = Math.floor(casinoRandom() * ROWS);
-      [1, 2, 3, 4].forEach((col) => { next[row]![col] = symbol("goat"); });
+      const preferred: Array<[number, number]> = [];
+      grid.forEach((row, y) => row.forEach((item, x) => { if (item.id === "strawberry") preferred.push([x, y]); }));
+      const targets = [...preferred.sort(() => casinoRandom() - .5), ...uniqueCells(6)].filter((cell, index, all) => all.findIndex(other => other[0] === cell[0] && other[1] === cell[1]) === index).slice(0, 3 + Math.floor(casinoRandom() * 4));
+      targets.forEach(([x, y]) => { next[y]![x] = this.pick(); });
     } else if (event === "COSMIC COLLISION") {
       const row = Math.floor(casinoRandom() * (ROWS - 1));
       const col = Math.floor(casinoRandom() * (COLS - 1));
@@ -469,6 +488,37 @@ export class MeghsCosmicJam {
       next[row]![col + 1] = chosen; next[row + 1]![col] = chosen; next[row + 1]![col + 1] = chosen;
     }
     return next;
+  }
+
+  private changedCells(before: JamSymbol[][], after: JamSymbol[][]): string[] {
+    const changed: string[] = [];
+    for (let y = 0; y < ROWS; y += 1) for (let x = 0; x < COLS; x += 1) {
+      if (before[y]![x]!.id !== after[y]![x]!.id) changed.push(`${x}:${y}`);
+    }
+    return changed;
+  }
+
+  private async animateCosmicEvent(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], effect: HTMLElement): Promise<void> {
+    const changed = this.changedCells(before, after);
+    if (!changed.length) return;
+    const nodes = changed.map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`)).filter((node): node is HTMLElement => Boolean(node));
+    nodes.forEach((node, index) => { node.style.setProperty("--event-delay", `${index * 75}ms`); node.classList.add("event-target"); });
+    if (this.lastSurge === "UFO SCAN" || this.lastSurge === "ALIEN ENCORE INVASION") {
+      effect.classList.add("beam-locked");
+      nodes.forEach((node) => node.classList.add("abducting"));
+      await this.wait(880);
+    } else if (this.lastSurge === "GOAT STAMPEDE") {
+      effect.classList.add("stampeding");
+      nodes.forEach((node) => node.classList.add("goat-eaten"));
+      await this.wait(1050);
+    } else {
+      nodes.forEach((node) => node.classList.add("cosmic-mutating"));
+      await this.wait(650);
+    }
+    this.render(after);
+    const fresh = changed.map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`)).filter((node): node is HTMLElement => Boolean(node));
+    fresh.forEach((node, index) => { node.style.setProperty("--event-delay", `${index * 70}ms`); node.classList.add("event-replacement"); });
+    await this.wait(650);
   }
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));

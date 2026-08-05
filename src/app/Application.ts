@@ -12,6 +12,7 @@ import { AccountService } from "../state/AccountService";
 import { applyActivity, rankForXp, type CasinoActivity } from "../state/CasinoProgression";
 import { CasinoAudio } from "../graphics/CasinoAudio";
 import { BeardBankDOM } from "../games/BeardBank/BeardBankDOM";
+import { BigBadBarber } from "../games/BigBadBarber";
 
 type GameId =
   | "beard-bank"
@@ -19,7 +20,8 @@ type GameId =
   | "roulette"
   | "free-drop"
   | "neema"
-  | "megh";
+  | "megh"
+  | "barber";
 
 export class Application {
   private pixi: PixiApplication | undefined;
@@ -200,6 +202,7 @@ export class Application {
           ${this.gameCard("free-drop", "ORIGINAL GAME", "BEARDFALL ROULETTE", "Drop it. Bounce it. Let the beardwall decide.", "prototype purple")}
           ${this.gameCard("neema", "FEATURE SLOT", "NEEMA'S HIGH SEAS HAPPY HOUR", "Cabin upgrades, cruise tickets, and one glorious Last Call", "live rose")}
           ${this.gameCard("megh", "CASCADE SLOT", "MEGH'S COSMIC JAM", "Tractor-beam tumbles, space goats, and the Intergalactic Encore", "live cosmic")}
+          ${this.gameCard("barber", "NEW FEATURE SLOT", "THE BIG BAD BARBER", "Build beard fortresses and survive the Shave Down", "live barber")}
         </div>
       </section>`;
     this.appRoot
@@ -449,6 +452,16 @@ export class Application {
     }
     if (id === "neema") {
       new NeemasHighSeas(
+        this.appRoot,
+        () => this.walletUnits,
+        (units) => this.saveWallet(units),
+        () => this.showLobby(),
+        (activity) => this.recordActivity(activity),
+      ).open();
+      return;
+    }
+    if (id === "barber") {
+      new BigBadBarber(
         this.appRoot,
         () => this.walletUnits,
         (units) => this.saveWallet(units),
