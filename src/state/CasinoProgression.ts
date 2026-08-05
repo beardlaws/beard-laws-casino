@@ -17,6 +17,12 @@ export interface MissionProgress {
   readonly claimed: boolean;
 }
 
+export interface CasinoMastery {
+  readonly level: number;
+  readonly progress: number;
+  readonly claimed: readonly string[];
+}
+
 export interface CasinoProgress {
   readonly xp: number;
   readonly beardChips: number;
@@ -36,6 +42,8 @@ export interface CasinoProgress {
   readonly dailyRewardKey: string;
   readonly dailyFreePlayUnits: number;
   readonly missions: readonly MissionProgress[];
+  readonly mastery: Partial<Record<CasinoGameId, CasinoMastery>>;
+  readonly discoveredEvents: readonly string[];
 }
 
 const dayKey = (date = new Date()): string => date.toISOString().slice(0, 10);
@@ -70,6 +78,8 @@ export const freshCasinoProgress = (): CasinoProgress => ({
   dailyRewardKey: "",
   dailyFreePlayUnits: 0,
   missions: missionSet(),
+  mastery: {},
+  discoveredEvents: [],
 });
 
 export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): CasinoProgress => {
@@ -100,6 +110,8 @@ export const normalizeCasinoProgress = (value?: Partial<CasinoProgress>): Casino
     dailyRewardKey: String(value?.dailyRewardKey ?? ""),
     dailyFreePlayUnits: Math.max(0, Math.round(Number(value?.dailyFreePlayUnits ?? 0))),
     missions: sameDay && value?.missions?.length ? value.missions.map((m) => ({ ...m })) : missionSet(),
+    mastery: { ...(value?.mastery ?? {}) },
+    discoveredEvents: Array.from(new Set(value?.discoveredEvents ?? [])),
   };
 };
 
@@ -150,6 +162,19 @@ export const applyActivity = (current: CasinoProgress, activity: CasinoActivity)
     const amount = mission.id === "spins" ? totalSpins - (progress.totalSpins - mission.progress) : mission.id === "bonus" ? totalBonuses - (progress.totalBonuses - mission.progress) : playedGames;
     return { ...mission, progress: Math.min(mission.target, Math.max(mission.progress, amount)) };
   });
+  const mastery = { ...progress.mastery };
+  const currentMastery = mastery[activity.game] ?? { level: 1, progress: 0, claimed: [] };
+  const masteryGain = activity.type === "spin" ? 1 : activity.type === "bonus" ? 30 : activity.type === "win" && (activity.value ?? 0) >= 20 ? 10 : activity.type === "stage" || activity.type === "voyage" ? 20 : 0;
+  const masteryProgress = currentMastery.progress + masteryGain;
+  const masteryLevel = Math.min(10, 1 + Math.floor(masteryProgress / 100));
+  if (masteryLevel > currentMastery.level) beardChips += (masteryLevel - currentMastery.level) * 25;
+  mastery[activity.game] = { ...currentMastery, level: masteryLevel, progress: masteryProgress };
+  const discoveredEvents = new Set(progress.discoveredEvents);
+  if (activity.type === "bonus") discoveredEvents.add(`${activity.game}:feature`);
+  if (activity.type === "stage" && (activity.value ?? 0) >= 3) discoveredEvents.add("megh:headliner");
+  if (activity.type === "voyage" && (activity.value ?? 0) >= 4) discoveredEvents.add("neema:captains-deck");
+  if (activity.type === "coin") discoveredEvents.add("beard-bank:collector");
+  if (activity.type === "win" && (activity.value ?? 0) >= 100) discoveredEvents.add(`${activity.game}:100x`);
   const favoriteGame = (Object.entries(gameSpins).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] ?? "none") as CasinoProgress["favoriteGame"];
-  return { ...progress, xp, beardChips, totalSpins, totalBonuses, biggestWinUnits, totalWageredUnits, totalWonUnits, biggestMultiplier, gameSpins, favoriteGame, achievements: [...achievements], missions };
+  return { ...progress, xp, beardChips, totalSpins, totalBonuses, biggestWinUnits, totalWageredUnits, totalWonUnits, biggestMultiplier, gameSpins, favoriteGame, achievements: [...achievements], missions, mastery, discoveredEvents: [...discoveredEvents] };
 };

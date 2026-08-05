@@ -1,0 +1,8 @@
+BEARD LAWS CASINO V76 - TRUTH & PROGRESSION
+
+1. Open PowerShell in this folder.
+2. Run: powershell -ExecutionPolicy Bypass -File .\VERIFY-V76.ps1
+3. Run: powershell -ExecutionPolicy Bypass -File .\PUBLISH-V76.ps1
+4. Wait for GitHub Pages and press Ctrl+F5.
+5. Open QA with Ctrl+Shift+D, then choose RUN CASINO MATH.
+6. Open The Beard Vault to see cabinet mastery tracks and discoveries.
