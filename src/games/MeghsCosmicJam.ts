@@ -1,61 +1,26 @@
 type AutoCount = number | "infinite" | null;
-type EncoreMode = "long-set" | "power-chords" | "ufo-storm";
-type CosmicEvent = "UFO SCAN" | "AMPLIFIER OVERLOAD" | "MYSTERY SIGNAL" | "STAGGERED REEL RUSH" | "GOAT STAMPEDE" | "COSMIC COLLISION" | "COSMIC WEATHER CLEAR";
 import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
 import { FeatureDirector } from "../engine/FeatureDirector";
 import { GameStateMachine } from "../engine/GameStateMachine";
-interface JamSymbol {
-  id: string;
-  label: string;
-  art: string;
-  weight: number;
-  pay: number;
-}
+import {
+  MEGH_COLS as COLS,
+  MEGH_MAX_FEATURE_DROPS as MAX_FEATURE_DROPS,
+  MEGH_MAX_RETRIGGER_DROPS as MAX_RETRIGGER_DROPS,
+  MEGH_PRODUCTION_MATH,
+  MEGH_ROWS as ROWS,
+  MEGH_SOUNDCHECK_TARGET as SOUNDCHECK_TARGET,
+  MEGH_SYMBOLS as SYMBOLS,
+  meghArt as art,
+  type CosmicEvent,
+  type EncoreMode,
+  type JamSymbol,
+} from "./megh/MeghConfig";
+import { findMeghClusters, makeMeghGrid, pickMeghSymbol, tumbleMeghGrid } from "./megh/MeghBoard";
 
-const art = (name: string): string =>
-  new URL(`../../assets/megh/${name}.png`, import.meta.url).href;
-const SYMBOLS: readonly JamSymbol[] = [
-  {
-    id: "strawberry",
-    label: "STRAWBERRY",
-    art: art("strawberry"),
-    weight: 24,
-    pay: 6,
-  },
-  { id: "amp", label: "JAM AMP", art: art("amp"), weight: 20, pay: 8 },
-  {
-    id: "guitar",
-    label: "COSMIC GUITAR",
-    art: art("guitar"),
-    weight: 17,
-    pay: 11,
-  },
-  { id: "vinyl", label: "VINYL", art: art("vinyl"), weight: 15, pay: 14 },
-  { id: "goat", label: "ROCK GOAT", art: art("goat"), weight: 11, pay: 20 },
-  { id: "megh", label: "MEGH", art: art("megh-cosmic-v2"), weight: 7, pay: 30 },
-  { id: "wild", label: "WILD NOTE", art: art("note"), weight: 5, pay: 18 },
-  { id: "ufo", label: "ENCORE UFO", art: art("ufo"), weight: 1.4, pay: 0 },
-];
-const COLS = 6;
-const ROWS = 5;
-const SOUNDCHECK_TARGET = 50;
-const MAX_FEATURE_DROPS = 100;
-const MAX_RETRIGGER_DROPS = 40;
-
-export const MEGH_PRODUCTION_MATH = {
-  cols: COLS,
-  rows: ROWS,
-  soundcheckTarget: SOUNDCHECK_TARGET,
-  maxFeatureDrops: MAX_FEATURE_DROPS,
-  maxRetriggerDrops: MAX_RETRIGGER_DROPS,
-  clusterMinimum: 6,
-  maxCascades: 8,
-  cascadePayScale: 3.15,
-  symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
-} as const;
+export { MEGH_PRODUCTION_MATH };
 
 export class MeghsCosmicJam {
   private auto: AutoCount = null;
@@ -173,13 +138,7 @@ export class MeghsCosmicJam {
   }
 
   private pick(): JamSymbol {
-    const totalWeight = SYMBOLS.reduce((s, x) => s + this.symbolWeight(x), 0);
-    let roll = casinoRandom() * totalWeight;
-    for (const symbol of SYMBOLS) {
-      roll -= this.symbolWeight(symbol);
-      if (roll < 0) return symbol;
-    }
-    return SYMBOLS[0]!;
+    return pickMeghSymbol(SYMBOLS, casinoRandom, (symbol) => this.symbolWeight(symbol));
   }
   private symbolWeight(symbol: JamSymbol): number {
     return symbol.id === "ufo" && this.freeDrops > 0 && this.encoreMode === "ufo-storm"
@@ -187,9 +146,7 @@ export class MeghsCosmicJam {
       : symbol.weight;
   }
   private makeGrid(): JamSymbol[][] {
-    return Array.from({ length: ROWS }, () =>
-      Array.from({ length: COLS }, () => this.pick()),
-    );
+    return makeMeghGrid(ROWS, COLS, () => this.pick());
   }
   private render(grid: JamSymbol[][], winners = new Set<string>()): void {
     const host = this.root.querySelector<HTMLElement>("[data-megh-reels]")!;
@@ -203,54 +160,12 @@ export class MeghsCosmicJam {
       )
       .join("");
   }
-  private clusters(
-    grid: JamSymbol[][],
-  ): Array<{ cells: Set<string>; symbol: JamSymbol }> {
-    const visited = new Set<string>();
-    const found: Array<{ cells: Set<string>; symbol: JamSymbol }> = [];
-    for (let y = 0; y < ROWS; y += 1)
-      for (let x = 0; x < COLS; x += 1) {
-        const key = `${x}:${y}`;
-        if (visited.has(key)) continue;
-        const base = grid[y]![x]!;
-        if (base.id === "ufo" || base.id === "wild") {
-          visited.add(key);
-          continue;
-        }
-        const cells = new Set<string>();
-        const queue: [[number, number]] = [[x, y]];
-        while (queue.length) {
-          const [cx, cy] = queue.pop()!;
-          const ck = `${cx}:${cy}`;
-          if (visited.has(ck)) continue;
-          const current = grid[cy]?.[cx];
-          if (!current || (current.id !== base.id && current.id !== "wild"))
-            continue;
-          visited.add(ck);
-          cells.add(ck);
-          (
-            [
-              [cx + 1, cy],
-              [cx - 1, cy],
-              [cx, cy + 1],
-              [cx, cy - 1],
-            ] as [number, number][]
-          ).forEach((p) => queue.push(p));
-        }
-        if (cells.size >= 6) found.push({ cells, symbol: base });
-      }
-    return found;
+  private clusters(grid: JamSymbol[][]): Array<{ cells: Set<string>; symbol: JamSymbol }> {
+    return findMeghClusters(grid, ROWS, COLS, MEGH_PRODUCTION_MATH.clusterMinimum);
   }
+
   private tumble(grid: JamSymbol[][], removed: Set<string>): JamSymbol[][] {
-    const next = grid.map((row) => [...row]);
-    for (let x = 0; x < COLS; x += 1) {
-      const kept: JamSymbol[] = [];
-      for (let y = ROWS - 1; y >= 0; y -= 1)
-        if (!removed.has(`${x}:${y}`)) kept.push(grid[y]![x]!);
-      for (let y = ROWS - 1; y >= 0; y -= 1)
-        next[y]![x] = kept[ROWS - 1 - y] ?? this.pick();
-    }
-    return next;
+    return tumbleMeghGrid(grid, removed, ROWS, COLS, () => this.pick());
   }
 
   private async animateCascadeGravity(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], removed: Set<string>): Promise<void> {

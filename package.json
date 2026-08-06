@@ -10,7 +10,7 @@
     "typecheck": "tsc -b --pretty",
     "test": "vitest run",
     "casino:audit": "node scripts/casino-audit.mjs",
-    "casino:release": "node scripts/casino-release.mjs V77B-ACTUAL-MATH",
+    "casino:release": "powershell -ExecutionPolicy Bypass -File ./PUBLISH.ps1",
     "casino:benchmark": "vitest run tests/games/BeardBankMathLab.test.ts"
   },
   "dependencies": {

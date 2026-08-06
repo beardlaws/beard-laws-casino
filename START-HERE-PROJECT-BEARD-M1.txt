@@ -1,0 +1,17 @@
+PROJECT BEARD DEV SUITE — MILESTONE 1
+
+Use this package as an update to your existing feature/project-beard-dev-suite branch.
+
+Recommended workflow:
+1. Back up or commit your current branch.
+2. Copy this package's contents into your existing beard-laws-casino repository folder.
+3. Open PowerShell in the repository folder.
+4. Run:
+   npm install
+   npm run typecheck
+   npm test
+   npm run build
+5. Publish with the new permanent pipeline:
+   powershell -ExecutionPolicy Bypass -File .\PUBLISH.ps1 -Version "PROJECT-BEARD-M1"
+
+The publish script stops immediately on install, audit, type-check, test, build, fingerprint, commit, or push failure.

@@ -15,6 +15,8 @@ import { BeardBankDOM } from "../games/BeardBank/BeardBankDOM";
 import { BigBadBarber } from "../games/BigBadBarber";
 import { CasinoTelemetryStore } from "../state/CasinoTelemetry";
 import { runProductionSimulation, productionSimulationCsv, type ProductionSimulationReport } from "../state/ProductionCasinoSimulation";
+import { BUILD_INFO, buildFingerprint } from "../build/BuildInfo";
+import { SpinReplayStore } from "../engine/replay/SpinReplayStore";
 
 type GameId =
   | "beard-bank"
@@ -34,13 +36,15 @@ export class Application {
   private readonly appRoot = document.getElementById("app")!;
   private readonly audio = new CasinoAudio();
   private readonly telemetry = new CasinoTelemetryStore();
+  private readonly replay = new SpinReplayStore();
   private currentGameId: GameId | "lobby" = "lobby";
 
   public async initialize(): Promise<void> {
+    this.installBuildFingerprint();
     this.installDeveloperPanel();
     window.addEventListener("casino:state", (event) => {
       const detail = (event as CustomEvent<{ state?: string }>).detail;
-      if (detail?.state) this.telemetry.setState(detail.state);
+      if (detail?.state) { this.telemetry.setState(detail.state); this.replay.recordState(detail.state); }
     });
     this.installSoundControl();
     const account = await this.accounts.restore();
@@ -55,13 +59,37 @@ export class Application {
     this.showLobby();
   }
 
+  private installBuildFingerprint(): void {
+    document.querySelector("[data-build-fingerprint]")?.remove();
+    const footer = document.createElement("aside");
+    footer.className = "build-fingerprint";
+    footer.dataset.buildFingerprint = "true";
+    footer.title = `Branch ${BUILD_INFO.branch} • Built ${BUILD_INFO.builtAt}`;
+    footer.innerHTML = `<b>${BUILD_INFO.version}</b><span>${BUILD_INFO.commit}</span><i>${BUILD_INFO.mathMode}</i>`;
+    document.body.appendChild(footer);
+  }
+
+  private downloadLastReplay(): boolean {
+    this.replay.finishActive();
+    const json = this.replay.exportLast();
+    if (!json) return false;
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `beard-laws-replay-${Date.now()}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    return true;
+  }
+
   private installSoundControl(): void {
     const button = document.createElement("button"); button.className = "sound-toggle"; button.textContent = "⚙ EXPERIENCE";
     const applyMotion = (): void => { document.documentElement.classList.toggle("reduced-motion", localStorage.getItem("beard-laws-casino-motion") === "reduced"); };
     applyMotion();
     button.addEventListener("click", () => {
       const modal=document.createElement("div");modal.className="modal-backdrop";
-      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • V77B</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER VOLUME</span><input data-volume type="range" min="0" max="100" value="${Math.round(this.audio.getVolume()*100)}"><b data-volume-value>${Math.round(this.audio.getVolume()*100)}%</b></label><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});const volume=modal.querySelector<HTMLInputElement>("[data-volume]");volume?.addEventListener("input",()=>{this.audio.setVolume(Number(volume.value)/100);const value=modal.querySelector<HTMLElement>("[data-volume-value]");if(value)value.textContent=`${volume.value}%`;});};
+      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • ${buildFingerprint()}</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER VOLUME</span><input data-volume type="range" min="0" max="100" value="${Math.round(this.audio.getVolume()*100)}"><b data-volume-value>${Math.round(this.audio.getVolume()*100)}%</b></label><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});const volume=modal.querySelector<HTMLInputElement>("[data-volume]");volume?.addEventListener("input",()=>{this.audio.setVolume(Number(volume.value)/100);const value=modal.querySelector<HTMLElement>("[data-volume-value]");if(value)value.textContent=`${volume.value}%`;});};
       render();document.body.appendChild(modal);
     }); document.body.appendChild(button);
   }
@@ -79,17 +107,17 @@ export class Application {
       return "any";
     };
     const actions = (items: Array<[string, string]>): string => items.map(([action, label]) => `<button data-dev-action="${action}" data-game="${gameForAction(action)}">${label}</button>`).join("");
-    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>CASINO TEST LAB • V77B</strong><button data-dev-close>×</button></header>
+    host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>PROJECT BEARD DEV SUITE • ${BUILD_INFO.version}</strong><button data-dev-close>×</button></header>
       <div class="dev-active"><span>ACTIVE CABINET</span><b data-dev-active>LOBBY</b><i data-dev-state>READY</i></div>
       <div class="dev-status" data-dev-status>QA ready. Open a cabinet, then trigger a test.</div>
       <div class="dev-telemetry" data-dev-summary></div><div class="dev-telemetry-table" data-dev-table></div>
-      <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button><button data-dev-math-all>RUN ACTUAL CABINET MATH</button></div>
+      <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button><button data-dev-math-all>RUN ACTUAL CABINET MATH</button><button data-dev-replay>EXPORT LAST REPLAY</button></div>
       <small>BEARD BANK</small><div class="dev-grid">${actions([["vault-heist","Vault Heist"],["free-spins","Free Spins"],["living-vault","Living Vault"],["vault-mini","Mini Coin"],["vault-minor","Minor Coin"],["vault-major","Major Coin"],["vault-grand","Grand Coin"],["vault-full","Full Vault"],["math-report","1M Math Report"]])}</div>
       <small>BIG BAD BARBER</small><div class="dev-grid">${actions([["barber-bonus","Force Shave Down"],["barber-attack","Force Barber Attack"],["barber-two-razors","Two-Razor Near Miss"],["barber-max-forts","Max Fortresses"]])}</div>
       <small>MEGH'S COSMIC JAM</small><div class="dev-grid">${actions([["megh-goat","Goat Stampede"],["megh-ufo","UFO Scan"],["megh-encore","Force Encore"],["megh-headliner","Headliner Mode"]])}</div>
       <small>NEEMA'S HIGH SEAS</small><div class="dev-grid">${actions([["neema-feature","Frozen Happy Hour"],["neema-captain","Captain Moment"],["neema-tickets","Three Tickets"],["neema-voyage","Final Voyage"]])}</div>
       <small>ROULETTE • FORCE NEXT RESULT</small><div class="dev-result"><select data-dev-result><option>0</option><option>00</option>${Array.from({ length: 36 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select><button data-dev-action="roulette-result" data-game="roulette">ARM RESULT</button></div>
-      <p>QA actions never alter production math. They only arm the matching active cabinet.</p></section>`;
+      <p>QA actions never alter production math. They only arm the matching active cabinet.</p><p class="dev-build">${buildFingerprint()} • ${BUILD_INFO.branch} • ${BUILD_INFO.builtAt}</p></section>`;
     document.body.appendChild(host);
     const panel = host.querySelector<HTMLElement>("[data-dev-panel]")!;
     const status = host.querySelector<HTMLElement>("[data-dev-status]")!;
@@ -112,6 +140,10 @@ export class Application {
     host.querySelector<HTMLSelectElement>("[data-dev-speed]")?.addEventListener("change", (event) => { const speed = Number((event.target as HTMLSelectElement).value); this.telemetry.setAnimationSpeed(speed); setStatus(`Animation speed set to ${speed}×.`, "ok"); });
     host.querySelector("[data-dev-pause]")?.addEventListener("click", (event) => { document.body.classList.toggle("qa-paused"); (event.currentTarget as HTMLElement).textContent = document.body.classList.contains("qa-paused") ? "RESUME ANIMATIONS" : "PAUSE ANIMATIONS"; });
     host.querySelector("[data-dev-reset-telemetry]")?.addEventListener("click", () => { this.telemetry.reset(); refresh(); setStatus("Telemetry reset.", "ok"); });
+    host.querySelector("[data-dev-replay]")?.addEventListener("click", () => {
+      const available = this.downloadLastReplay();
+      setStatus(available ? "Replay exported." : "No completed spin replay is available yet.", available ? "ok" : "error");
+    });
     host.querySelector("[data-dev-math-all]")?.addEventListener("click", () => { setStatus("Running production-rule simulations for Barber, Megh, and Neema…", "running"); panel.hidden = true; this.showCasinoMathReport(); });
     host.querySelectorAll<HTMLElement>("[data-dev-action]").forEach((button) => button.addEventListener("click", () => {
       const action = button.dataset.devAction ?? "";
@@ -228,6 +260,7 @@ export class Application {
   }
 
   private recordActivity(activity: CasinoActivity): void {
+    this.replay.recordActivity(activity);
     this.audio.activity(activity);
     if (activity.type === "spin" || activity.type === "bonus" || activity.type === "win") {
       this.telemetry.record(activity.game, activity.type, activity.type === "spin" ? (activity.wager ?? 0) : (activity.amount ?? 0));

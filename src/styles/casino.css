@@ -44,3 +44,26 @@
 /* Canonical forward-looking layers. */
 @import "./tokens.css";
 @import "./foundation.css";
+
+/* Project Beard Dev Suite — build identity and diagnostic affordances */
+.build-fingerprint {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  z-index: 2147483000;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 220, 126, 0.32);
+  border-radius: 999px;
+  background: rgba(5, 5, 12, 0.82);
+  color: rgba(255, 244, 210, 0.82);
+  font: 700 10px/1 system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+}
+.build-fingerprint span,
+.build-fingerprint i { color: rgba(211, 190, 255, 0.78); font-style: normal; }
+.dev-build { opacity: 0.72; font-size: 0.72rem; overflow-wrap: anywhere; }
