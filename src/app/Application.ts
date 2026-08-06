@@ -17,6 +17,8 @@ import { CasinoTelemetryStore } from "../state/CasinoTelemetry";
 import { runProductionSimulation, productionSimulationCsv, type ProductionSimulationReport } from "../state/ProductionCasinoSimulation";
 import { BUILD_INFO, buildFingerprint } from "../build/BuildInfo";
 import { SpinReplayStore } from "../engine/replay/SpinReplayStore";
+import { SpinOutcomeStore } from "../engine/outcome/SpinOutcomeStore";
+import type { SpinOutcome } from "../engine/contracts/SpinOutcome";
 
 type GameId =
   | "beard-bank"
@@ -37,6 +39,7 @@ export class Application {
   private readonly audio = new CasinoAudio();
   private readonly telemetry = new CasinoTelemetryStore();
   private readonly replay = new SpinReplayStore();
+  private readonly outcomes = new SpinOutcomeStore();
   private currentGameId: GameId | "lobby" = "lobby";
 
   public async initialize(): Promise<void> {
@@ -44,7 +47,12 @@ export class Application {
     this.installDeveloperPanel();
     window.addEventListener("casino:state", (event) => {
       const detail = (event as CustomEvent<{ state?: string }>).detail;
-      if (detail?.state) { this.telemetry.setState(detail.state); this.replay.recordState(detail.state); }
+      if (detail?.state) {
+        this.telemetry.setState(detail.state);
+        const outcome = this.outcomes.recordState(detail.state);
+        this.replay.recordState(detail.state);
+        if (outcome) this.acceptOutcome(outcome);
+      }
     });
     this.installSoundControl();
     const account = await this.accounts.restore();
@@ -260,6 +268,8 @@ export class Application {
   }
 
   private recordActivity(activity: CasinoActivity): void {
+    const completedOutcome = this.outcomes.recordActivity(activity);
+    if (completedOutcome) this.acceptOutcome(completedOutcome);
     this.replay.recordActivity(activity);
     this.audio.activity(activity);
     if (activity.type === "spin" || activity.type === "bonus" || activity.type === "win") {
@@ -276,6 +286,11 @@ export class Application {
     this.profile = { ...this.profile, walletUnits, casino, updatedAtIso: new Date().toISOString() };
     this.profiles.save(this.profile);
     this.accounts.saveProfile(this.profile);
+  }
+
+  private acceptOutcome(outcome: SpinOutcome): void {
+    this.replay.attachOutcome(outcome);
+    window.dispatchEvent(new CustomEvent("casino:outcome", { detail: outcome }));
   }
 
   private applyUnlockedRewards(): void {

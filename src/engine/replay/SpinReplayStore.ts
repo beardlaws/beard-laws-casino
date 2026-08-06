@@ -1,4 +1,5 @@
 import type { CasinoActivity } from "../../state/CasinoProgression";
+import type { SpinOutcome } from "../contracts/SpinOutcome";
 
 export interface ReplayEvent {
   atMs: number;
@@ -12,6 +13,7 @@ export interface SpinReplay {
   startedAtIso: string;
   wagerUnits: number;
   events: ReplayEvent[];
+  outcome?: SpinOutcome;
 }
 
 const STORAGE_KEY = "beard-laws-casino-last-replay-v1";
@@ -53,6 +55,22 @@ export class SpinReplayStore {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.last));
     } catch {
       // Replays are diagnostic only. Gameplay must never fail on storage limits.
+    }
+  }
+
+
+  public attachOutcome(outcome: SpinOutcome): void {
+    if (this.active && this.active.game === outcome.game) {
+      this.active.outcome = structuredClone(outcome);
+      return;
+    }
+    if (this.last && this.last.game === outcome.game) {
+      this.last = { ...this.last, outcome: structuredClone(outcome) };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.last));
+      } catch {
+        // Diagnostic enrichment must never interrupt gameplay.
+      }
     }
   }
 
