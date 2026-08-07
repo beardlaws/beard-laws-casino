@@ -72,13 +72,19 @@ export class Application {
     this.installBuildFingerprint();
     this.installDeveloperPanel();
     window.addEventListener("casino:state", (event) => {
-      const detail = (event as CustomEvent<{ state?: string }>).detail;
+      const detail = (event as CustomEvent<{ game?: string; state?: string }>).detail;
       if (detail?.state) {
         this.telemetry.setState(detail.state);
-        const outcome = this.outcomes.recordState(detail.state);
+        const outcome = detail.game === "barber" ? null : this.outcomes.recordState(detail.state);
         this.replay.recordState(detail.state);
         if (outcome) this.acceptOutcome(outcome);
       }
+    });
+    window.addEventListener("casino:direct-outcome", (event) => {
+      const outcome = (event as CustomEvent<SpinOutcome>).detail;
+      if (!outcome || outcome.schemaVersion !== 1) return;
+      this.outcomes.acceptOutcome(outcome);
+      this.acceptOutcome(outcome);
     });
     this.installSoundControl();
     const account = await this.accounts.restore();
@@ -294,7 +300,7 @@ export class Application {
   }
 
   private recordActivity(activity: CasinoActivity): void {
-    const completedOutcome = this.outcomes.recordActivity(activity);
+    const completedOutcome = activity.game === "barber" ? null : this.outcomes.recordActivity(activity);
     if (completedOutcome) this.acceptOutcome(completedOutcome);
     this.replay.recordActivity(activity);
     this.audio.activity(activity);

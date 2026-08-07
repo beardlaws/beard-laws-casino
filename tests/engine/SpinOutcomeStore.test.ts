@@ -44,4 +44,28 @@ describe("SpinOutcomeStore", () => {
     expect(completed?.totalWinUnits).toBe(50);
     expect(store.exportLast()).toContain('"game": "barber"');
   });
+  it("accepts a cabinet-authored outcome from a migrated runtime", () => {
+    const store = new SpinOutcomeStore();
+    store.acceptOutcome({
+      schemaVersion: 1,
+      id: "barber-direct",
+      game: "barber",
+      startedAtIso: "2026-08-07T00:00:00.000Z",
+      completedAtIso: "2026-08-07T00:00:01.000Z",
+      wagerUnits: 100,
+      baseWinUnits: 200,
+      featureWinUnits: 300,
+      totalWinUnits: 500,
+      winMultiplier: 5,
+      features: [],
+      progression: [],
+      presentation: [],
+      resultGrid: [["wax"]],
+      metadata: { runtime: "project-beard-m5" },
+    });
+
+    expect(store.getLast()?.id).toBe("barber-direct");
+    expect(store.exportLast()).toContain('"runtime": "project-beard-m5"');
+  });
+
 });

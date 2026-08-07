@@ -4,6 +4,14 @@ import { animateDomReels } from "./DomReelAnimator";
 import { FeatureDirector } from "../engine/FeatureDirector";
 import { SlotBetModel } from "./SlotBetModel";
 import { slotControlPanelMarkup } from "../ui/SlotControlPanel";
+import { FeatureExecutionPipeline } from "../engine/feature/FeatureExecutionPipeline";
+import type { FeatureExecutionContext, FeatureExecutionPlan } from "../engine/contracts/FeatureExecution";
+import { GameStateMachine } from "../engine/GameStateMachine";
+import {
+  createBarberFeaturePlan,
+  createBarberSpinOutcome,
+  resolveBarberRuntime,
+} from "./barber/BarberRuntime";
 
 type SymbolId = "beard"|"wax"|"comb"|"pole"|"clipper"|"builder"|"wild"|"razor";
 type BarberSymbol = { id:SymbolId; label:string; art:string; weight:number; pay:number };
@@ -43,12 +51,23 @@ export class BigBadBarber {
   private fortressLevels=[0,0,0,0,0];
   private currentGrid:BarberSymbol[][]=[];
   private forceTwoRazors=false;
+  private spinSequence=0;
+  private readonly stateMachine=new GameStateMachine("barber");
+  private readonly featureExecution=new FeatureExecutionPipeline({
+    handlers:{
+      progression:(context)=>this.executeProgressionStep(context),
+      feature:(context)=>this.executeFeatureStep(context),
+      payout:(context)=>this.executePayoutStep(context),
+      presentation:(context)=>this.executePresentationStep(context),
+      complete:()=>undefined,
+    },
+  });
   private readonly handleDeveloperAction=(event:Event):void=>{
     const action=(event as CustomEvent<{action?:string}>).detail?.action;
-    if(action==="barber-bonus"&&!this.spinning)void this.startShaveDown();
+    if(action==="barber-bonus"&&!this.spinning)void this.runQaFeature("barber-shave-down");
     if(action==="barber-attack"&&!this.spinning){
       if(!this.fortressLevels.some(level=>level>0)){this.fortressLevels=[2,1,3,2,1];this.updateFortresses();}
-      void this.barberAttack(false);
+      void this.runQaFeature("barber-attack");
     }
     if(action==="barber-two-razors"&&!this.spinning){this.forceTwoRazors=true;this.message("QA ARMED • TWO-RAZOR ANTICIPATION ON NEXT SPIN");}
     if(action==="barber-max-forts"&&!this.spinning){this.fortressLevels=[4,4,4,4,4];this.updateFortresses();this.message("QA • ALL GOLDEN BEARD CASTLES BUILT");}
@@ -95,32 +114,180 @@ export class BigBadBarber {
   private async spin():Promise<void>{
     if(this.spinning||(!this.bonusSpins&&this.getWallet()<this.betUnits))return;
     this.spinning=true;this.lastWin=0;
+    const startedAtIso=new Date().toISOString();
+    const spinId=`barber-${Date.now()}-${++this.spinSequence}`;
+    const fortressLevelsBefore=[...this.fortressLevels];
     const isBonus=this.bonusSpins>0;
-    if(isBonus)this.bonusSpins--;else{this.setWallet(this.getWallet()-this.betUnits);this.onActivity({type:"spin",game:"barber",wager:this.betUnits});}
+    const wagerUnits=this.betUnits;
+
+    this.stateMachine.transition("SPIN_START");
+    if(isBonus)this.bonusSpins--;
+    else{this.setWallet(this.getWallet()-wagerUnits);this.onActivity({type:"spin",game:"barber",wager:wagerUnits});}
+    this.stateMachine.transition("SPINNING");
     this.root.querySelector(".barber-machine")?.classList.add("barber-spinning");this.update();
-    const grid=this.makeGrid();if(this.forceTwoRazors){const razor=SYMBOLS.find(s=>s.id==="razor")!;grid[1]![0]=razor;grid[1]![2]=razor;grid.forEach((row,y)=>row.forEach((symbol,x)=>{if(symbol.id==="razor"&&!((x===0||x===2)&&y===1))row[x]=SYMBOLS.find(s=>s.id==="wax")!;}));this.forceTwoRazors=false;}this.currentGrid=grid;const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
-    const earlyRazors=cols.slice(0,4).flat().filter(s=>s.id==="razor").length;if(earlyRazors>=2)this.message("THE GOLDEN RAZOR IS CIRCLING THE FINAL REEL…");
+
+    const grid=this.makeGrid();
+    if(this.forceTwoRazors){
+      const razor=SYMBOLS.find(s=>s.id==="razor")!;
+      const wax=SYMBOLS.find(s=>s.id==="wax")!;
+      grid[1]![0]=razor;grid[1]![2]=razor;
+      grid.forEach((row,y)=>row.forEach((symbol,x)=>{if(symbol.id==="razor"&&!((x===0||x===2)&&y===1))row[x]=wax;}));
+      this.forceTwoRazors=false;
+    }
+    this.currentGrid=grid;
+    const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;
+    const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
+    const earlyRazors=cols.slice(0,4).flat().filter(s=>s.id==="razor").length;
+    if(earlyRazors>=2)this.message("THE GOLDEN RAZOR IS CIRCLING THE FINAL REEL…");
     await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),profile:"barber",anticipationReel:earlyRazors>=2?4:-1,anticipationDelay:1250,renderSymbol:s=>this.symbolMarkup(s)});
-    this.render(grid);this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");await this.wait(160);
+    this.render(grid);this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");
+    this.stateMachine.transition("REEL_STOPS");await this.wait(160);
+    this.stateMachine.transition("EVALUATING");
 
-    const result=this.evaluate(grid);const razors=grid.flat().filter(s=>s.id==="razor").length;
-    const upgraded=await this.applyBuilders(grid);
-    if(result.award>0)await this.payBaseWin(grid,result);
-    if(razors>=3&&!isBonus){this.onActivity({type:"bonus",game:"barber"});await this.startShaveDown();}
-    else if(!upgraded&&!result.award&&this.fortressLevels.some(x=>x>0)&&(isBonus||casinoRandom()<.48))await this.barberAttack(isBonus);
-    else if(!upgraded&&!result.award)this.message(razors===2?"ONE MORE RAZOR FOR THE SHAVE DOWN":isBonus?`${this.bonusSpins} SHAVE DOWN SPINS REMAIN`:`THE BARBER IS STILL OUT THERE…`);
+    const result=this.evaluate(grid);
+    const razors=grid.flat().filter(s=>s.id==="razor").length;
+    const builderCounts=Array.from({length:COLS},(_,x)=>grid.filter(row=>row[x]!.id==="builder").length);
+    const decision=resolveBarberRuntime({
+      fortressLevels:fortressLevelsBefore,
+      builderCounts,
+      maxLevel:MAX_LEVEL,
+      fortressMultipliers:FORT_MULT,
+      razorCount:razors,
+      baseWinUnits:result.award,
+      isBonusSpin:isBonus,
+      wagerUnits,
+      attackChance:BARBER_PRODUCTION_MATH.attackChance,
+      attackRoll:casinoRandom(),
+      targetRoll:casinoRandom(),
+    });
+    const outcome=createBarberSpinOutcome({
+      id:spinId,
+      startedAtIso,
+      completedAtIso:new Date().toISOString(),
+      wagerUnits,
+      baseWinUnits:result.award,
+      resultGrid:grid.map(row=>row.map(symbol=>symbol.id)),
+      winnerKeys:[...result.winners],
+      razorCount:razors,
+      isBonusSpin:isBonus,
+      fortressLevelsBefore,
+      decision,
+    });
+    const plan=createBarberFeaturePlan(outcome);
 
-    this.spinning=false;this.update();
+    try{
+      await this.featureExecution.enqueue(plan);
+    }finally{
+      this.spinning=false;
+      if(this.stateMachine.state==="FEATURE_ACTIVE")this.stateMachine.transition("FEATURE_OUTRO");
+      this.stateMachine.reset();
+      this.update();
+    }
+
+    window.dispatchEvent(new CustomEvent("casino:direct-outcome",{detail:outcome}));
+
     if(this.bonusSpins>0){await this.wait(650);void this.spin();return;}
-    if(this.autoInfinite||this.autoRemaining>0){if(this.autoRemaining>0)this.autoRemaining--;if(this.getWallet()>=this.betUnits){await this.wait(650);void this.spin();}else this.stopAuto();}
+    if(this.autoInfinite||this.autoRemaining>0){
+      if(this.autoRemaining>0)this.autoRemaining--;
+      if(this.getWallet()>=this.betUnits){await this.wait(650);void this.spin();}
+      else this.stopAuto();
+    }
   }
 
-  private async applyBuilders(grid:BarberSymbol[][]):Promise<boolean>{
-    const counts=Array.from({length:COLS},(_,x)=>grid.filter(row=>row[x]!.id==="builder").length);if(!counts.some(Boolean))return false;
-    this.message("BEARD BUILDERS ON THE BOARD!");window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"builder"}}));
-    for(let x=0;x<COLS;x++){for(let n=0;n<counts[x]!;n++){const old=this.fortressLevels[x]!;if(old<MAX_LEVEL){await this.highlightColumn(x);this.fortressLevels[x]=old+1;this.updateFortresses();await this.pulseFort(x,"upgrade");}}}
-    this.message("FORTRESSES UPGRADED • KEEP BUILDING");return true;
+  private enterFeatureState():void{
+    if(this.stateMachine.state==="READY")this.stateMachine.transition("FEATURE_INTRO");
+    else if(this.stateMachine.state==="EVALUATING")this.stateMachine.transition("FEATURE_INTRO");
+    if(this.stateMachine.state==="FEATURE_INTRO")this.stateMachine.transition("FEATURE_ACTIVE");
   }
+
+  private async executeProgressionStep(context:FeatureExecutionContext):Promise<void>{
+    if(context.step.label!=="barber-builder-upgrade")return;
+    this.enterFeatureState();
+    const reel=Number(context.step.payload.reel);
+    const toLevel=Number(context.step.payload.toLevel);
+    if(!Number.isInteger(reel)||reel<0||reel>=COLS)return;
+    if(!Number.isInteger(toLevel)||toLevel<1||toLevel>MAX_LEVEL)return;
+    this.message("BEARD BUILDERS ON THE BOARD!");
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"builder"}}));
+    await this.highlightColumn(reel);
+    this.fortressLevels[reel]=toLevel;
+    this.updateFortresses();
+    await this.pulseFort(reel,"upgrade");
+  }
+
+  private async executeFeatureStep(context:FeatureExecutionContext):Promise<void>{
+    this.enterFeatureState();
+    if(context.step.label==="barber-shave-down"){
+      if(context.step.payload.qa!==true)this.onActivity({type:"bonus",game:"barber"});
+      await this.startShaveDown();
+      return;
+    }
+    if(context.step.label==="barber-attack"){
+      const targetReel=Number(context.step.payload.targetReel);
+      const fortressLevel=Number(context.step.payload.fortressLevel);
+      const multiplier=Number(context.step.payload.multiplier);
+      const awardUnits=Number(context.step.payload.awardUnits);
+      await this.executeBarberAttack({targetReel,fortressLevel,multiplier,awardUnits},context.step.payload.qa===true);
+    }
+  }
+
+  private async executePayoutStep(context:FeatureExecutionContext):Promise<void>{
+    if(context.step.label!=="barber-base-payout")return;
+    if(this.stateMachine.state==="EVALUATING"||this.stateMachine.state==="FEATURE_ACTIVE")this.stateMachine.transition("WIN_PRESENTATION");
+    const amountUnits=Number(context.step.payload.amountUnits);
+    const winnerKeys=Array.isArray(context.step.payload.winnerKeys)?context.step.payload.winnerKeys.map(String):[];
+    await this.payBaseWin(this.currentGrid,{award:Math.max(0,amountUnits),winners:new Set(winnerKeys)});
+  }
+
+  private executePresentationStep(context:FeatureExecutionContext):void{
+    if(context.step.label!=="barber-message")return;
+    this.message(String(context.step.payload.message??"THE BARBER IS STILL OUT THERE…"));
+  }
+
+  private async executeBarberAttack(attack:{targetReel:number;fortressLevel:number;multiplier:number;awardUnits:number},qa=false):Promise<void>{
+    if(!Number.isInteger(attack.targetReel)||attack.targetReel<0||attack.targetReel>=COLS)return;
+    const currentLevel=this.fortressLevels[attack.targetReel]??0;
+    if(currentLevel<=0)return;
+    const level=Math.max(1,Math.min(MAX_LEVEL,attack.fortressLevel||currentLevel));
+    const mult=Math.max(0,attack.multiplier||FORT_MULT[level]||0);
+    const award=Math.max(0,Math.round(attack.awardUnits));
+    this.message(`THE BIG BAD BARBER TARGETS FORTRESS ${attack.targetReel+1}!`);
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));
+    const layer=this.characterLayer();
+    layer.innerHTML=`<div class="mean-barber attack" style="--target:${attack.targetReel}"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><div class="barber-speech">TIME FOR A TRIM!</div></div>`;
+    await this.wait(750);
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"clippers"}}));
+    await this.pulseFort(attack.targetReel,"attack");
+    const fort=this.root.querySelector<HTMLElement>(`[data-fort="${attack.targetReel}"]`)!;
+    fort.classList.add("being-shaved");this.spawnShavings(fort);await this.wait(1250);
+    fort.classList.remove("being-shaved");this.fortressLevels[attack.targetReel]=0;this.updateFortresses();
+    if(award>0){
+      this.lastWin+=award;this.setWallet(this.getWallet()+award);
+      if(!qa)this.onActivity({type:"win",game:"barber",amount:award,value:this.betUnits>0?award/this.betUnits:0,wager:this.betUnits});
+    }
+    fort.classList.add("prize-reveal");
+    fort.insertAdjacentHTML("beforeend",`<div class="fort-prize">${mult}×<small>$${(award/100).toFixed(2)}</small></div>`);
+    this.message(`${FORT_NAMES[level]} SHAVED • ${mult}× REVEALED`);
+    await this.wait(1500);
+    fort.querySelector(".fort-prize")?.remove();fort.classList.remove("prize-reveal");layer.innerHTML="";
+    if(this.bonusSpins>0)this.message(`${this.bonusSpins} SHAVE DOWN SPINS REMAIN`);
+  }
+
+  private async runQaFeature(kind:"barber-shave-down"|"barber-attack"):Promise<void>{
+    if(this.spinning)return;
+    this.spinning=true;this.update();
+    let step:FeatureExecutionPlan["steps"][number];
+    if(kind==="barber-shave-down"){
+      step={id:`qa-shave-${Date.now()}`,kind:"feature",game:"barber",order:0,delayMs:0,label:kind,payload:Object.freeze({spins:8,qa:true})};
+    }else{
+      const built=this.fortressLevels.map((level,reel)=>({level,reel})).filter(entry=>entry.level>0);
+      const target=built[0]!;const multiplier=FORT_MULT[target.level]??0;
+      step={id:`qa-attack-${Date.now()}`,kind:"feature",game:"barber",order:0,delayMs:0,label:kind,payload:Object.freeze({targetReel:target.reel,fortressLevel:target.level,multiplier,awardUnits:this.betUnits*multiplier,qa:true})};
+    }
+    const plan:FeatureExecutionPlan=Object.freeze({schemaVersion:1,id:`qa-plan-${Date.now()}`,spinOutcomeId:`qa-${Date.now()}`,game:"barber",createdAtIso:new Date().toISOString(),steps:Object.freeze([Object.freeze(step),Object.freeze({id:`qa-complete-${Date.now()}`,kind:"complete",game:"barber",order:1,delayMs:0,label:"ready",payload:Object.freeze({qa:true})})])});
+    try{await this.featureExecution.enqueue(plan);}finally{this.spinning=false;if(this.stateMachine.state==="FEATURE_ACTIVE")this.stateMachine.transition("FEATURE_OUTRO");this.stateMachine.reset();this.update();}
+  }
+
 
   private async payBaseWin(grid:BarberSymbol[][],result:{award:number;winners:Set<string>}):Promise<void>{this.render(grid,result.winners);this.lastWin+=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);const director=new FeatureDirector(this.root.querySelector<HTMLElement>(".barber-machine")!);director.burst(this.root.querySelector<HTMLElement>("[data-barber-reels]")!,"✦",18,"gold-particle");await director.shake(result.award>=this.betUnits*10?"medium":"soft",280);await this.wait(650);}
 
@@ -128,17 +295,6 @@ export class BigBadBarber {
     window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));this.bonusSpins=8;const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><strong>THE SHAVE DOWN!</strong></div>`;this.root.querySelector(".barber-machine")?.classList.add("bonus-mode");this.message("8 FREE SPINS • BUILD FAST • HE SHAVES AFTER FAILED BUILDS");await this.wait(1900);layer.innerHTML="";this.update();
   }
 
-  private async barberAttack(isBonus:boolean):Promise<void>{
-    const built=this.fortressLevels.map((level,index)=>({level,index})).filter(x=>x.level>0);if(!built.length)return;
-    const target=built[Math.floor(casinoRandom()*built.length)]!;const level=target.level;const mult=FORT_MULT[level]!;const award=this.betUnits*mult;
-    this.message(`THE BIG BAD BARBER TARGETS FORTRESS ${target.index+1}!`);window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));
-    const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber attack" style="--target:${target.index}"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><div class="barber-speech">TIME FOR A TRIM!</div></div>`;
-    await this.wait(750);window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"clippers"}}));await this.pulseFort(target.index,"attack");
-    const fort=this.root.querySelector<HTMLElement>(`[data-fort="${target.index}"]`)!;fort.classList.add("being-shaved");this.spawnShavings(fort);await this.wait(1250);
-    fort.classList.remove("being-shaved");this.fortressLevels[target.index]=0;this.updateFortresses();
-    if(award>0){this.lastWin+=award;this.setWallet(this.getWallet()+award);this.onActivity({type:"win",game:"barber",amount:award,value:award/this.betUnits,wager:this.betUnits});}
-    fort.classList.add("prize-reveal");fort.insertAdjacentHTML("beforeend",`<div class="fort-prize">${mult}×<small>$${(award/100).toFixed(2)}</small></div>`);this.message(`${FORT_NAMES[level]} SHAVED • ${mult}× REVEALED`);await this.wait(1500);fort.querySelector(".fort-prize")?.remove();fort.classList.remove("prize-reveal");layer.innerHTML="";if(isBonus)this.message(`${this.bonusSpins} SHAVE DOWN SPINS REMAIN`);
-  }
 
   private fortMarkup(i:number):string{return `<i data-fort="${i}" class="fort-level-0"><span class="fort-art"><b class="fort-roof"></b><b class="fort-body"></b><b class="fort-beard"></b><b class="fort-flag"></b></span><small data-fort-name>${FORT_NAMES[0]}</small><em data-fort-mult>EMPTY</em></i>`;}
   private updateFortresses():void{this.root.querySelectorAll<HTMLElement>("[data-fort]").forEach((n,i)=>{const l=this.fortressLevels[i]!;n.className=`fort-level-${l}`;n.querySelector<HTMLElement>("[data-fort-name]")!.textContent=FORT_NAMES[l]!;n.querySelector<HTMLElement>("[data-fort-mult]")!.textContent=l?`${FORT_MULT[l]}×`:"EMPTY";});const b=this.root.querySelector<HTMLElement>("[data-barber-forts]");if(b)b.textContent=`${this.fortressLevels.filter(x=>x>0).length} / 5`;}

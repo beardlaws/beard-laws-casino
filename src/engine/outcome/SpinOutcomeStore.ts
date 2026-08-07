@@ -105,6 +105,17 @@ export class SpinOutcomeStore {
     return structuredClone(outcome);
   }
 
+  /** Accepts a cabinet-authored outcome from a fully migrated Project Beard runtime. */
+  public acceptOutcome(outcome: SpinOutcome): void {
+    this.active = null;
+    this.last = structuredClone(outcome);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(outcome));
+    } catch {
+      // Diagnostics must never interrupt gameplay.
+    }
+  }
+
   public getLast(): SpinOutcome | null {
     return this.last ? structuredClone(this.last) : null;
   }
