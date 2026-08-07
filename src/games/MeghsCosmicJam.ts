@@ -4,6 +4,7 @@ import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
 import { GameStateMachine } from "../engine/GameStateMachine";
+import { PremiumAnimationEngine } from "../engine/animation/PremiumAnimationEngine";
 import {
   MEGH_COLS as COLS,
   MEGH_MAX_FEATURE_DROPS as MAX_FEATURE_DROPS,
@@ -709,16 +710,17 @@ export class MeghsCosmicJam {
   }
   private async animateWin(target: number): Promise<void> {
     const node = this.root.querySelector<HTMLElement>("[data-megh-win]")!;
-    const began = performance.now();
-    await new Promise<void>((resolve) => {
-      const tick = (now: number) => {
-        const p = Math.min(1, (now - began) / 750);
-        node.textContent = `$${(Math.round(this.lastDisplayedWin + (target - this.lastDisplayedWin) * (1 - Math.pow(1 - p, 3))) / 100).toFixed(2)}`;
-        if (p < 1) requestAnimationFrame(tick);
-        else resolve();
-      };
-      requestAnimationFrame(tick);
+    const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? this.root;
+    const premium = new PremiumAnimationEngine(machine, "megh");
+    await premium.countUp(node, this.lastDisplayedWin, target, {
+      duration: target >= this.betUnits * 20 ? 1500 : 820,
+      formatter: (value) => `$${(Math.round(value) / 100).toFixed(2)}`,
     });
+    if (target >= this.betUnits * 20) {
+      premium.cue("big-win", { amount: target, wager: this.betUnits });
+      premium.pulse("cosmic", 720);
+      await premium.impact(target >= this.betUnits * 50 ? "medium" : "soft");
+    }
     this.lastDisplayedWin = target;
   }
   private async showEncoreIntro(retrigger: boolean, drops: number): Promise<void> {

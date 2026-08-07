@@ -147,8 +147,9 @@ export class Application {
       return "any";
     };
     const actions = (items: Array<[string, string]>): string => items.map(([action, label]) => `<button data-dev-action="${action}" data-game="${gameForAction(action)}">${label}</button>`).join("");
+    let lastAnimationCue = "IDLE";
     host.innerHTML = `<button class="dev-tools-toggle" data-dev-toggle title="Casino QA tools">QA</button><section data-dev-panel hidden><header><strong>PROJECT BEARD DEV SUITE • ${BUILD_INFO.version}</strong><button data-dev-close>×</button></header>
-      <div class="dev-active"><span>ACTIVE CABINET</span><b data-dev-active>LOBBY</b><i data-dev-state>READY</i></div>
+      <div class="dev-active"><span>ACTIVE CABINET</span><b data-dev-active>LOBBY</b><i data-dev-state>READY</i><em data-dev-animation>ANIMATION: IDLE</em></div>
       <div class="dev-status" data-dev-status>QA ready. Open a cabinet, then trigger a test.</div>
       <div class="dev-telemetry" data-dev-summary></div><div class="dev-telemetry-table" data-dev-table></div>
       <div class="dev-qa-row"><label>ANIMATION SPEED<select data-dev-speed><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label><label><input type="checkbox" data-dev-close-after> CLOSE AFTER TRIGGER</label><button data-dev-pause>PAUSE ANIMATIONS</button><button data-dev-reset-telemetry>RESET TELEMETRY</button><button data-dev-math-all>RUN ACTUAL CABINET MATH</button><button data-dev-replay>EXPORT LAST REPLAY</button></div>
@@ -166,6 +167,8 @@ export class Application {
       const snap = this.telemetry.snapshot();
       host.querySelector<HTMLElement>("[data-dev-active]")!.textContent = this.currentGameId.toUpperCase();
       host.querySelector<HTMLElement>("[data-dev-state]")!.textContent = snap.gameState;
+      const animation = host.querySelector<HTMLElement>("[data-dev-animation]");
+      if (animation) animation.textContent = `ANIMATION: ${lastAnimationCue}`;
       const all = Object.values(snap.games);
       const spins = all.reduce((n, g) => n + (g?.spins ?? 0), 0);
       const features = all.reduce((n, g) => n + (g?.features ?? 0), 0);
@@ -198,6 +201,11 @@ export class Application {
     }));
     window.addEventListener("casino:qa-result", (event) => { const detail = (event as CustomEvent<{ message?: string; ok?: boolean }>).detail; setStatus(detail?.message ?? "QA action complete.", detail?.ok === false ? "error" : "ok"); refresh(); });
     window.addEventListener("casino:state", refresh);
+    window.addEventListener("casino:animation", (event) => {
+      const detail = (event as CustomEvent<{ cue?: string; game?: string }>).detail;
+      lastAnimationCue = `${(detail?.game ?? this.currentGameId).toUpperCase()} • ${(detail?.cue ?? "UNKNOWN").toUpperCase()}`;
+      refresh();
+    });
     window.addEventListener("keydown", (event) => { if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "d") toggle(); });
   }
 

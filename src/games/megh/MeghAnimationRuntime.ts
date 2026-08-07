@@ -1,4 +1,5 @@
 import { FeatureDirector } from "../../engine/FeatureDirector";
+import { PremiumAnimationEngine } from "../../engine/animation/PremiumAnimationEngine";
 import type { MeghCascadeResolution } from "./MeghCascadeRuntime";
 
 export interface MeghAnimationRuntimeOptions {
@@ -49,7 +50,9 @@ export class MeghAnimationRuntime {
       .map((key) => nodeFor(this.host, key))
       .filter((node): node is HTMLElement => Boolean(node));
 
+    const premium = new PremiumAnimationEngine(this.host, "megh");
     this.host.classList.add("megh-stage-active", "megh-gravity-running");
+    premium.cue("gravity-start", { removed: resolution.removed.size });
 
     if (config.animateRemoval ?? true) {
       await Promise.all(removedNodes.map((node, index) => node.animate(
@@ -87,7 +90,7 @@ export class MeghAnimationRuntime {
       node.classList.add(motion.isNew ? "cascade-new-symbol" : "cascade-falling-symbol");
       const startY = -distanceRows * pitch;
       const duration = meghDropDuration(distanceRows);
-      const delay = motion.x * 32 + Math.max(0, motion.y) * 15;
+      const delay = motion.x * 92 + Math.max(0, motion.y) * 18;
 
       animations.push(node.animate(
         [
@@ -127,9 +130,12 @@ export class MeghAnimationRuntime {
     }
 
     await Promise.all(animations);
+    premium.cue("symbol-land", { count: animations.length });
+    await premium.impact(animations.length > 14 ? "medium" : "soft");
     this.host.classList.remove("megh-gravity-running");
     this.host.classList.add("megh-board-settled");
-    window.dispatchEvent(new CustomEvent("casino:animation", { detail: { cue: "board-settle", game: "megh" } }));
+    premium.cue("board-settle");
+    premium.pulse("cosmic", 340);
     await this.options.wait(230);
     this.host.classList.remove("megh-board-settled", "megh-stage-active");
   }
@@ -145,19 +151,22 @@ export class MeghAnimationRuntime {
     if (!nodes.length) return;
 
     const director = new FeatureDirector(this.host);
+    const premium = new PremiumAnimationEngine(this.host, "megh");
     this.host.classList.add("megh-feature-focus");
     nodes.forEach((node) => node.classList.add("event-target", "megh-feature-target"));
+    const releaseSpotlight = await premium.spotlight(nodes, { dimOpacity: .38, targetBoost: 1.28 });
 
     try {
       if (kind === "ufo-abduct") {
         actorOptions.sound("ufo");
-        await this.presentUfo(nodes, director, actorOptions);
+        await this.presentUfo(nodes, director, actorOptions, premium);
       } else {
         actorOptions.sound("goat");
-        await this.presentGoats(nodes, director, actorOptions);
+        await this.presentGoats(nodes, director, actorOptions, premium);
       }
     } finally {
       nodes.forEach((node) => node.classList.remove("event-target", "megh-feature-target", "abducting-readable", "goat-marked-readable", "goat-eaten-readable"));
+      releaseSpotlight();
       this.host.classList.remove("megh-feature-focus");
       director.characters.clear();
     }
@@ -167,64 +176,83 @@ export class MeghAnimationRuntime {
     nodes: readonly HTMLElement[],
     director: FeatureDirector,
     options: MeghFeatureActorOptions,
+    premium: PremiumAnimationEngine,
   ): Promise<void> {
     const hostRect = this.host.getBoundingClientRect();
-    const actorWidth = Math.max(98, Math.min(128, hostRect.width * .17));
-    const actorHeight = actorWidth * .82;
-    const hoverY = -Math.max(58, actorHeight * .48);
+    const actorWidth = Math.max(92, Math.min(120, hostRect.width * .16));
+    const actorHeight = actorWidth * .72;
     const actor = director.characters.create(
       "megh-ufo-actor megh-ufo-runtime megh-board-ufo",
       `<img src="${options.ufoArt}" alt="Encore UFO"><i class="megh-ufo-beam"></i>`,
     );
     actor.style.setProperty("--megh-ufo-size", `${actorWidth}px`);
 
-    let current = new DOMPoint(-actorWidth - 30, hoverY);
-    director.characters.position(actor, current.x, current.y);
+    // M8 keeps the craft physically inside the reel viewport. Every target gets
+    // a board-local hover point; no negative-Y actor coordinates can leak onto
+    // the purple cabinet background.
+    const firstTarget = centerInHost(this.host, nodes[0]!);
+    let current = new DOMPoint(8, Math.max(6, Math.min(hostRect.height - actorHeight - 6, firstTarget.y - actorHeight * .92)));
+    director.characters.position(actor, -actorWidth + 8, current.y);
     actor.classList.add("is-travelling");
-    await this.options.wait(100);
+    premium.cue("ufo-enter");
+    await director.characters.move(actor, new DOMPoint(-actorWidth + 8, current.y), current, {
+      duration: 520,
+      easing: "cubic-bezier(.18,.72,.24,1)",
+    });
 
     for (const node of nodes) {
       const target = centerInHost(this.host, node);
-      const hover = new DOMPoint(target.x - actorWidth / 2, hoverY);
+      const hoverY = Math.max(6, Math.min(hostRect.height - actorHeight - 6, target.y - actorHeight * .92));
+      const hoverX = Math.max(4, Math.min(hostRect.width - actorWidth - 4, target.x - actorWidth / 2));
+      const hover = new DOMPoint(hoverX, hoverY);
       await director.characters.move(actor, current, hover, {
-        duration: 620,
+        duration: 560,
         easing: "cubic-bezier(.18,.72,.24,1)",
       });
       current = hover;
       actor.classList.remove("is-travelling");
       actor.classList.add("is-locking");
       this.host.classList.add("megh-anticipating");
-      await this.options.wait(360);
+      premium.cue("ufo-lock", { cell: node.dataset.cell ?? "" });
+      premium.pulse("cosmic", 380);
+      await this.options.wait(420);
 
       const nodeRect = node.getBoundingClientRect();
-      const beamHeight = Math.max(96, target.y - hoverY - actorHeight * .38);
+      const actorBeamOriginY = hoverY + actorHeight * .47;
+      const beamHeight = Math.max(38, target.y - actorBeamOriginY);
       actor.style.setProperty("--megh-beam-height", `${beamHeight}px`);
-      actor.style.setProperty("--megh-beam-width", `${Math.max(46, nodeRect.width * .58)}px`);
+      actor.style.setProperty("--megh-beam-width", `${Math.max(48, nodeRect.width * .68)}px`);
       actor.classList.add("is-firing");
       node.classList.add("abducting-readable");
       options.sound("beam");
-      window.dispatchEvent(new CustomEvent("casino:animation", { detail: { cue: "ufo-lock", game: "megh" } }));
+      premium.cue("ufo-impact", { cell: node.dataset.cell ?? "" });
 
-      const lift = Math.max(110, target.y - hoverY - actorHeight * .25);
+      // Move the actual rendered tile into the beam. No clone is created, so
+      // the board and presentation cannot diverge during abduction.
+      const lift = Math.max(42, target.y - (hoverY + actorHeight * .26));
       await node.animate(
         [
           { transform: "translate3d(0,0,0) scale(1)", opacity: 1, filter: "brightness(1)" },
-          { transform: `translate3d(0,-${Math.round(lift * .28)}px,0) scale(.92) rotate(3deg)`, opacity: 1, filter: "brightness(1.35)", offset: .34 },
-          { transform: `translate3d(0,-${Math.round(lift * .68)}px,0) scale(.6) rotate(10deg)`, opacity: .75, filter: "brightness(1.75)", offset: .72 },
-          { transform: `translate3d(0,-${Math.round(lift)}px,0) scale(.08) rotate(22deg)`, opacity: 0, filter: "brightness(2.4) blur(2px)" },
+          { transform: `translate3d(0,-${Math.round(lift * .22)}px,0) scale(.95) rotate(2deg)`, opacity: 1, filter: "brightness(1.35)", offset: .28 },
+          { transform: `translate3d(0,-${Math.round(lift * .62)}px,0) scale(.63) rotate(8deg)`, opacity: .82, filter: "brightness(1.8)", offset: .68 },
+          { transform: `translate3d(0,-${Math.round(lift)}px,0) scale(.06) rotate(20deg)`, opacity: 0, filter: "brightness(2.5) blur(2px)" },
         ],
-        { duration: 980, easing: "cubic-bezier(.18,.62,.2,1)", fill: "forwards" },
+        { duration: 1050, easing: "cubic-bezier(.16,.58,.18,1)", fill: "forwards" },
       ).finished.catch(() => undefined);
-      await director.shake("soft", 145);
-      director.burst(node, "✦", 8, "cosmic-particle");
+      await premium.impact("soft");
+      director.burst(node, "✦", 10, "cosmic-particle");
       actor.classList.remove("is-firing", "is-locking");
       this.host.classList.remove("megh-anticipating");
       actor.classList.add("is-travelling");
-      await this.options.wait(210);
+      await this.options.wait(240);
     }
 
-    const exit = new DOMPoint(hostRect.width + actorWidth + 40, hoverY - 18);
-    await director.characters.move(actor, current, exit, { duration: 760, easing: "cubic-bezier(.35,.05,.78,.25)" });
+    const exit = new DOMPoint(hostRect.width - 8, Math.max(6, Math.min(hostRect.height - actorHeight - 6, current.y - 12)));
+    await director.characters.move(actor, current, exit, { duration: 620, easing: "cubic-bezier(.35,.05,.78,.25)" });
+    await actor.animate(
+      [{ opacity: 1, transform: actor.style.transform || "none" }, { opacity: 0, transform: `${actor.style.transform || "none"} translateX(80px)` }],
+      { duration: 180, easing: "ease-in", fill: "forwards" },
+    ).finished.catch(() => undefined);
     actor.remove();
   }
 
@@ -232,6 +260,7 @@ export class MeghAnimationRuntime {
     nodes: readonly HTMLElement[],
     director: FeatureDirector,
     options: MeghFeatureActorOptions,
+    premium: PremiumAnimationEngine,
   ): Promise<void> {
     const hostRect = this.host.getBoundingClientRect();
     const actorSize = Math.max(92, Math.min(128, hostRect.width * .16));
@@ -248,6 +277,7 @@ export class MeghAnimationRuntime {
       const approach = new DOMPoint(Math.max(6, target.x - actorSize * .78), target.y - actorSize * .54);
       director.characters.position(actor, entry.x, entry.y);
       actor.classList.add("is-running");
+      premium.cue("goat-enter", { cell: node.dataset.cell ?? "" });
       await director.characters.move(actor, entry, approach, { duration: 850, easing: "cubic-bezier(.18,.72,.24,1)" });
       actor.classList.remove("is-running");
       actor.classList.add("is-looking");
@@ -261,6 +291,7 @@ export class MeghAnimationRuntime {
       actor.classList.add("is-chomping");
       node.classList.add("goat-eaten-readable");
       options.sound("chomp");
+      premium.cue("goat-chomp", { cell: node.dataset.cell ?? "" });
       director.burst(node, "•", 10, "crumb-particle");
       await director.shake("soft", 130);
       await this.options.wait(620);

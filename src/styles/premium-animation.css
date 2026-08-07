@@ -1,0 +1,35 @@
+/* Project Beard M8 — shared premium animation primitives. */
+.casino-feature-focus-active > *:not(.casino-character-layer) {
+  transition: opacity 150ms linear, filter 150ms linear;
+}
+.casino-feature-focus-active .jam-symbol:not(.casino-feature-focus-target) {
+  opacity: var(--casino-focus-opacity, .42) !important;
+  filter: brightness(.62) saturate(.78) !important;
+}
+.casino-feature-focus-target {
+  opacity: 1 !important;
+  filter: brightness(var(--casino-target-boost, 1.22)) saturate(1.16) !important;
+  z-index: 48 !important;
+}
+[data-animation-pulse="cosmic"] {
+  box-shadow: inset 0 0 34px rgba(130,255,214,.2), 0 0 24px rgba(191,255,104,.14) !important;
+}
+[data-animation-pulse="gold"] {
+  box-shadow: inset 0 0 34px rgba(255,220,110,.22), 0 0 26px rgba(255,196,68,.18) !important;
+}
+[data-animation-pulse="danger"] {
+  box-shadow: inset 0 0 38px rgba(255,63,90,.22), 0 0 28px rgba(255,55,80,.17) !important;
+}
+
+/* Subtle cabinet life. Paused during active gravity/feature actions. */
+.megh-machine:not(:has(.megh-gravity-running)):not(:has(.megh-feature-focus)) {
+  animation: projectBeardCabinetBreathe 5.8s ease-in-out infinite alternate;
+}
+@keyframes projectBeardCabinetBreathe {
+  from { filter: brightness(.985) saturate(.99); }
+  to { filter: brightness(1.025) saturate(1.035); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .megh-machine { animation: none !important; }
+}
