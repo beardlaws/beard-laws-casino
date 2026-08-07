@@ -1,5 +1,6 @@
 import type { CasinoGameId } from './CasinoProgression';
 import { BARBER_PRODUCTION_MATH } from '../games/BigBadBarber';
+import { resolveBarberFinale } from '../games/barber/BarberRuntime';
 import { MEGH_PRODUCTION_MATH } from '../games/MeghsCosmicJam';
 import { NEEMA_PRODUCTION_MATH } from '../games/NeemasHighSeas';
 
@@ -158,6 +159,18 @@ const simulateBarber = (spins: number, seed: number): ProductionSimulationReport
         const built = applyBuilders(freeBoard);
         if (!built && freeBase === 0 && forts.some((level) => level > 0)) bonus += attack();
       }
+      // Project Beard M13 Final Trim: every fortress that survives the eight
+      // free spins reveals once at a lower finale scale, then resets.
+      const finale = resolveBarberFinale(
+        forts,
+        config.fortressMultipliers,
+        100,
+        Number(config.finalFortressAwardScale ?? 0),
+      );
+      for (const reveal of finale) {
+        bonus += reveal.awardUnits / 100;
+        forts[reveal.reel] = 0;
+      }
       featureWon += bonus;
       featureWins.push(bonus);
       paidReturn += bonus;
@@ -178,7 +191,7 @@ const simulateBarber = (spins: number, seed: number): ProductionSimulationReport
   }
   longestDrought = Math.max(longestDrought, drought);
   return summarize('barber', spins, seed, baseWon, featureWon, returns, featureWins, nearMisses, longestLosing, longestDrought, [
-    'Uses Big Bad Barber production symbol weights, 243-ways evaluator, four-reel minimum match, Builder upgrades, 14% paid-spin attack rule, scaled fortress awards, and eight Shave Down free spins.',
+    'Uses Big Bad Barber production symbol weights, 243-ways evaluator, four-reel minimum match, Builder upgrades, 14% paid-spin attack rule, scaled fortress awards, eight Shave Down free spins, and the Final Trim reveal of surviving fortresses.',
     'Presentation-only Barber variants are intentionally excluded because they do not change payouts.',
   ]);
 };

@@ -11,6 +11,7 @@ import {
   createBarberFeaturePlan,
   createBarberSpinOutcome,
   resolveBarberRuntime,
+  resolveBarberFinale,
 } from "./barber/BarberRuntime";
 
 type SymbolId = "beard"|"wax"|"comb"|"pole"|"clipper"|"builder"|"wild"|"razor";
@@ -41,6 +42,7 @@ export const BARBER_PRODUCTION_MATH = {
   basePayScale: 0.47,
   minimumMatch: 4,
   fortressAwardScale: 0.06,
+  finalFortressAwardScale: 0.03,
   symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
 } as const;
 
@@ -56,6 +58,8 @@ export class BigBadBarber {
   private forceTwoRazors=false;
   private forceThreeRazors=false;
   private spinSequence=0;
+  private shaveDownRunning=false;
+  private shaveDownStartWallet=0;
   private presentation!:BarberPresentation;
   private readonly stateMachine=new GameStateMachine("barber");
   private readonly featureExecution=new FeatureExecutionPipeline({
@@ -89,6 +93,7 @@ export class BigBadBarber {
       <header><small>BEARD LAWS CASINO • PERSISTENT FEATURE SLOT</small><h1>THE BIG BAD BARBER</h1><p>Build legendary beard fortresses. Pray the clippers jam.</p><button class="game-rules" data-barber-rules>RULES &amp; PAYTABLE</button></header>
       <div class="barber-progress"><span class="fortress-meter"><small>FORTRESSES BUILT</small><b data-barber-forts>0 / 5</b></span><div class="fortress-track">${Array.from({length:5},(_,i)=>this.fortMarkup(i)).join("")}</div><span class="razor-meter"><small>FEATURE</small><b>3+ RAZORS</b></span></div>
       <div class="barber-message" data-barber-message>BUILD THE BEARDS • BEWARE THE BARBER</div>
+      <div class="barber-bonus-hud" data-barber-bonus-hud hidden><span><small>SHAVE DOWN</small><b data-barber-bonus-spins>8 FREE SPINS</b></span><span><small>BONUS WIN</small><b data-barber-bonus-total>$0.00</b></span><em>BUILD • SURVIVE • FINAL TRIM</em></div>
       <div class="barber-stage"><div class="barber-character-layer" data-barber-character-layer></div><div class="barber-reels" data-barber-reels></div></div>
       ${slotControlPanelMarkup({prefix:"barber",auto:true})}
       <div class="barber-auto-menu" data-barber-auto-menu hidden><button data-auto-count="10">10</button><button data-auto-count="25">25</button><button data-auto-count="50">50</button><button data-auto-count="-1">∞</button></div>
@@ -135,6 +140,7 @@ export class BigBadBarber {
     this.root.querySelector(".barber-machine")?.classList.add("barber-spinning");this.update();
 
     const grid=this.makeGrid();
+    const qaForcedThreeRazors=this.forceThreeRazors;
     if(this.forceTwoRazors || this.forceThreeRazors){
       const razor=SYMBOLS.find(s=>s.id==="razor")!;
       const wax=SYMBOLS.find(s=>s.id==="wax")!;
@@ -159,6 +165,7 @@ export class BigBadBarber {
 
     const result=this.evaluate(grid);
     const razors=grid.flat().filter(s=>s.id==="razor").length;
+    if(!isBonus&&razors>=3)this.message(`${razors} GOLDEN RAZORS • THE SHAVE DOWN TRIGGERS!`);
     const builderCounts=Array.from({length:COLS},(_,x)=>grid.filter(row=>row[x]!.id==="builder").length);
     const decision=resolveBarberRuntime({
       fortressLevels:fortressLevelsBefore,
@@ -174,6 +181,14 @@ export class BigBadBarber {
       targetRoll:casinoRandom(),
       fortressAwardScale:BARBER_PRODUCTION_MATH.fortressAwardScale,
     });
+    if(qaForcedThreeRazors){
+      window.dispatchEvent(new CustomEvent("casino:qa-result",{detail:{
+        ok:decision.triggerShaveDown,
+        message:decision.triggerShaveDown
+          ? "VERIFIED: three Golden Razors were counted by the paid-spin evaluator and launched Shave Down."
+          : `FAILED: three-Razor verification produced razorCount=${razors}.`,
+      }}));
+    }
     const outcome=createBarberSpinOutcome({
       id:spinId,
       startedAtIso,
@@ -200,6 +215,7 @@ export class BigBadBarber {
 
     window.dispatchEvent(new CustomEvent("casino:direct-outcome",{detail:outcome}));
 
+    if(isBonus&&this.bonusSpins===0&&this.shaveDownRunning)await this.finishShaveDown();
     if(this.bonusSpins>0){await this.wait(650);void this.spin();return;}
     if(this.autoInfinite||this.autoRemaining>0){
       if(this.autoRemaining>0)this.autoRemaining--;
@@ -331,7 +347,77 @@ export class BigBadBarber {
   private async payBaseWin(grid:BarberSymbol[][],result:{award:number;winners:Set<string>}):Promise<void>{const before=this.lastWin;this.render(grid,result.winners);this.lastWin+=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);await this.presentation.celebrateWin(before,this.lastWin,this.betUnits);await this.wait(420);}
 
   private async startShaveDown():Promise<void>{
-    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));this.bonusSpins=8;const layer=this.characterLayer();layer.innerHTML=`<div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><strong>THE SHAVE DOWN!</strong></div>`;this.root.querySelector(".barber-machine")?.classList.add("bonus-mode");this.message("8 FREE SPINS • BUILD FAST • HE SHAVES AFTER FAILED BUILDS");await this.wait(1900);layer.innerHTML="";this.update();
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));
+    this.bonusSpins=BARBER_PRODUCTION_MATH.bonusSpins;
+    this.shaveDownRunning=true;
+    this.shaveDownStartWallet=this.getWallet();
+    const layer=this.characterLayer();
+    const machine=this.root.querySelector<HTMLElement>(".barber-machine");
+    machine?.classList.add("bonus-mode","shave-down-active");
+    layer.innerHTML=`<div class="shave-down-trigger"><div class="razor-lock-row"><i>RAZOR</i><i>RAZOR</i><i>RAZOR</i></div><div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div></div><strong>THE SHAVE DOWN!</strong><small>8 FREE SPINS • BUILD THE FORTRESSES • SURVIVE THE FINAL TRIM</small></div>`;
+    this.message("3 GOLDEN RAZORS LOCKED • THE SHAVE DOWN BEGINS!");
+    await this.wait(2400);
+    layer.innerHTML="";
+    this.message("8 FREE SPINS • BUILD FAST • FAILED BUILDS CAN SUMMON THE BARBER");
+    this.update();
+  }
+
+  private async finishShaveDown():Promise<void>{
+    if(!this.shaveDownRunning)return;
+    const layer=this.characterLayer();
+    const built=this.fortressLevels.map((level,reel)=>({level,reel})).filter((entry)=>entry.level>0);
+    this.message(built.length?"FINAL TRIM • EVERY SURVIVING FORTRESS REVEALS":"FINAL TRIM • THE BARBER CLEARED THE BLOCK");
+    layer.innerHTML=`<div class="shave-down-finale"><div class="mean-barber intro"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div></div><strong>FINAL TRIM</strong><small>${built.length?`${built.length} FORTRESS${built.length===1?"":"ES"} TO SHAVE`:"NO FORTRESSES SURVIVED"}</small></div>`;
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"barber"}}));
+    await this.wait(1500);
+    layer.innerHTML="";
+    const reveals=resolveBarberFinale(
+      this.fortressLevels,
+      FORT_MULT,
+      this.betUnits,
+      BARBER_PRODUCTION_MATH.finalFortressAwardScale,
+    );
+    for(const reveal of reveals){
+      await this.revealFinaleFort(reveal.reel,reveal.multiplier,reveal.awardUnits);
+    }
+    const total=Math.max(0,this.getWallet()-this.shaveDownStartWallet);
+    layer.innerHTML=`<div class="shave-down-total"><small>SHAVE DOWN COMPLETE</small><strong>$${(total/100).toFixed(2)}</strong><b>THE BARBER LEAVES • THE BEARDS WILL REBUILD</b></div>`;
+    this.message(`SHAVE DOWN COMPLETE • BONUS WIN $${(total/100).toFixed(2)}`);
+    await this.wait(2200);
+    layer.innerHTML="";
+    this.shaveDownRunning=false;
+    this.root.querySelector(".barber-machine")?.classList.remove("bonus-mode","shave-down-active");
+    this.update();
+  }
+
+  private async revealFinaleFort(reel:number,multiplier:number,awardUnits:number):Promise<void>{
+    const fort=this.root.querySelector<HTMLElement>(`[data-fort="${reel}"]`);
+    if(!fort)return;
+    this.presentation.targetFort(reel);
+    const layer=this.characterLayer();
+    layer.innerHTML=`<div class="mean-barber attack finale" style="--target:${reel}"><div class="barber-head"><b></b><i></i></div><div class="barber-clippers"></div><div class="barber-speech">FINAL TRIM!</div></div>`;
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"clippers"}}));
+    await this.wait(420);
+    fort.classList.add("being-shaved","finale-shave");
+    this.spawnShavings(fort);
+    await this.wait(620);
+    fort.classList.remove("being-shaved","finale-shave");
+    this.fortressLevels[reel]=0;
+    this.updateFortresses();
+    if(awardUnits>0){
+      this.lastWin+=awardUnits;
+      this.setWallet(this.getWallet()+awardUnits);
+      this.onActivity({type:"win",game:"barber",amount:awardUnits,value:this.betUnits>0?awardUnits/this.betUnits:0,wager:this.betUnits});
+    }
+    fort.classList.add("prize-reveal");
+    fort.insertAdjacentHTML("beforeend",`<div class="fort-prize finale-prize">${multiplier}×<small>$${(awardUnits/100).toFixed(2)}</small></div>`);
+    this.presentation.rewardBurst(fort);
+    await this.wait(720);
+    fort.querySelector(".fort-prize")?.remove();
+    fort.classList.remove("prize-reveal");
+    layer.innerHTML="";
+    this.presentation.clearTarget();
+    this.update();
   }
 
 
@@ -347,7 +433,7 @@ export class BigBadBarber {
   private changeBet(d:number):void{if(this.spinning||this.autoRemaining||this.autoInfinite)return;this.betModel.changeCredits(d);this.update();}
   private changeDenom(d:number):void{if(this.spinning||this.autoRemaining||this.autoInfinite)return;this.betModel.changeDenomination(d);this.update();}
   private message(s:string):void{const n=this.root.querySelector<HTMLElement>("[data-barber-message]");if(n)n.textContent=s;}
-  private update():void{const q=(s:string)=>this.root.querySelector<HTMLElement>(s);const credit=q("[data-barber-credit]"),bet=q("[data-barber-bet]"),denom=q("[data-barber-denom]"),credits=q("[data-barber-credits]"),win=q("[data-barber-win]");if(!credit||!bet||!denom||!credits||!win)return;credit.textContent=`$${(this.getWallet()/100).toFixed(2)}`;bet.textContent=`$${(this.betUnits/100).toFixed(2)}`;denom.textContent=`${this.betModel.denominationUnits}¢`;credits.textContent=String(this.betModel.credits);win.textContent=`$${(this.lastWin/100).toFixed(2)}`;const spin=q("[data-barber-spin]") as HTMLButtonElement;spin.disabled=this.spinning||(!this.bonusSpins&&this.getWallet()<this.betUnits);spin.textContent=this.autoRemaining||this.autoInfinite?"STOP":this.bonusSpins?`FREE ${this.bonusSpins}`:"SPIN";const auto=q("[data-barber-auto]") as HTMLButtonElement;auto.textContent=this.autoInfinite?"AUTO ∞":this.autoRemaining?`AUTO ${this.autoRemaining}`:"AUTO";this.updateFortresses();}
-  private showRules():void{const m=document.createElement("div");m.className="modal-backdrop";m.innerHTML=`<section class="slot-rules barber-rules"><button data-close>×</button><small>THE BIG BAD BARBER</small><h2>BUILD. UPGRADE. SURVIVE.</h2><p>Wins pay left to right on 243 ways. No Shave Wilds substitute for regular paying symbols.</p><h3>BEARD BUILDERS</h3><ul><li>Every Builder Crate upgrades the fortress above its reel.</li><li>Fortresses persist between paid spins and grow through four levels.</li><li>Higher levels store larger reveal multipliers.</li></ul><h3>THE BARBER ATTACK</h3><ul><li>Failed build spins can summon the Big Bad Barber.</li><li>He shaves one built fortress and reveals its stored prize.</li><li>The attacked fortress resets after paying.</li></ul><h3>THE SHAVE DOWN</h3><ul><li>Land 3+ Golden Razors for 8 free spins.</li><li>Builders remain active and failed builds are more dangerous.</li></ul><p class="rules-note">Original Beard Laws feature slot. Fictional credits only.</p></section>`;document.body.appendChild(m);m.querySelector("[data-close]")?.addEventListener("click",()=>m.remove());}
+  private update():void{const q=(s:string)=>this.root.querySelector<HTMLElement>(s);const credit=q("[data-barber-credit]"),bet=q("[data-barber-bet]"),denom=q("[data-barber-denom]"),credits=q("[data-barber-credits]"),win=q("[data-barber-win]");if(!credit||!bet||!denom||!credits||!win)return;credit.textContent=`$${(this.getWallet()/100).toFixed(2)}`;bet.textContent=`$${(this.betUnits/100).toFixed(2)}`;denom.textContent=`${this.betModel.denominationUnits}¢`;credits.textContent=String(this.betModel.credits);win.textContent=`$${(this.lastWin/100).toFixed(2)}`;const spin=q("[data-barber-spin]") as HTMLButtonElement;spin.disabled=this.spinning||(!this.bonusSpins&&this.getWallet()<this.betUnits);spin.textContent=this.autoRemaining||this.autoInfinite?"STOP":this.bonusSpins?`FREE ${this.bonusSpins}`:"SPIN";const auto=q("[data-barber-auto]") as HTMLButtonElement;auto.textContent=this.autoInfinite?"AUTO ∞":this.autoRemaining?`AUTO ${this.autoRemaining}`:"AUTO";const hud=q("[data-barber-bonus-hud]");if(hud){hud.hidden=!this.shaveDownRunning;const spins=q("[data-barber-bonus-spins]"),total=q("[data-barber-bonus-total]");if(spins)spins.textContent=`${this.bonusSpins} FREE SPINS`;if(total)total.textContent=`$${(Math.max(0,this.getWallet()-this.shaveDownStartWallet)/100).toFixed(2)}`;}this.updateFortresses();}
+  private showRules():void{const m=document.createElement("div");m.className="modal-backdrop";m.innerHTML=`<section class="slot-rules barber-rules"><button data-close>×</button><small>THE BIG BAD BARBER</small><h2>BUILD. UPGRADE. SURVIVE.</h2><p>Wins pay left to right on 243 ways. No Shave Wilds substitute for regular paying symbols.</p><h3>BEARD BUILDERS</h3><ul><li>Every Builder Crate upgrades the fortress above its reel.</li><li>Fortresses persist between paid spins and grow through four levels.</li><li>Higher levels store larger reveal multipliers.</li></ul><h3>THE BARBER ATTACK</h3><ul><li>Failed build spins can summon the Big Bad Barber.</li><li>He shaves one built fortress and reveals its stored prize.</li><li>The attacked fortress resets after paying.</li></ul><h3>THE SHAVE DOWN</h3><ul><li>Land 3+ Golden Razors on a paid spin and the Shave Down always triggers.</li><li>Eight free spins keep Builders active; failed build spins can summon the Barber.</li><li>When the final free spin ends, every surviving fortress enters the Final Trim and reveals its stored prize.</li></ul><p class="rules-note">Original Beard Laws feature slot. Fictional credits only.</p></section>`;document.body.appendChild(m);m.querySelector("[data-close]")?.addEventListener("click",()=>m.remove());}
   private wait(ms:number):Promise<void>{return new Promise(r=>setTimeout(r,ms));}
 }

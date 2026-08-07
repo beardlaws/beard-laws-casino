@@ -5,3 +5,138 @@
 .tito-modal{width:min(430px,90vw);background:#fff9df;color:#171016;padding:28px;border-radius:18px;box-shadow:0 30px 100px rgba(0,0,0,.7);text-align:center;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.tito-modal h2{margin:.35rem 0}.tito-modal>strong{display:block;font-size:3rem;margin:18px 0}.tito-modal>p{font-weight:900}.tito-modal>time{display:block;margin:8px}.tito-modal>div:last-child{display:grid;gap:8px;margin-top:20px}.ticket-barcode{height:76px;margin:18px 0;background:repeating-linear-gradient(90deg,#111 0 3px,transparent 3px 6px,#111 6px 7px,transparent 7px 11px)}
 @media(max-width:760px){.economy-balance-grid.bank{grid-template-columns:repeat(2,1fr)}.ticket-list article{grid-template-columns:1fr 1fr}.session-history article{grid-template-columns:1fr auto}.session-history article span{grid-column:1/-1}.bank-actions,.cashier-actions{grid-template-columns:1fr}}
 @media print{body>*{display:none!important}.modal-backdrop{display:grid!important;position:static!important;background:#fff!important}.tito-modal{display:block!important;box-shadow:none!important;margin:0 auto}}
+
+
+/* Project Beard M13 — cashier cage / Beard Laws Bank destination polish */
+.hero-actions .cashier-button{
+  appearance:none;
+  min-height:54px;
+  padding:0 20px;
+  border:1px solid rgba(255,215,104,.72);
+  border-radius:14px;
+  background:linear-gradient(180deg,#2a1735,#140b1b 72%);
+  color:#ffe8a8;
+  box-shadow:inset 0 1px rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.28);
+  font-weight:950;
+  letter-spacing:.045em;
+  cursor:pointer;
+}
+.hero-actions .cashier-button:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.casino-destination-modal{
+  width:min(900px,94vw)!important;
+  max-height:min(88vh,940px);
+  overflow:auto;
+  padding:28px!important;
+  border:1px solid rgba(244,191,76,.78)!important;
+  border-radius:26px!important;
+  background:
+    radial-gradient(circle at 50% -10%,rgba(126,48,129,.22),transparent 34%),
+    linear-gradient(180deg,#1d0c25,#0d0711 68%,#08050a)!important;
+  box-shadow:0 34px 100px rgba(0,0,0,.72),inset 0 0 0 1px rgba(255,255,255,.025)!important;
+}
+.economy-modal-header{text-align:center;margin:0 auto 20px;max-width:680px}
+.economy-modal-header small{color:#d8b3e3;letter-spacing:.12em;font-weight:900}
+.economy-modal-header h2{margin:.35rem 0 .45rem!important;font-size:clamp(2rem,4vw,3.2rem)!important;line-height:.96;color:#ffe7a4}
+.economy-modal-header p{margin:0;color:#bda8c4;font-size:.94rem;line-height:1.45}
+.bank-account-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0}
+.bank-account-card{
+  position:relative;overflow:hidden;min-height:126px;padding:16px;
+  border:1px solid rgba(255,214,102,.25);border-radius:18px;
+  background:linear-gradient(155deg,rgba(44,18,53,.96),rgba(10,6,15,.96));
+  box-shadow:inset 0 0 24px rgba(0,0,0,.3);
+}
+.bank-account-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,transparent,#e3ae47,transparent);opacity:.8}
+.bank-account-card.wallet:before{background:linear-gradient(90deg,transparent,#8cff6f,transparent)}
+.bank-account-card.tickets:before{background:linear-gradient(90deg,transparent,#d68bff,transparent)}
+.bank-account-card small{display:block;color:#be9fc8;font-size:.68rem;letter-spacing:.12em;font-weight:900}
+.bank-account-card strong{display:block;margin:10px 0 8px;color:#ffe8a6;font-size:clamp(1.45rem,2.7vw,2.1rem);font-variant-numeric:tabular-nums}
+.bank-account-card.wallet strong{color:#82ff8e}
+.bank-account-card span{display:block;color:#8f7b98;font-size:.76rem;line-height:1.3}
+.active-visit-card{
+  display:grid;grid-template-columns:1fr auto;gap:10px 18px;align-items:center;
+  margin:12px 0 16px;padding:17px 18px;border-radius:18px;
+  border:1px solid rgba(188,255,111,.28);
+  background:linear-gradient(90deg,rgba(72,28,79,.55),rgba(24,13,31,.85));
+}
+.active-visit-card.idle{border-color:rgba(255,214,102,.18)}
+.active-visit-card small{color:#bca4c6;letter-spacing:.12em;font-size:.66rem;font-weight:900}
+.active-visit-card h3{margin:.2rem 0 0;color:#fff0bd;font-size:1.1rem}
+.active-visit-card>strong{font-size:1.7rem;font-variant-numeric:tabular-nums}
+.active-visit-card>p{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap;margin:0;color:#a995b2;font-size:.78rem}
+.positive{color:#a8ff79!important}.negative{color:#ff8d98!important}
+.bank-actions,.cashier-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.economy-action,.cashout-destination{
+  min-height:72px!important;padding:13px 16px!important;text-align:left!important;
+  border:1px solid rgba(255,214,104,.34)!important;border-radius:16px!important;
+  background:linear-gradient(180deg,#341441,#1b0b23)!important;color:#fff0bd!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.06),0 8px 18px rgba(0,0,0,.18);
+}
+.economy-action.primary,.cashout-destination.primary{background:linear-gradient(180deg,#f6d675,#c98a2d)!important;color:#281511!important;border-color:#ffe99b!important}
+.economy-action b,.cashout-destination b{display:block;font-size:.92rem;letter-spacing:.035em}
+.economy-action small,.cashout-destination small{display:block;margin-top:4px;color:inherit;opacity:.7;font-size:.72rem;font-weight:700}
+.economy-action:not(:disabled):hover,.cashout-destination:not(:disabled):hover{filter:brightness(1.1);transform:translateY(-1px)}
+.economy-action:disabled,.cashout-destination:disabled{opacity:.35;cursor:not-allowed}
+.cashout-destination.ticket{background:linear-gradient(180deg,#44304c,#25122d)!important}
+.cashout-destination.keep{background:linear-gradient(180deg,#211327,#110a17)!important}
+.cashout-processing{animation:cashoutProcessing .42s ease both}
+@keyframes cashoutProcessing{50%{filter:brightness(1.35);transform:scale(.985)}}
+.bank-section{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.bank-section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+.bank-section-heading h3{margin:0;color:#ffe7a6;font-size:1rem}
+.bank-section-heading span{padding:4px 9px;border-radius:999px;background:#2a1733;color:#caa9d4;font-size:.68rem;font-weight:900}
+.bank-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.bank-stat-grid p{margin:0;padding:12px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.055)}
+.bank-stat-grid small{display:block;color:#937fa0;font-size:.64rem;letter-spacing:.08em}
+.bank-stat-grid b{display:block;margin-top:5px;color:#f9e6ad;font-size:1rem;font-variant-numeric:tabular-nums}
+.bank-empty-state{padding:16px;border:1px dashed rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.025);text-align:center}
+.bank-empty-state b{display:block;color:#dac7df}.bank-empty-state span{display:block;margin-top:4px;color:#8f7e98;font-size:.76rem}
+.ticket-list article{grid-template-columns:1fr auto auto!important;padding:13px 14px!important;background:rgba(255,255,255,.035)}
+.ticket-list article>div:first-child{display:grid;gap:3px}
+.ticket-list article small,.ticket-list article time{color:#8f7d98;font-size:.68rem}
+.ticket-list article>strong{font-size:1.25rem;color:#ffe49a;font-variant-numeric:tabular-nums}
+.ticket-actions{display:flex;gap:6px}
+.ticket-actions button{min-height:36px!important;padding:6px 9px!important;font-size:.66rem}
+.session-history{display:grid;gap:8px}
+.session-history article{
+  display:grid!important;grid-template-columns:88px minmax(190px,1fr) auto auto auto!important;
+  gap:12px!important;align-items:center;padding:12px 14px!important;border:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,.018))!important
+}
+.session-history article.win{border-left:3px solid #88e568}.session-history article.loss{border-left:3px solid #df6f7e}
+.session-date{display:grid}.session-date small{color:#8f7e98;font-size:.66rem}
+.session-history article>div:nth-child(2){display:grid;gap:3px}
+.session-history article>div:nth-child(2)>strong{color:#f8e4ad;font-size:.82rem}
+.session-history article>div:nth-child(2)>span{color:#907e99;font-size:.68rem}
+.session-history em{font-style:normal;color:#a18da8;font-size:.68rem;white-space:nowrap}
+.session-result{font-size:1rem!important;font-variant-numeric:tabular-nums}
+.economy-message{padding:10px 12px;border-radius:12px;background:rgba(137,255,112,.06);color:#c8ffa0}
+.cashier-total{position:relative;overflow:hidden;padding:20px!important;background:radial-gradient(circle at 50% 0,rgba(142,255,105,.1),rgba(8,5,15,.92))!important}
+.cashier-total:after{content:"";position:absolute;left:15%;right:15%;bottom:0;height:2px;background:linear-gradient(90deg,transparent,#9dff72,transparent)}
+.cashier-total small{display:block;margin-top:5px;color:#91a08f;font-size:.72rem}
+.cashier-ledger{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:16px 0!important}
+.cashier-ledger p{min-height:52px;align-items:center;background:rgba(255,255,255,.025)}
+.cashier-ledger p.result{grid-column:1/-1;font-size:1.1rem}
+.cashier-ledger p.result.negative{background:rgba(255,73,92,.06)}
+.cashier-ledger p.result.positive{background:rgba(129,255,89,.06)}
+.cashier-empty{margin:16px 0}
+@media(max-width:800px){
+  .bank-account-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bank-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .session-history article{grid-template-columns:72px 1fr auto!important}
+  .session-history em{display:none}
+}
+@media(max-width:560px){
+  .casino-destination-modal{padding:18px!important}
+  .bank-account-cards,.bank-actions,.cashier-actions,.cashier-ledger{grid-template-columns:1fr!important}
+  .active-visit-card{grid-template-columns:1fr}
+  .active-visit-card>strong{justify-self:start}
+  .bank-stat-grid{grid-template-columns:1fr 1fr}
+  .session-history article{grid-template-columns:1fr auto!important}
+  .session-history article>div:nth-child(2){grid-column:1/-1}
+  .ticket-list article{grid-template-columns:1fr auto!important}
+  .ticket-actions{grid-column:1/-1}
+}
+
+.wallet-pill{display:grid!important;grid-template-columns:1fr!important;justify-items:end!important;align-content:center!important;min-width:154px!important;padding:9px 13px!important}
+.wallet-pill small,.wallet-pill strong,.wallet-pill span{position:static!important;display:block!important;line-height:1.05!important}
+.wallet-pill span{margin-top:4px!important;font-size:.56rem!important;letter-spacing:.08em!important;color:#a9ff87!important;opacity:.82}

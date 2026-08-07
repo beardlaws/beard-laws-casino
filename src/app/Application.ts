@@ -274,7 +274,7 @@ export class Application {
   private showCasinoMathReport(): void {
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
-    modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>V77B • ACTUAL MATH INTEGRATION</small><h2>Running 100,000 production-rule spins…</h2><p>The lab is using the same symbol weights, pay rules, triggers, persistent meters, fortress values, cascade rules, and bonus limits used by the playable cabinets.</p></section>`;
+    modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>PROJECT BEARD M13 • PRODUCTION MATH</small><h2>Running 100,000 production-rule spins…</h2><p>The lab is using the same symbol weights, pay rules, triggers, persistent meters, fortress values, cascade rules, and bonus limits used by the playable cabinets.</p></section>`;
     document.body.appendChild(modal);
     window.setTimeout(() => {
       const reports: ProductionSimulationReport[] = [
@@ -283,25 +283,25 @@ export class Application {
         runProductionSimulation("neema", 100000, 7702),
       ];
       const oneIn = (frequency: number): string => frequency > 0 ? `1 in ${(1 / frequency).toFixed(1)}` : "Not observed";
-      modal.innerHTML = `<section class="progress-modal casino-math-modal"><button class="close" data-close>×</button><small>V77B • PRODUCTION RULE LAB</small><h2>Actual Cabinet Math Report</h2><div class="math-cards">${reports.map((report) => `<article><h3>${report.game.toUpperCase()}</h3><p><span>RULE-SET RTP</span><b>${(report.rtp * 100).toFixed(2)}%</b></p><p><span>BASE / FEATURE</span><b>${(report.baseRtp * 100).toFixed(1)}% / ${(report.featureRtp * 100).toFixed(1)}%</b></p><p><span>ANY WIN</span><b>${(report.hitFrequency * 100).toFixed(1)}%</b></p><p><span>WIN ≥ BET</span><b>${(report.profitableFrequency * 100).toFixed(1)}%</b></p><p><span>FEATURE</span><b>${oneIn(report.featureFrequency)}</b></p><p><span>AVG / MEDIAN FEATURE</span><b>${report.averageFeatureX.toFixed(1)}× / ${report.medianFeatureX.toFixed(1)}×</b></p><p><span>MAX OBSERVED</span><b>${report.maxWinX.toFixed(1)}×</b></p><p><span>LONGEST FEATURE DROUGHT</span><b>${report.longestFeatureDrought}</b></p><p><span>NEAR MISS</span><b>${(report.nearMissFrequency * 100).toFixed(2)}%</b></p><p><span>VOLATILITY INDEX</span><b>${report.volatility.toFixed(2)}</b></p></article>`).join("")}</div><p class="math-disclaimer"><b>These are now production-rule simulations.</b> They directly import each cabinet's live symbol weights and constants. Interactive player choices are simulated uniformly and presentation-only events are excluded. They are engineering reports, not regulatory certification.</p><div class="math-actions"><button class="primary" data-download-math>DOWNLOAD ACTUAL CSV</button><button class="account-secondary" data-run-million>RUN 1,000,000 EACH</button><button class="account-secondary" data-beardbank-math>RUN BEARD BANK 1M</button><button class="account-secondary" data-close>RETURN</button></div></section>`;
+      modal.innerHTML = `<section class="progress-modal casino-math-modal"><button class="close" data-close>×</button><small>PROJECT BEARD M13 • PRODUCTION RULE LAB</small><h2>Actual Cabinet Math Report</h2><div class="math-cards">${reports.map((report) => `<article><h3>${report.game.toUpperCase()}</h3><p><span>RULE-SET RTP</span><b>${(report.rtp * 100).toFixed(2)}%</b></p><p><span>BASE / FEATURE</span><b>${(report.baseRtp * 100).toFixed(1)}% / ${(report.featureRtp * 100).toFixed(1)}%</b></p><p><span>ANY WIN</span><b>${(report.hitFrequency * 100).toFixed(1)}%</b></p><p><span>WIN ≥ BET</span><b>${(report.profitableFrequency * 100).toFixed(1)}%</b></p><p><span>FEATURE</span><b>${oneIn(report.featureFrequency)}</b></p><p><span>AVG / MEDIAN FEATURE</span><b>${report.averageFeatureX.toFixed(1)}× / ${report.medianFeatureX.toFixed(1)}×</b></p><p><span>MAX OBSERVED</span><b>${report.maxWinX.toFixed(1)}×</b></p><p><span>LONGEST FEATURE DROUGHT</span><b>${report.longestFeatureDrought}</b></p><p><span>NEAR MISS</span><b>${(report.nearMissFrequency * 100).toFixed(2)}%</b></p><p><span>VOLATILITY INDEX</span><b>${report.volatility.toFixed(2)}</b></p></article>`).join("")}</div><p class="math-disclaimer"><b>These are now production-rule simulations.</b> They directly import each cabinet's live symbol weights and constants. Interactive player choices are simulated uniformly and presentation-only events are excluded. Target band for the flagship cabinets is 95–96% RTP. They are engineering reports, not regulatory certification.</p><div class="math-actions"><button class="primary" data-download-math>DOWNLOAD ACTUAL CSV</button><button class="account-secondary" data-run-million>RUN 1,000,000 EACH</button><button class="account-secondary" data-beardbank-math>RUN BEARD BANK 1M</button><button class="account-secondary" data-close>RETURN</button></div></section>`;
       modal.querySelectorAll("[data-close]").forEach((node) => node.addEventListener("click", () => modal.remove()));
       modal.querySelector("[data-beardbank-math]")?.addEventListener("click", () => { modal.remove(); this.showMathReport(); });
       modal.querySelector("[data-download-math]")?.addEventListener("click", () => {
         const blob = new Blob([productionSimulationCsv(reports)], { type: "text/csv" });
         const anchor = document.createElement("a");
         anchor.href = URL.createObjectURL(blob);
-        anchor.download = "beard-laws-casino-v77b-production-math.csv";
+        anchor.download = "beard-laws-casino-m13-production-math.csv";
         anchor.click();
         URL.revokeObjectURL(anchor.href);
       });
       modal.querySelector("[data-run-million]")?.addEventListener("click", () => {
-        modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>V77B • DEEP RUN</small><h2>Running 3,000,000 production-rule spins…</h2><p>This can take several seconds. The casino accountant has requested snacks.</p></section>`;
+        modal.innerHTML = `<section class="progress-modal casino-math-modal"><small>PROJECT BEARD M13 • DEEP RUN</small><h2>Running 3,000,000 production-rule spins…</h2><p>This can take several seconds. The casino accountant has requested snacks.</p></section>`;
         window.setTimeout(() => {
           const million = [runProductionSimulation("barber", 1000000, 7712), runProductionSimulation("megh", 1000000, 7712), runProductionSimulation("neema", 1000000, 7712)];
           const blob = new Blob([productionSimulationCsv(million)], { type: "text/csv" });
           const anchor = document.createElement("a");
           anchor.href = URL.createObjectURL(blob);
-          anchor.download = "beard-laws-casino-v77b-production-math-1m.csv";
+          anchor.download = "beard-laws-casino-m13-production-math-1m.csv";
           anchor.click();
           URL.revokeObjectURL(anchor.href);
           modal.remove();
@@ -678,37 +678,114 @@ export class Application {
   }
 
   private showBank(): void {
-    const modal = document.createElement("div"); modal.className = "modal-backdrop";
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop";
     const render = (message = ""): void => {
       const economy = this.profile.economy;
       const openTickets = economy.tickets.filter((ticket) => !ticket.redeemedAtIso);
       const recent = [...economy.sessions].reverse().slice(0, 8);
-      modal.innerHTML = `<section class="atm-modal bank-modal"><button class="close" data-close>×</button><small>BEARD LAWS BANK • FICTIONAL ACCOUNTS</small><h2>Your Money Between Casino Visits</h2><div class="economy-balance-grid bank"><p><span>CHECKING</span><strong>${this.money(economy.checkingUnits)}</strong></p><p><span>SAVINGS</span><strong>${this.money(economy.savingsUnits)}</strong></p><p><span>CASINO WALLET</span><strong>${this.money()}</strong></p><p><span>OPEN TICKETS</span><strong>${this.money(openTickets.reduce((sum,t)=>sum+t.valueUnits,0))}</strong></p></div><div class="bank-actions"><button class="primary" data-atm>VISIT ATM</button><button data-cashier>CASHIER</button></div><p class="account-message">${message}</p><h3>Outstanding Tickets</h3><div class="ticket-list">${openTickets.length ? openTickets.map((ticket) => `<article><b>${ticket.id}</b><strong>${this.money(ticket.valueUnits)}</strong><small>${new Date(ticket.issuedAtIso).toLocaleString()}</small><button data-redeem="${ticket.id}" data-destination="checking">TO CHECKING</button><button data-redeem="${ticket.id}" data-destination="savings">TO SAVINGS</button></article>`).join("") : "<p>No outstanding tickets.</p>"}</div><h3>Recent Casino Visits</h3><div class="session-history">${recent.length ? recent.map((session) => `<article class="${session.resultUnits >= 0 ? "win" : "loss"}"><b>${new Date(session.endedAtIso).toLocaleDateString()}</b><span>${session.favoriteGame.toUpperCase()} • ${session.spins} spins</span><strong>${session.resultUnits >= 0 ? "+" : ""}${this.money(session.resultUnits)}</strong></article>`).join("") : "<p>No completed casino visits yet.</p>"}</div><p class="economy-note">All balances are fictional entertainment credits with no cash value.</p></section>`;
+      const sessions = economy.sessions;
+      const lifetimeResult = sessions.reduce((sum, session) => sum + session.resultUnits, 0);
+      const totalWagered = sessions.reduce((sum, session) => sum + session.totalWageredUnits, 0);
+      const totalWon = sessions.reduce((sum, session) => sum + session.totalWonUnits, 0);
+      const biggestWin = sessions.reduce((max, session) => Math.max(max, session.biggestWinUnits), 0);
+      const winningVisits = sessions.filter((session) => session.resultUnits > 0).length;
+      const active = economy.activeSession;
+      const activeResult = active
+        ? this.walletUnits - active.startingWalletUnits - active.atmWithdrawalsUnits - active.atmFeesUnits
+        : 0;
+      const gameLabel = (game: string): string => game === "barber"
+        ? "BIG BAD BARBER"
+        : game === "megh"
+          ? "MEGH'S COSMIC JAM"
+          : game === "neema"
+            ? "NEEMA'S HIGH SEAS"
+            : game === "beard-bank"
+              ? "BEARD BANK"
+              : game === "none"
+                ? "CASINO VISIT"
+                : game.replaceAll("-", " ").toUpperCase();
+
+      modal.innerHTML = `<section class="atm-modal bank-modal casino-destination-modal">
+        <button class="close" data-close aria-label="Close">×</button>
+        <header class="economy-modal-header"><small>BEARD LAWS BANK • FICTIONAL ACCOUNTS</small><h2>Your Money Between Casino Visits</h2><p>Bank the night, keep a ticket, or fund the next run. No real money. Plenty of terrible financial decisions.</p></header>
+        <div class="bank-account-cards">
+          <article class="bank-account-card checking"><small>CHECKING</small><strong>${this.money(economy.checkingUnits)}</strong><span>Available for ATM withdrawals</span></article>
+          <article class="bank-account-card savings"><small>SAVINGS</small><strong>${this.money(economy.savingsUnits)}</strong><span>Park fictional winnings here</span></article>
+          <article class="bank-account-card wallet"><small>CASINO WALLET</small><strong>${this.money()}</strong><span>${active ? "Casino visit active" : "Not currently playing"}</span></article>
+          <article class="bank-account-card tickets"><small>OPEN TICKETS</small><strong>${this.money(openTickets.reduce((sum,t)=>sum+t.valueUnits,0))}</strong><span>${openTickets.length} ticket${openTickets.length===1?"":"s"} waiting</span></article>
+        </div>
+        ${active ? `<section class="active-visit-card"><div><small>TONIGHT'S CASINO VISIT</small><h3>${active.spins} spins • ${active.features} features</h3></div><strong class="${activeResult >= 0 ? "positive" : "negative"}">${activeResult >= 0 ? "+" : ""}${this.money(activeResult)}</strong><p><span>Started ${this.money(active.startingWalletUnits)}</span><span>ATM ${this.money(active.atmWithdrawalsUnits)}</span><span>Wagered ${this.money(active.totalWageredUnits)}</span><span>Wins ${this.money(active.totalWonUnits)}</span></p></section>` : `<section class="active-visit-card idle"><div><small>NO ACTIVE VISIT</small><h3>Ready for the next casino night.</h3></div><p>Visit the ATM to move fictional credits from checking into the casino wallet.</p></section>`}
+        <div class="bank-actions"><button class="primary economy-action" data-atm><b>VISIT ATM</b><small>Move checking → casino wallet</small></button><button class="economy-action" data-cashier ${this.walletUnits<=0?"disabled":""}><b>CASHIER</b><small>Cash out this casino visit</small></button></div>
+        ${message ? `<p class="account-message economy-message">${message}</p>` : ""}
+        <section class="bank-section"><div class="bank-section-heading"><h3>Outstanding Tickets</h3><span>${openTickets.length}</span></div><div class="ticket-list">${openTickets.length ? openTickets.map((ticket) => `<article><div><small>TICKET OUT</small><b>${ticket.id}</b><time>${new Date(ticket.issuedAtIso).toLocaleString()}</time></div><strong>${this.money(ticket.valueUnits)}</strong><div class="ticket-actions"><button data-redeem="${ticket.id}" data-destination="checking">TO CHECKING</button><button data-redeem="${ticket.id}" data-destination="savings">TO SAVINGS</button></div></article>`).join("") : `<div class="bank-empty-state"><b>No outstanding tickets.</b><span>Print one at the cashier if you want to leave the casino without depositing it immediately.</span></div>`}</div></section>
+        <section class="bank-section"><div class="bank-section-heading"><h3>Casino Passport Stats</h3><span>${sessions.length} visits</span></div><div class="bank-stat-grid"><p><small>LIFETIME RESULT</small><b class="${lifetimeResult >= 0 ? "positive" : "negative"}">${lifetimeResult >= 0 ? "+" : ""}${this.money(lifetimeResult)}</b></p><p><small>WINNING VISITS</small><b>${winningVisits}/${sessions.length}</b></p><p><small>TOTAL WAGERED</small><b>${this.money(totalWagered)}</b></p><p><small>RECORDED WINS</small><b>${this.money(totalWon)}</b></p><p><small>BIGGEST WIN</small><b>${this.money(biggestWin)}</b></p><p><small>ATM FEES</small><b>${this.money(economy.lifetimeAtmFeesUnits)}</b></p></div></section>
+        <section class="bank-section"><div class="bank-section-heading"><h3>Recent Casino Visits</h3><span>Last ${Math.min(8,recent.length)}</span></div><div class="session-history">${recent.length ? recent.map((session) => `<article class="${session.resultUnits >= 0 ? "win" : "loss"}"><div class="session-date"><b>${new Date(session.endedAtIso).toLocaleDateString()}</b><small>${new Date(session.endedAtIso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</small></div><div><strong>${gameLabel(session.favoriteGame)}</strong><span>${session.spins} spins • ${session.features} features • biggest ${this.money(session.biggestWinUnits)}</span></div><em>START ${this.money(session.startingWalletUnits)}</em><em>END ${this.money(session.endingWalletUnits)}</em><b class="session-result">${session.resultUnits >= 0 ? "+" : ""}${this.money(session.resultUnits)}</b></article>`).join("") : `<div class="bank-empty-state"><b>No completed casino visits yet.</b><span>Your first cashout will create the first entry.</span></div>`}</div></section>
+        <p class="economy-note">All balances, tickets, winnings and losses are fictional entertainment credits with no cash value.</p>
+      </section>`;
       modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
       modal.querySelector("[data-atm]")?.addEventListener("click",()=>{modal.remove();this.showAtm();});
       modal.querySelector("[data-cashier]")?.addEventListener("click",()=>{modal.remove();this.showCashier();});
       modal.querySelectorAll<HTMLElement>("[data-redeem]").forEach((button)=>button.addEventListener("click",()=>{
-        try { const next=redeemCasinoTicket(this.profile.economy,String(button.dataset.redeem),button.dataset.destination === "savings" ? "savings" : "checking"); this.audio.cue("bank"); this.saveEconomy(next); render(`Ticket ${button.dataset.redeem} redeemed.`); }
-        catch(error){render(error instanceof Error?error.message:"Ticket could not be redeemed.");}
+        try {
+          const next=redeemCasinoTicket(this.profile.economy,String(button.dataset.redeem),button.dataset.destination === "savings" ? "savings" : "checking");
+          this.audio.cue("bank");
+          this.saveEconomy(next);
+          render(`Ticket ${button.dataset.redeem} redeemed to ${button.dataset.destination}.`);
+        } catch(error) {
+          render(error instanceof Error?error.message:"Ticket could not be redeemed.");
+        }
       }));
     };
-    render(); document.body.appendChild(modal);
+    render();
+    document.body.appendChild(modal);
   }
 
   private showCashier(): void {
-    const modal=document.createElement("div"); modal.className="modal-backdrop";
-    const economy=ensureCasinoSession(this.profile.economy,this.walletUnits);
-    if (economy !== this.profile.economy) this.saveEconomy(economy);
+    const modal=document.createElement("div");
+    modal.className="modal-backdrop";
+    if(!this.profile.economy.activeSession && this.walletUnits>0){
+      this.saveEconomy(ensureCasinoSession(this.profile.economy,this.walletUnits));
+    }
     const session=this.profile.economy.activeSession;
-    const tripResult=session ? this.walletUnits-session.startingWalletUnits-session.atmWithdrawalsUnits+session.atmFeesUnits : 0;
-    modal.innerHTML=`<section class="atm-modal cashier-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • CASHIER</small><h2>End This Casino Visit</h2><div class="cashier-total"><span>CASINO CASH</span><strong>${this.money()}</strong></div>${session?`<div class="cashier-ledger"><p><span>STARTED</span><b>${this.money(session.startingWalletUnits)}</b></p><p><span>ATM ADDED</span><b>${this.money(session.atmWithdrawalsUnits)}</b></p><p><span>ATM FEES</span><b>-${this.money(session.atmFeesUnits)}</b></p><p><span>WAGERED</span><b>${this.money(session.totalWageredUnits)}</b></p><p><span>RECORDED WINS</span><b>${this.money(session.totalWonUnits)}</b></p><p class="result"><span>TRIP RESULT</span><b>${tripResult>=0?"+":""}${this.money(tripResult)}</b></p></div>`:""}<div class="cashier-actions"><button class="primary" data-cashout="checking">CASH OUT TO CHECKING</button><button data-cashout="savings">CASH OUT TO SAVINGS</button><button data-cashout="ticket">PRINT TICKET</button><button data-close>KEEP PLAYING</button></div><p class="economy-note">Tickets and bank balances are fictional and have no real-world cash value.</p></section>`;
+    const tripResult=session ? this.walletUnits-session.startingWalletUnits-session.atmWithdrawalsUnits-session.atmFeesUnits : 0;
+    const canCashOut=this.walletUnits>0;
+    modal.innerHTML=`<section class="atm-modal cashier-modal casino-destination-modal">
+      <button class="close" data-close aria-label="Close">×</button>
+      <header class="economy-modal-header"><small>BEARD LAWS CASINO • CASHIER CAGE</small><h2>${session?"Cash Out This Casino Visit":"Cashier"}</h2><p>${session?"Count it, ticket it, or bank it. The Barber does not accept IOUs.":"There is no active casino visit to close."}</p></header>
+      <div class="cashier-total"><span>CASINO WALLET</span><strong>${this.money()}</strong><small>${session?`${session.spins} spins recorded this visit`:"Visit the ATM to start a casino session."}</small></div>
+      ${session?`<div class="cashier-ledger">
+        <p><span>STARTED WITH</span><b>${this.money(session.startingWalletUnits)}</b></p>
+        <p><span>ATM WITHDRAWALS</span><b>${this.money(session.atmWithdrawalsUnits)}</b></p>
+        <p><span>ATM FEES</span><b>-${this.money(session.atmFeesUnits)}</b></p>
+        <p><span>TOTAL WAGERED</span><b>${this.money(session.totalWageredUnits)}</b></p>
+        <p><span>RECORDED WINS</span><b>${this.money(session.totalWonUnits)}</b></p>
+        <p><span>FEATURES</span><b>${session.features}</b></p>
+        <p><span>BIGGEST WIN</span><b>${this.money(session.biggestWinUnits)}</b></p>
+        <p class="result ${tripResult>=0?"positive":"negative"}"><span>NET TRIP RESULT</span><b>${tripResult>=0?"+":""}${this.money(tripResult)}</b></p>
+      </div>`:`<div class="bank-empty-state cashier-empty"><b>No chips on the rail.</b><span>Your casino wallet is empty and there is no active visit to settle.</span></div>`}
+      <div class="cashier-actions">
+        <button class="primary cashout-destination checking" data-cashout="checking" ${canCashOut?"":"disabled"}><b>CASH OUT TO CHECKING</b><small>Deposit the full casino wallet</small></button>
+        <button class="cashout-destination savings" data-cashout="savings" ${canCashOut?"":"disabled"}><b>CASH OUT TO SAVINGS</b><small>Bank the win and pretend you're responsible</small></button>
+        <button class="cashout-destination ticket" data-cashout="ticket" ${canCashOut?"":"disabled"}><b>PRINT TICKET</b><small>Keep a fictional TITO ticket for later</small></button>
+        <button class="cashout-destination keep" data-close><b>KEEP PLAYING</b><small>Return to the casino floor</small></button>
+      </div>
+      <p class="economy-note">Tickets and bank balances are fictional entertainment credits with no real-world cash value.</p>
+    </section>`;
     modal.querySelectorAll("[data-close]").forEach((node)=>node.addEventListener("click",()=>modal.remove()));
     modal.querySelectorAll<HTMLElement>("[data-cashout]").forEach((button)=>button.addEventListener("click",()=>{
+      if(!canCashOut)return;
       const destination=(button.dataset.cashout??"checking") as CashoutDestination;
+      button.setAttribute("disabled","");
+      button.classList.add("cashout-processing");
       const result=cashOutCasinoWallet(this.profile.economy,this.walletUnits,destination);
-      this.audio.cue(destination === "ticket" ? "ticket" : "cashier"); this.saveEconomy(result.state,result.walletUnits);
-      modal.remove();
-      if(result.ticket) this.showTicket(result.ticket.id); else this.showLobby();
+      this.audio.cue(destination === "ticket" ? "ticket" : "cashier");
+      this.saveEconomy(result.state,result.walletUnits);
+      window.setTimeout(()=>{
+        modal.remove();
+        if(result.ticket)this.showTicket(result.ticket.id);
+        else this.showLobby();
+      },420);
     }));
     document.body.appendChild(modal);
   }

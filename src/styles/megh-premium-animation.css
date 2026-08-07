@@ -186,3 +186,22 @@
   55% { transform: scale(.995,1.01) translateY(-1px); }
   100% { transform: scale(1) translateY(0); }
 }
+
+
+/* Project Beard M13 — tighter UFO scan, less flashlight tail. */
+.megh-reels .jam-symbol.abducting-readable{overflow:visible!important}
+.megh-reels .jam-symbol.abducting-readable:after{
+  content:"";position:absolute;inset:7%;z-index:40;border:2px solid rgba(222,255,145,.9);
+  border-radius:14px;box-shadow:0 0 18px rgba(199,255,119,.75),inset 0 0 18px rgba(199,255,119,.12);
+  pointer-events:none;animation:meghM13ScanRing .62s ease-in-out infinite alternate
+}
+.megh-board-ufo .megh-ufo-beam{
+  opacity:0!important;
+  filter:drop-shadow(0 0 9px rgba(207,255,122,.68))!important;
+}
+.megh-board-ufo.is-firing .megh-ufo-beam{
+  opacity:.72!important;
+  animation:meghM13BeamPulse .28s ease-in-out infinite alternate!important;
+}
+@keyframes meghM13ScanRing{from{transform:scale(.94);opacity:.58}to{transform:scale(1.03);opacity:1}}
+@keyframes meghM13BeamPulse{to{opacity:.9;filter:drop-shadow(0 0 13px rgba(230,255,155,.9)) brightness(1.12)}}

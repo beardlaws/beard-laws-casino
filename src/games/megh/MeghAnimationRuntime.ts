@@ -215,11 +215,11 @@ export class MeghAnimationRuntime {
       this.host.classList.add("megh-anticipating");
       premium.cue("ufo-lock", { cell: node.dataset.cell ?? "" });
       premium.pulse("cosmic", 380);
-      await this.options.wait(650);
+      await this.options.wait(820);
 
       const nodeRect = node.getBoundingClientRect();
       const actorBeamOriginY = hoverY + actorHeight * .47;
-      const beamHeight = Math.max(34, Math.min(112, target.y - actorBeamOriginY));
+      const beamHeight = Math.max(24, Math.min(68, target.y - actorBeamOriginY));
       actor.style.setProperty("--megh-beam-height", `${beamHeight}px`);
       actor.style.setProperty("--megh-beam-width", `${Math.max(48, nodeRect.width * .68)}px`);
       actor.classList.add("is-firing");
@@ -244,7 +244,7 @@ export class MeghAnimationRuntime {
       actor.classList.remove("is-firing", "is-locking");
       this.host.classList.remove("megh-anticipating");
       actor.classList.add("is-travelling");
-      await this.options.wait(240);
+      await this.options.wait(320);
     }
 
     const exit = new DOMPoint(hostRect.width - 8, Math.max(6, Math.min(hostRect.height - actorHeight - 6, current.y - 12)));

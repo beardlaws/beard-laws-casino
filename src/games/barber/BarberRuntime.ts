@@ -103,6 +103,41 @@ export function resolveBarberRuntime(input: ResolveBarberRuntimeInput): BarberRu
   };
 }
 
+
+
+export interface BarberFinaleReveal {
+  readonly reel: number;
+  readonly fortressLevel: number;
+  readonly multiplier: number;
+  readonly awardUnits: number;
+}
+
+export function resolveBarberFinale(
+  fortressLevels: readonly number[],
+  fortressMultipliers: readonly number[],
+  wagerUnits: number,
+  awardScale: number,
+): readonly BarberFinaleReveal[] {
+  return Object.freeze(
+    fortressLevels
+      .map((fortressLevel, reel) => ({ fortressLevel, reel }))
+      .filter(({ fortressLevel }) => fortressLevel > 0)
+      .map(({ fortressLevel, reel }) => Object.freeze({
+        reel,
+        fortressLevel,
+        multiplier: fortressMultipliers[fortressLevel] ?? 0,
+        awardUnits: Math.max(
+          0,
+          Math.round(
+            wagerUnits
+              * (fortressMultipliers[fortressLevel] ?? 0)
+              * Math.max(0, awardScale),
+          ),
+        ),
+      })),
+  );
+}
+
 export interface CreateBarberOutcomeInput {
   readonly id: string;
   readonly startedAtIso: string;
@@ -149,7 +184,7 @@ export function createBarberSpinOutcome(input: CreateBarberOutcomeInput): SpinOu
     presentation: Object.freeze([]),
     resultGrid: Object.freeze(input.resultGrid.map((row) => Object.freeze([...row]))),
     metadata: Object.freeze({
-      runtime: "project-beard-m5",
+      runtime: "project-beard-m13",
       isBonusSpin: input.isBonusSpin,
       razorCount: input.razorCount,
       winnerKeys: [...input.winnerKeys],

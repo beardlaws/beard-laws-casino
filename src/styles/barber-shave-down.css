@@ -1,0 +1,44 @@
+/* Project Beard M13 — Big Bad Barber Shave Down spectacle */
+.barber-bonus-hud{
+  display:grid;grid-template-columns:auto auto 1fr;gap:18px;align-items:center;
+  margin:8px 0 10px;padding:10px 14px;border:1px solid rgba(255,205,85,.54);border-radius:13px;
+  background:linear-gradient(90deg,rgba(98,25,45,.9),rgba(41,13,28,.96),rgba(98,25,45,.9));
+  box-shadow:inset 0 0 22px rgba(255,75,99,.08),0 0 18px rgba(255,192,65,.08)
+}
+.barber-bonus-hud[hidden]{display:none!important}
+.barber-bonus-hud span{display:grid;gap:1px}.barber-bonus-hud small{font-size:.6rem;letter-spacing:.12em;color:#dba8b7;font-weight:900}
+.barber-bonus-hud b{color:#ffe39a;font-size:1rem;font-variant-numeric:tabular-nums}
+.barber-bonus-hud em{justify-self:end;color:#ffb9c7;font-style:normal;font-size:.68rem;letter-spacing:.08em;font-weight:950}
+.barber-machine.shave-down-active{box-shadow:0 30px 90px #000,0 0 72px rgba(255,56,93,.36),inset 0 0 90px rgba(103,12,40,.38)!important}
+.shave-down-trigger,.shave-down-finale,.shave-down-total{
+  position:absolute;inset:8% 7%;z-index:500;display:grid;place-items:center;align-content:center;gap:10px;
+  text-align:center;border:2px solid rgba(255,210,93,.7);border-radius:28px;
+  background:radial-gradient(circle at 50% 40%,rgba(111,27,47,.96),rgba(18,7,16,.98) 68%);
+  box-shadow:0 30px 90px rgba(0,0,0,.8),inset 0 0 44px rgba(255,186,66,.08);
+  animation:shaveDownCardIn .42s cubic-bezier(.16,.82,.22,1) both
+}
+.shave-down-trigger .mean-barber,.shave-down-finale .mean-barber{position:relative!important;left:auto!important;top:auto!important;transform:none!important;animation:none!important;width:180px;height:215px}
+.shave-down-trigger>strong,.shave-down-finale>strong{font-size:clamp(2.3rem,6vw,4.8rem);line-height:.9;color:#ffe379;text-shadow:0 4px #7e2733,0 0 28px rgba(255,179,57,.58)}
+.shave-down-trigger>small,.shave-down-finale>small{color:#f2bdd0;font-weight:900;letter-spacing:.08em}
+.razor-lock-row{display:flex;gap:10px;margin-bottom:4px}
+.razor-lock-row i{
+  display:grid;place-items:center;width:78px;height:34px;border-radius:9px;border:1px solid #ffe88b;
+  background:linear-gradient(180deg,#f5d46d,#8e5d20);color:#2a1014;font-style:normal;font-size:.68rem;font-weight:1000;
+  box-shadow:0 0 16px rgba(255,211,88,.42);animation:razorLockPulse .6s ease-in-out infinite alternate
+}
+.shave-down-total>small{color:#e7abc0;letter-spacing:.16em;font-weight:950}
+.shave-down-total>strong{font-size:clamp(3.2rem,8vw,6.8rem);color:#fff0a6;text-shadow:0 0 34px rgba(255,209,82,.72);font-variant-numeric:tabular-nums}
+.shave-down-total>b{color:#f0bdca;letter-spacing:.06em}
+.mean-barber.finale .barber-clippers{transform:rotate(-18deg) scale(.82)!important}
+.finale-shave{animation:finaleFortShake .11s linear infinite}
+.finale-prize{box-shadow:0 0 34px rgba(255,226,104,.7)!important}
+.barber-machine.shave-down-active .fortress-track>i[class*="fort-level-"]:not(.fort-level-0){animation:bonusFortBreathe 1.15s ease-in-out infinite alternate}
+@keyframes shaveDownCardIn{from{opacity:0;transform:scale(.86) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes razorLockPulse{to{filter:brightness(1.25);transform:translateY(-2px)}}
+@keyframes finaleFortShake{25%{transform:translateX(-3px) rotate(-.5deg)}75%{transform:translateX(3px) rotate(.5deg)}}
+@keyframes bonusFortBreathe{to{filter:brightness(1.16);box-shadow:0 0 22px rgba(255,206,84,.26),inset 0 0 20px rgba(255,255,255,.04)}}
+@media(max-width:700px){
+  .barber-bonus-hud{grid-template-columns:1fr 1fr}.barber-bonus-hud em{grid-column:1/-1;justify-self:center}
+  .shave-down-trigger,.shave-down-finale,.shave-down-total{inset:5% 3%}
+  .razor-lock-row i{width:64px}
+}

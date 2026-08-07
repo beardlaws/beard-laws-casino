@@ -97,7 +97,7 @@ export const NEEMA_PRODUCTION_MATH = {
   maxVoyageSpins: MAX_VOYAGE_SPINS,
   maxVoyageRetriggers: MAX_VOYAGE_RETRIGGERS,
   linePayScale: 0.62,
-  featurePayScale: 0.25,
+  featurePayScale: 0.275,
   lines: LINES,
   symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
 } as const;
