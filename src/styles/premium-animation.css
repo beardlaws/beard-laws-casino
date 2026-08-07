@@ -33,3 +33,17 @@
 @media (prefers-reduced-motion: reduce) {
   .megh-machine { animation: none !important; }
 }
+
+/* M12 shared cabinet reaction layer */
+[data-cabinet-reaction="gold"], [data-animation-pulse="gold"]{animation:casino-gold-reaction .7s ease-out}
+[data-cabinet-reaction="cosmic"], [data-animation-pulse="cosmic"]{animation:casino-cosmic-reaction .7s ease-out}
+[data-cabinet-reaction="danger"], [data-animation-pulse="danger"]{animation:casino-danger-reaction .65s ease-out}
+[data-win-tier="big"]{filter:brightness(1.05) saturate(1.08)}
+[data-win-tier="major"]{filter:brightness(1.1) saturate(1.15);box-shadow:0 0 36px rgba(255,220,115,.16)}
+[data-win-tier="legendary"]{filter:brightness(1.16) saturate(1.2);box-shadow:0 0 64px rgba(255,228,130,.28)}
+@keyframes casino-gold-reaction{0%,100%{filter:none}38%{filter:brightness(1.16) saturate(1.22);box-shadow:0 0 42px rgba(255,215,97,.28)}}
+@keyframes casino-cosmic-reaction{0%,100%{filter:none}38%{filter:brightness(1.12) saturate(1.2);box-shadow:0 0 42px rgba(189,76,255,.24)}}
+@keyframes casino-danger-reaction{0%,100%{filter:none}35%{filter:brightness(.92) saturate(1.25);box-shadow:0 0 42px rgba(255,69,79,.22)}}
+.casino-shell{animation:casino-idle-breathe 8s ease-in-out infinite}
+@keyframes casino-idle-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.018)}}
+.reduced-motion .casino-shell{animation:none}

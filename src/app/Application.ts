@@ -21,6 +21,8 @@ import { SpinOutcomeStore } from "../engine/outcome/SpinOutcomeStore";
 import type { SpinOutcome } from "../engine/contracts/SpinOutcome";
 import { FeatureExecutionPipeline } from "../engine/feature/FeatureExecutionPipeline";
 import { planFeatureExecution } from "../engine/feature/SpinOutcomeFeaturePlanner";
+import { cashOutCasinoWallet, ensureCasinoSession, recordEconomyActivity, redeemCasinoTicket, withdrawFromChecking, type CashoutDestination } from "../engine/economy/CasinoEconomy";
+import { PremiumAnimationEngine } from "../engine/animation/PremiumAnimationEngine";
 
 type GameId =
   | "beard-bank"
@@ -87,6 +89,7 @@ export class Application {
       this.acceptOutcome(outcome);
     });
     this.installSoundControl();
+    this.audio.startAmbience("lobby");
     const account = await this.accounts.restore();
     if (account.session) {
       const cloud = await this.accounts.loadProfile();
@@ -124,14 +127,42 @@ export class Application {
   }
 
   private installSoundControl(): void {
-    const button = document.createElement("button"); button.className = "sound-toggle"; button.textContent = "⚙ EXPERIENCE";
-    const applyMotion = (): void => { document.documentElement.classList.toggle("reduced-motion", localStorage.getItem("beard-laws-casino-motion") === "reduced"); };
+    const button = document.createElement("button");
+    button.className = "sound-toggle";
+    button.textContent = "⚙ EXPERIENCE";
+    const applyMotion = (): void => {
+      document.documentElement.classList.toggle(
+        "reduced-motion",
+        localStorage.getItem("beard-laws-casino-motion") === "reduced",
+      );
+    };
     applyMotion();
     button.addEventListener("click", () => {
-      const modal=document.createElement("div");modal.className="modal-backdrop";
-      const render=():void=>{const reduced=localStorage.getItem("beard-laws-casino-motion")==="reduced";const turbo=localStorage.getItem("beard-laws-casino-turbo")==="on";modal.innerHTML=`<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • ${buildFingerprint()}</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER VOLUME</span><input data-volume type="range" min="0" max="100" value="${Math.round(this.audio.getVolume()*100)}"><b data-volume-value>${Math.round(this.audio.getVolume()*100)}%</b></label><p>Settings stay on this device. Reduced Motion removes nonessential celebration movement.</p></div>`;modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});const volume=modal.querySelector<HTMLInputElement>("[data-volume]");volume?.addEventListener("input",()=>{this.audio.setVolume(Number(volume.value)/100);const value=modal.querySelector<HTMLElement>("[data-volume-value]");if(value)value.textContent=`${volume.value}%`;});};
-      render();document.body.appendChild(modal);
-    }); document.body.appendChild(button);
+      const modal = document.createElement("div");
+      modal.className = "modal-backdrop";
+      const render = (): void => {
+        const reduced = localStorage.getItem("beard-laws-casino-motion") === "reduced";
+        const turbo = localStorage.getItem("beard-laws-casino-turbo") === "on";
+        const master = Math.round(this.audio.getVolume() * 100);
+        const effects = Math.round(this.audio.getEffectsVolume() * 100);
+        const ambience = Math.round(this.audio.getAmbienceVolume() * 100);
+        modal.innerHTML = `<div class="atm-modal experience-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • ${buildFingerprint()}</small><h2>Experience Settings</h2><div class="experience-grid"><button data-sound>SOUND <b>${this.audio.isEnabled()?"ON":"OFF"}</b></button><button data-haptics>HAPTICS <b>${this.audio.isHapticsEnabled()?"ON":"OFF"}</b></button><button data-turbo>TURBO <b>${turbo?"ON":"OFF"}</b></button><button data-motion>MOTION <b>${reduced?"REDUCED":"FULL"}</b></button></div><label class="volume-control"><span>MASTER</span><input data-volume="master" type="range" min="0" max="100" value="${master}"><b>${master}%</b></label><label class="volume-control"><span>GAME EFFECTS</span><input data-volume="effects" type="range" min="0" max="100" value="${effects}"><b>${effects}%</b></label><label class="volume-control"><span>CASINO AMBIENCE</span><input data-volume="ambience" type="range" min="0" max="100" value="${ambience}"><b>${ambience}%</b></label><p>Each cabinet now has its own ambient audio personality. Reduced Motion removes nonessential celebration movement.</p></div>`;
+        modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
+        modal.querySelector("[data-sound]")?.addEventListener("click",()=>{this.audio.toggle();render();});
+        modal.querySelector("[data-haptics]")?.addEventListener("click",()=>{this.audio.toggleHaptics();render();});
+        modal.querySelector("[data-turbo]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-turbo",turbo?"off":"on");render();});
+        modal.querySelector("[data-motion]")?.addEventListener("click",()=>{localStorage.setItem("beard-laws-casino-motion",reduced?"full":"reduced");applyMotion();render();});
+        modal.querySelectorAll<HTMLInputElement>("[data-volume]").forEach((slider) => slider.addEventListener("input", () => {
+          const value = Number(slider.value) / 100;
+          if (slider.dataset.volume === "master") this.audio.setVolume(value);
+          if (slider.dataset.volume === "effects") this.audio.setEffectsVolume(value);
+          if (slider.dataset.volume === "ambience") this.audio.setAmbienceVolume(value);
+          const label = slider.parentElement?.querySelector("b"); if (label) label.textContent = `${slider.value}%`;
+        }));
+      };
+      render(); document.body.appendChild(modal);
+    });
+    document.body.appendChild(button);
   }
 
   private installDeveloperPanel(): void {
@@ -286,8 +317,18 @@ export class Application {
       walletUnits: this.walletUnits,
       updatedAtIso: new Date().toISOString(),
     };
+    this.persistProfile();
+  }
+
+  private persistProfile(): void {
     this.profiles.save(this.profile);
     this.accounts.saveProfile(this.profile);
+  }
+
+  private saveEconomy(economy: PlayerProfile["economy"], walletUnits = this.walletUnits): void {
+    this.walletUnits = Math.max(0, Math.round(walletUnits));
+    this.profile = { ...this.profile, economy, walletUnits: this.walletUnits, updatedAtIso: new Date().toISOString() };
+    this.persistProfile();
   }
 
   private saveBeardBankProgress(
@@ -323,9 +364,16 @@ export class Application {
       casino = { ...casino, beardChips: casino.beardChips + chipReward, missions: casino.missions.map((mission) => ({ ...mission, claimed: true })) };
     }
     this.walletUnits = walletUnits;
-    this.profile = { ...this.profile, walletUnits, casino, updatedAtIso: new Date().toISOString() };
-    this.profiles.save(this.profile);
-    this.accounts.saveProfile(this.profile);
+    const economy = recordEconomyActivity(this.profile.economy, this.walletUnits, activity);
+    this.profile = { ...this.profile, walletUnits, casino, economy, updatedAtIso: new Date().toISOString() };
+    this.persistProfile();
+    if (activity.type === "win" && (activity.amount ?? 0) > 0) {
+      const multiplier = (activity.wager ?? 0) > 0 ? (activity.amount ?? 0) / (activity.wager ?? 1) : (activity.value ?? 0);
+      if (multiplier >= 5) {
+        const cabinet = this.appRoot.querySelector<HTMLElement>(".barber-game,.megh-game,.neema-game,.beard-bank-dom,.cabinet");
+        if (cabinet) void new PremiumAnimationEngine(cabinet, activity.game).celebrateWin(multiplier);
+      }
+    }
   }
 
   private acceptOutcome(outcome: SpinOutcome): void {
@@ -344,6 +392,7 @@ export class Application {
 
   private showLobby(): void {
     this.currentGameId = "lobby";
+    this.audio.startAmbience("lobby");
     this.telemetry.setActiveGame("lobby");
     this.applyUnlockedRewards();
     this.destroyPixi();
@@ -352,9 +401,9 @@ export class Application {
     const completed = this.profile.casino.missions.filter((mission) => mission.progress >= mission.target).length;
     this.appRoot.innerHTML = `
       <section class="casino-shell">
-        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "PLAYER CARD INSERTED" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>${this.profile.casino.xp} REPUTATION</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><div class="wallet-pill"><small>CASINO WALLET</small><strong>${this.money()}</strong></div></div></header>
-        <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><button class="atm-button" data-atm>VISIT ATM <span>+</span></button></div>
-        <section class="casino-dashboard v73-dashboard"><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Best ${this.profile.casino.biggestMultiplier.toFixed(1)}×</span></button><button data-leaderboard><small>CASINO LEADERBOARD</small><strong>THE BEARD BOARD</strong><span>Players • records • recent legends</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button><button class="vault-button" data-vault><small>THE BEARD VAULT</small><strong>${this.profile.casino.beardChips} BEARD CHIPS</strong><span>Skins • characters • trophies</span></button></section>
+        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "PLAYER CARD INSERTED" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>${this.profile.casino.xp} REPUTATION</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><button class="wallet-pill" data-cashier><small>CASINO WALLET</small><strong>${this.money()}</strong><span>CASHIER →</span></button></div></header>
+        <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><div class="hero-actions"><button class="atm-button" data-atm>VISIT ATM <span>+</span></button><button class="cashier-button" data-bank>BEARD LAWS BANK</button></div></div>
+        <section class="casino-dashboard v73-dashboard"><button data-bank><small>BEARD LAWS BANK</small><strong>${this.money(this.profile.economy.checkingUnits)} CHECKING</strong><span>${this.profile.economy.activeSession ? "CASINO VISIT ACTIVE" : `${this.profile.economy.sessions.length} VISITS RECORDED`}</span></button><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Best ${this.profile.casino.biggestMultiplier.toFixed(1)}×</span></button><button data-leaderboard><small>CASINO LEADERBOARD</small><strong>THE BEARD BOARD</strong><span>Players • records • recent legends</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button><button class="vault-button" data-vault><small>THE BEARD VAULT</small><strong>${this.profile.casino.beardChips} BEARD CHIPS</strong><span>Skins • characters • trophies</span></button></section>
         <div class="floor-label"><span>CASINO FLOOR</span><span>Fictional credits • No real money</span></div>
         <div class="game-grid">
           ${this.gameCard("beard-bank", "FLAGSHIP SLOT", "BEARD BANK", "Crack the Living Vault", "live gold")}
@@ -369,6 +418,8 @@ export class Application {
     this.appRoot
       .querySelector("[data-atm]")
       ?.addEventListener("click", () => this.showAtm());
+    this.appRoot.querySelectorAll("[data-bank]").forEach((node) => node.addEventListener("click", () => this.showBank()));
+    this.appRoot.querySelector("[data-cashier]")?.addEventListener("click", () => this.showCashier());
     this.appRoot
       .querySelector("[data-profile]")
       ?.addEventListener("click", () => this.showAccount());
@@ -608,31 +659,66 @@ export class Application {
   private showAtm(): void {
     const modal = document.createElement("div");
     modal.className = "modal-backdrop";
-    modal.innerHTML = `<div class="atm-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO CASHIER</small><h2>Choose tonight's bankroll</h2><p>These are fictional entertainment credits. Nothing is deposited, purchased, or withdrawn.</p><div class="amounts">${[2000, 5000, 10000, 20000].map((v) => `<button data-amount="${v}">${this.money(v)}</button>`).join("")}</div><label>Custom amount ($)<input data-custom type="number" min="1" max="10000" value="200"></label><button class="primary" data-deposit>LOAD CASINO WALLET</button><button class="cashout" data-clear>CASH OUT & END SESSION</button></div>`;
+    const render = (message = ""): void => {
+      modal.innerHTML = `<div class="atm-modal economy-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • ATM</small><h2>Fund this casino visit</h2><div class="economy-balance-grid"><p><span>CHECKING</span><strong>${this.money(this.profile.economy.checkingUnits)}</strong></p><p><span>CASINO WALLET</span><strong>${this.money()}</strong></p></div><p class="economy-note">Fictional entertainment money only. ATM withdrawals move credits from your Beard Laws Bank checking account into the casino wallet.</p><div class="amounts">${[10000,20000,30000,50000].map((v) => `<button data-amount="${v}">${this.money(v)}</button>`).join("")}</div><label>Custom amount ($)<input data-custom type="number" min="1" max="10000" value="200"></label><p class="atm-fee">ATM FEE <b>$3.99</b></p><p class="account-message">${message}</p><button class="cashout" data-cashier>GO TO CASHIER</button></div>`;
+      modal.querySelector("[data-close]")?.addEventListener("click", () => modal.remove());
+      modal.querySelector("[data-cashier]")?.addEventListener("click", () => { modal.remove(); this.showCashier(); });
+      const withdraw = (amount: number): void => {
+        try {
+          const result = withdrawFromChecking(this.profile.economy, this.walletUnits, amount, 399);
+          this.audio.cue("atm"); this.saveEconomy(result.state, result.walletUnits); render(`${this.money(amount)} moved to the casino wallet. Fee ${this.money(result.feeUnits)}.`);
+        } catch (error) { render(error instanceof Error ? error.message : "ATM transaction failed."); }
+      };
+      modal.querySelectorAll<HTMLElement>("[data-amount]").forEach((button) => button.addEventListener("click", () => withdraw(Number(button.dataset.amount))));
+      modal.querySelector<HTMLInputElement>("[data-custom]")?.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return; withdraw(Math.round(Number((event.currentTarget as HTMLInputElement).value) * 100));
+      });
+    };
+    render(); document.body.appendChild(modal);
+  }
+
+  private showBank(): void {
+    const modal = document.createElement("div"); modal.className = "modal-backdrop";
+    const render = (message = ""): void => {
+      const economy = this.profile.economy;
+      const openTickets = economy.tickets.filter((ticket) => !ticket.redeemedAtIso);
+      const recent = [...economy.sessions].reverse().slice(0, 8);
+      modal.innerHTML = `<section class="atm-modal bank-modal"><button class="close" data-close>×</button><small>BEARD LAWS BANK • FICTIONAL ACCOUNTS</small><h2>Your Money Between Casino Visits</h2><div class="economy-balance-grid bank"><p><span>CHECKING</span><strong>${this.money(economy.checkingUnits)}</strong></p><p><span>SAVINGS</span><strong>${this.money(economy.savingsUnits)}</strong></p><p><span>CASINO WALLET</span><strong>${this.money()}</strong></p><p><span>OPEN TICKETS</span><strong>${this.money(openTickets.reduce((sum,t)=>sum+t.valueUnits,0))}</strong></p></div><div class="bank-actions"><button class="primary" data-atm>VISIT ATM</button><button data-cashier>CASHIER</button></div><p class="account-message">${message}</p><h3>Outstanding Tickets</h3><div class="ticket-list">${openTickets.length ? openTickets.map((ticket) => `<article><b>${ticket.id}</b><strong>${this.money(ticket.valueUnits)}</strong><small>${new Date(ticket.issuedAtIso).toLocaleString()}</small><button data-redeem="${ticket.id}" data-destination="checking">TO CHECKING</button><button data-redeem="${ticket.id}" data-destination="savings">TO SAVINGS</button></article>`).join("") : "<p>No outstanding tickets.</p>"}</div><h3>Recent Casino Visits</h3><div class="session-history">${recent.length ? recent.map((session) => `<article class="${session.resultUnits >= 0 ? "win" : "loss"}"><b>${new Date(session.endedAtIso).toLocaleDateString()}</b><span>${session.favoriteGame.toUpperCase()} • ${session.spins} spins</span><strong>${session.resultUnits >= 0 ? "+" : ""}${this.money(session.resultUnits)}</strong></article>`).join("") : "<p>No completed casino visits yet.</p>"}</div><p class="economy-note">All balances are fictional entertainment credits with no cash value.</p></section>`;
+      modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
+      modal.querySelector("[data-atm]")?.addEventListener("click",()=>{modal.remove();this.showAtm();});
+      modal.querySelector("[data-cashier]")?.addEventListener("click",()=>{modal.remove();this.showCashier();});
+      modal.querySelectorAll<HTMLElement>("[data-redeem]").forEach((button)=>button.addEventListener("click",()=>{
+        try { const next=redeemCasinoTicket(this.profile.economy,String(button.dataset.redeem),button.dataset.destination === "savings" ? "savings" : "checking"); this.audio.cue("bank"); this.saveEconomy(next); render(`Ticket ${button.dataset.redeem} redeemed.`); }
+        catch(error){render(error instanceof Error?error.message:"Ticket could not be redeemed.");}
+      }));
+    };
+    render(); document.body.appendChild(modal);
+  }
+
+  private showCashier(): void {
+    const modal=document.createElement("div"); modal.className="modal-backdrop";
+    const economy=ensureCasinoSession(this.profile.economy,this.walletUnits);
+    if (economy !== this.profile.economy) this.saveEconomy(economy);
+    const session=this.profile.economy.activeSession;
+    const tripResult=session ? this.walletUnits-session.startingWalletUnits-session.atmWithdrawalsUnits+session.atmFeesUnits : 0;
+    modal.innerHTML=`<section class="atm-modal cashier-modal"><button class="close" data-close>×</button><small>BEARD LAWS CASINO • CASHIER</small><h2>End This Casino Visit</h2><div class="cashier-total"><span>CASINO CASH</span><strong>${this.money()}</strong></div>${session?`<div class="cashier-ledger"><p><span>STARTED</span><b>${this.money(session.startingWalletUnits)}</b></p><p><span>ATM ADDED</span><b>${this.money(session.atmWithdrawalsUnits)}</b></p><p><span>ATM FEES</span><b>-${this.money(session.atmFeesUnits)}</b></p><p><span>WAGERED</span><b>${this.money(session.totalWageredUnits)}</b></p><p><span>RECORDED WINS</span><b>${this.money(session.totalWonUnits)}</b></p><p class="result"><span>TRIP RESULT</span><b>${tripResult>=0?"+":""}${this.money(tripResult)}</b></p></div>`:""}<div class="cashier-actions"><button class="primary" data-cashout="checking">CASH OUT TO CHECKING</button><button data-cashout="savings">CASH OUT TO SAVINGS</button><button data-cashout="ticket">PRINT TICKET</button><button data-close>KEEP PLAYING</button></div><p class="economy-note">Tickets and bank balances are fictional and have no real-world cash value.</p></section>`;
+    modal.querySelectorAll("[data-close]").forEach((node)=>node.addEventListener("click",()=>modal.remove()));
+    modal.querySelectorAll<HTMLElement>("[data-cashout]").forEach((button)=>button.addEventListener("click",()=>{
+      const destination=(button.dataset.cashout??"checking") as CashoutDestination;
+      const result=cashOutCasinoWallet(this.profile.economy,this.walletUnits,destination);
+      this.audio.cue(destination === "ticket" ? "ticket" : "cashier"); this.saveEconomy(result.state,result.walletUnits);
+      modal.remove();
+      if(result.ticket) this.showTicket(result.ticket.id); else this.showLobby();
+    }));
     document.body.appendChild(modal);
-    modal
-      .querySelector("[data-close]")
-      ?.addEventListener("click", () => modal.remove());
-    modal.querySelectorAll<HTMLElement>("[data-amount]").forEach((button) =>
-      button.addEventListener("click", () => {
-        this.saveWallet(Number(button.dataset.amount));
-        modal.remove();
-        this.showLobby();
-      }),
-    );
-    modal.querySelector("[data-deposit]")?.addEventListener("click", () => {
-      const input = modal.querySelector<HTMLInputElement>("[data-custom]")!;
-      this.saveWallet(
-        Math.min(1_000_000, Math.max(100, Number(input.value) * 100)),
-      );
-      modal.remove();
-      this.showLobby();
-    });
-    modal.querySelector("[data-clear]")?.addEventListener("click", () => {
-      this.saveWallet(0);
-      modal.remove();
-      this.showLobby();
-    });
+  }
+
+  private showTicket(ticketId: string): void {
+    const ticket=this.profile.economy.tickets.find((item)=>item.id===ticketId); if(!ticket){this.showBank();return;}
+    const modal=document.createElement("div"); modal.className="modal-backdrop";
+    modal.innerHTML=`<section class="tito-modal"><small>BEARD LAWS CASINO</small><h2>TICKET OUT</h2><strong>${this.money(ticket.valueUnits)}</strong><div class="ticket-barcode" aria-hidden="true"></div><p>${ticket.id}</p><time>${new Date(ticket.issuedAtIso).toLocaleString()}</time><b>FICTIONAL • NO CASH VALUE</b><div><button data-print>PRINT</button><button data-bank>GO TO BANK</button><button data-close>RETURN TO CASINO</button></div></section>`;
+    modal.querySelector("[data-print]")?.addEventListener("click",()=>window.print()); modal.querySelector("[data-bank]")?.addEventListener("click",()=>{modal.remove();this.showBank();}); modal.querySelector("[data-close]")?.addEventListener("click",()=>{modal.remove();this.showLobby();});
+    document.body.appendChild(modal);
   }
 
   private openGame(id: GameId): void {
@@ -642,6 +728,8 @@ export class Application {
     }
     this.currentGameId = id;
     this.telemetry.setActiveGame(id);
+    if (!this.profile.economy.activeSession) this.saveEconomy(ensureCasinoSession(this.profile.economy, this.walletUnits));
+    this.audio.startAmbience(id === "barber" ? "barber" : id === "megh" ? "megh" : id === "neema" ? "neema" : id === "beard-bank" ? "beard-bank" : "tables");
     this.applyUnlockedRewards();
     if (id === "beard-bank") {
       void this.openBeardBank();

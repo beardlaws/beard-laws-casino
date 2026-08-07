@@ -1,4 +1,5 @@
 import { freshCasinoProgress, normalizeCasinoProgress, type CasinoProgress } from "./CasinoProgression";
+import { freshCasinoEconomy, normalizeCasinoEconomy, type CasinoEconomyState } from "../engine/economy/CasinoEconomy";
 
 export interface BeardBankProgress {
   readonly livingVaultCharges: number;
@@ -11,6 +12,7 @@ export interface PlayerProfile {
   readonly walletUnits: number;
   readonly beardBank: BeardBankProgress;
   readonly casino: CasinoProgress;
+  readonly economy: CasinoEconomyState;
   readonly updatedAtIso: string;
 }
 
@@ -28,6 +30,7 @@ export const freshProfile = (profileId: string): PlayerProfile => ({
   walletUnits: 0,
   beardBank: { livingVaultCharges: 0, lifetimeCoinsCollected: 0 },
   casino: freshCasinoProgress(),
+  economy: freshCasinoEconomy(),
   updatedAtIso: new Date().toISOString(),
 });
 
@@ -91,6 +94,7 @@ export class LocalPlayerProfileRepository implements PlayerProfileRepository {
           : 0,
       },
       casino: normalizeCasinoProgress(value.casino),
+      economy: normalizeCasinoEconomy(value.economy),
       updatedAtIso: new Date().toISOString(),
     };
   }

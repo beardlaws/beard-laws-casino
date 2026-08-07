@@ -5,6 +5,7 @@ import {
 } from "@supabase/supabase-js";
 import { freshProfile, type PlayerProfile } from "./PlayerProfileStore";
 import { normalizeCasinoProgress } from "./CasinoProgression";
+import { normalizeCasinoEconomy } from "../engine/economy/CasinoEconomy";
 
 export interface AccountState {
   readonly connected: boolean;
@@ -135,12 +136,14 @@ export class AccountService {
       walletUnits?: number;
       beardBank?: PlayerProfile["beardBank"];
       casino?: PlayerProfile["casino"];
+      economy?: PlayerProfile["economy"];
       updatedAtIso?: string;
     } = {};
     if (typeof row.display_name === "string") flat.displayName = row.display_name;
     if (typeof row.wallet_units === "number") flat.walletUnits = row.wallet_units;
     if (row.beard_bank && typeof row.beard_bank === "object") flat.beardBank = row.beard_bank as PlayerProfile["beardBank"];
     if (row.casino && typeof row.casino === "object") flat.casino = row.casino as PlayerProfile["casino"];
+    if (row.economy && typeof row.economy === "object") flat.economy = row.economy as PlayerProfile["economy"];
     if (typeof row.updated_at === "string") flat.updatedAtIso = row.updated_at;
     return this.normalizeCloud(flat, userId);
   }
@@ -192,6 +195,7 @@ export class AccountService {
         wallet_units: profile.walletUnits,
         beard_bank: profile.beardBank,
         casino: profile.casino,
+        economy: profile.economy,
         updated_at: new Date().toISOString(),
       },
     ];
@@ -238,6 +242,7 @@ export class AccountService {
         ),
       },
       casino: normalizeCasinoProgress(value.casino),
+      economy: normalizeCasinoEconomy(value.economy),
       updatedAtIso: String(value.updatedAtIso || new Date().toISOString()),
     };
   }

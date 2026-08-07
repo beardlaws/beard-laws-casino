@@ -10,7 +10,9 @@ export type AnimationCue =
   | "symbol-land"
   | "board-settle"
   | "win-count"
-  | "big-win";
+  | "big-win"
+  | "jackpot-flash"
+  | "cabinet-led";
 
 export interface SpotlightOptions {
   readonly dimOpacity?: number;
@@ -80,6 +82,27 @@ export class PremiumAnimationEngine {
     window.setTimeout(() => {
       if (this.host.dataset.animationPulse === tone) delete this.host.dataset.animationPulse;
     }, duration);
+  }
+
+
+  public reactCabinet(tone: "cosmic" | "gold" | "danger" = "gold", duration = 700): void {
+    this.host.dataset.cabinetReaction = tone;
+    this.cue("cabinet-led", { tone, duration });
+    window.setTimeout(() => {
+      if (this.host.dataset.cabinetReaction === tone) delete this.host.dataset.cabinetReaction;
+    }, duration);
+  }
+
+  public async celebrateWin(multiplier: number): Promise<void> {
+    if (!Number.isFinite(multiplier) || multiplier < 5) return;
+    const tier = multiplier >= 100 ? "legendary" : multiplier >= 25 ? "major" : "big";
+    this.host.dataset.winTier = tier;
+    this.cue(multiplier >= 100 ? "jackpot-flash" : "big-win", { multiplier, tier });
+    this.reactCabinet(multiplier >= 100 ? "gold" : "cosmic", multiplier >= 100 ? 1500 : 900);
+    await this.impact(multiplier >= 100 ? "hard" : "medium");
+    window.setTimeout(() => {
+      if (this.host.dataset.winTier === tier) delete this.host.dataset.winTier;
+    }, multiplier >= 100 ? 1800 : 1050);
   }
 
   public async countUp(
