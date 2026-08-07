@@ -1,3 +1,10 @@
+import {
+  resolveReelMotionProfile,
+  type ReelMotionOverrides,
+  type ReelMotionPreset,
+  type ReelMotionProfile,
+} from "./ReelMotionProfile";
+
 export type ReelPhase = "accelerating" | "cruising" | "decelerating" | "settling" | "stopped";
 
 export interface ReelStripOptions<T> {
@@ -6,14 +13,25 @@ export interface ReelStripOptions<T> {
   rows: number;
   randomSymbol: () => T;
   renderSymbol: (symbol: T, reel: number, row: number) => string;
+  profile?: ReelMotionPreset | ReelMotionProfile;
+  motion?: ReelMotionOverrides;
+  /** Compatibility overrides. Prefer profile/motion for new code. */
   duration?: number;
   stagger?: number;
   fillerRows?: number;
   anticipationReel?: number;
   anticipationDelay?: number;
   settleDistance?: number;
+  onSpinStart?: () => void;
   onReelPhase?: (reel: number, phase: ReelPhase) => void;
   onReelStop?: (reel: number) => void;
+  onSpinComplete?: () => void;
+}
+
+export interface ReelRuntimeEventDetail {
+  readonly reel?: number;
+  readonly phase?: ReelPhase;
+  readonly preset: string;
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
@@ -27,12 +45,20 @@ const easeOutBack = (t: number): number => {
 const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
 const wait = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
 
+function dispatchRuntimeEvent(name: string, detail: ReelRuntimeEventDetail): void {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
+}
+
 /**
- * Shared DOM reel-strip engine.
+ * Project Beard shared DOM reel engine.
  *
- * Direction is deliberately top-to-bottom: each strip begins above its final
- * result and travels downward into the reel window. A settled grid remains
- * underneath the temporary motion layer, preventing black flashes.
+ * Every active DOM cabinet uses the same motion phases and event hooks. The
+ * cabinet selects a named profile (premium/barber/voyage/cascade/bonus) and
+ * may override only the values that are genuinely game-specific.
+ *
+ * Motion direction is top-to-bottom. The previous settled result remains
+ * below the temporary motion layer until the new result is locked, avoiding
+ * black frames or empty reel windows between spin and reveal.
  */
 export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<void> {
   const {
@@ -41,25 +67,39 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
     rows,
     randomSymbol,
     renderSymbol,
-    duration = 2100,
-    stagger = 210,
-    fillerRows = 24,
     anticipationReel = -1,
     anticipationDelay = 950,
-    settleDistance = 0.14,
+    onSpinStart,
     onReelPhase,
     onReelStop,
+    onSpinComplete,
   } = options;
 
+  const presetName = typeof options.profile === "string" ? options.profile : "custom";
+  const motion = resolveReelMotionProfile(options.profile ?? "premium", {
+    ...options.motion,
+    ...(options.duration !== undefined ? { duration: options.duration } : {}),
+    ...(options.stagger !== undefined ? { stagger: options.stagger } : {}),
+    ...(options.fillerRows !== undefined ? { fillerRows: options.fillerRows } : {}),
+    ...(options.settleDistance !== undefined ? { settleDistance: options.settleDistance } : {}),
+  });
+
   const reelCount = finalColumns.length;
-  window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "reel-start" } }));
   if (reelCount === 0 || rows <= 0) return;
+
+  onSpinStart?.();
+  dispatchRuntimeEvent("casino:reel-spin-start", { preset: presetName });
+  window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "reel-start" } }));
 
   const lockedHeight = Math.round(host.getBoundingClientRect().height);
   if (lockedHeight > 0) host.style.height = `${lockedHeight}px`;
   host.classList.remove("has-win", "reel-engine-landed");
   host.classList.add("reel-engine-host", "reel-engine-spinning");
+  host.dataset.reelProfile = presetName;
   host.style.setProperty("--reel-count", String(reelCount));
+  host.style.setProperty("--reel-cruise-blur", `${motion.cruiseBlurPx}px`);
+  host.style.setProperty("--reel-decel-blur", `${motion.decelerationBlurPx}px`);
+  host.style.setProperty("--reel-settle-ms", `${motion.settleMs}ms`);
 
   const motionLayer = document.createElement("div");
   motionLayer.className = "reel-engine-motion";
@@ -68,14 +108,12 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
   host.appendChild(motionLayer);
 
   const stopTimes = finalColumns.map((_, reel) =>
-    duration + reel * stagger + (reel === anticipationReel ? anticipationDelay : 0),
+    motion.duration + reel * motion.stagger + (reel === anticipationReel ? anticipationDelay : 0),
   );
-  const fillerCounts = stopTimes.map((stopTime) => Math.max(fillerRows, Math.ceil(stopTime / 68)));
+  const fillerCounts = stopTimes.map((stopTime) => Math.max(motion.fillerRows, Math.ceil(stopTime / 68)));
 
   motionLayer.innerHTML = finalColumns.map((finalReel, reel) => {
     const fillerCount = fillerCounts[reel]!;
-    // Final result is first in the strip. The strip begins translated upward,
-    // showing filler symbols, and travels down to translateY(0).
     const strip = [...finalReel, ...Array.from({ length: fillerCount }, randomSymbol)];
     return `<div class="reel-engine-window" data-reel-engine-window="${reel}"><div class="reel-engine-track">${strip
       .map((symbol, index) => renderSymbol(symbol, reel, index < rows ? index : index - rows))
@@ -89,7 +127,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
   const tracks = windows.map((windowNode) => windowNode.querySelector<HTMLElement>(".reel-engine-track")!);
   const cellHeights = windows.map((windowNode) => windowNode.getBoundingClientRect().height / rows);
   const distances = fillerCounts.map((count, reel) => count * cellHeights[reel]!);
-  const settlePixels = cellHeights.map((height) => Math.max(2, height * settleDistance));
+  const settlePixels = cellHeights.map((height) => Math.max(2, height * motion.settleDistance));
 
   windows.forEach((windowNode, reel) => {
     const distance = distances[reel]!;
@@ -100,12 +138,15 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
 
   await nextFrame();
 
-  if (anticipationReel >= 0) window.setTimeout(() => window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "anticipation" } })), Math.max(450, duration - 420));
+  if (anticipationReel >= 0) {
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "anticipation" } }));
+      dispatchRuntimeEvent("casino:reel-anticipation", { reel: anticipationReel, preset: presetName });
+    }, Math.max(450, motion.duration - 420));
+  }
+
   const start = performance.now();
   const maxStop = Math.max(...stopTimes);
-  const accelerationMs = 300;
-  const decelerationMs = 720;
-  const settleMs = 125;
   const phases: ReelPhase[] = finalColumns.map(() => "accelerating");
   const stopped = finalColumns.map(() => false);
 
@@ -115,6 +156,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
     const node = windows[reel]!;
     node.dataset.reelPhase = phase;
     onReelPhase?.(reel, phase);
+    dispatchRuntimeEvent("casino:reel-phase", { reel, phase, preset: presetName });
   };
 
   await new Promise<void>((resolve) => {
@@ -126,8 +168,8 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
         const stopTime = stopTimes[reel]!;
         const distance = distances[reel]!;
         const settle = settlePixels[reel]!;
-        const cruiseEnd = Math.max(accelerationMs, stopTime - decelerationMs - settleMs);
-        const settleStart = stopTime - settleMs;
+        const cruiseEnd = Math.max(motion.accelerationMs, stopTime - motion.decelerationMs - motion.settleMs);
+        const settleStart = stopTime - motion.settleMs;
 
         if (elapsed >= stopTime) {
           track.style.transform = "translate3d(0,0,0)";
@@ -136,6 +178,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
             stopped[reel] = true;
             windows[reel]!.classList.add("reel-engine-stopped");
             onReelStop?.(reel);
+            dispatchRuntimeEvent("casino:reel-stop", { reel, phase: "stopped", preset: presetName });
             window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "reel-stop", index: reel } }));
           }
           return;
@@ -143,13 +186,13 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
 
         allStopped = false;
         let y: number;
-        if (elapsed < accelerationMs) {
+        if (elapsed < motion.accelerationMs) {
           setPhase(reel, "accelerating");
-          const t = easeInCubic(clamp01(elapsed / accelerationMs));
+          const t = easeInCubic(clamp01(elapsed / motion.accelerationMs));
           y = -distance + distance * 0.14 * t;
         } else if (elapsed < cruiseEnd) {
           setPhase(reel, "cruising");
-          const t = clamp01((elapsed - accelerationMs) / Math.max(1, cruiseEnd - accelerationMs));
+          const t = clamp01((elapsed - motion.accelerationMs) / Math.max(1, cruiseEnd - motion.accelerationMs));
           y = -distance * 0.86 + distance * 0.69 * t;
         } else if (elapsed < settleStart) {
           setPhase(reel, "decelerating");
@@ -157,7 +200,7 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
           y = -distance * 0.17 + (distance * 0.17 + settle) * t;
         } else {
           setPhase(reel, "settling");
-          const t = easeOutBack(clamp01((elapsed - settleStart) / settleMs));
+          const t = easeOutBack(clamp01((elapsed - settleStart) / motion.settleMs));
           y = settle * (1 - t);
         }
         track.style.transform = `translate3d(0,${y.toFixed(3)}px,0)`;
@@ -176,6 +219,13 @@ export async function spinReelStrips<T>(options: ReelStripOptions<T>): Promise<v
   await wait(90);
   motionLayer.remove();
   host.classList.remove("reel-engine-host", "reel-engine-landed");
+  delete host.dataset.reelProfile;
   host.style.removeProperty("--reel-count");
+  host.style.removeProperty("--reel-cruise-blur");
+  host.style.removeProperty("--reel-decel-blur");
+  host.style.removeProperty("--reel-settle-ms");
   host.style.removeProperty("height");
+
+  onSpinComplete?.();
+  dispatchRuntimeEvent("casino:reel-spin-complete", { preset: presetName });
 }

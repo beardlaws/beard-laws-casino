@@ -67,3 +67,5 @@
 .build-fingerprint span,
 .build-fingerprint i { color: rgba(211, 190, 255, 0.78); font-style: normal; }
 .dev-build { opacity: 0.72; font-size: 0.72rem; overflow-wrap: anywhere; }
+
+@import "./reels.css";

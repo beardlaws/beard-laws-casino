@@ -318,9 +318,7 @@ export class NeemasHighSeas {
       finalColumns: grid,
       rows: ROWS,
       randomSymbol: () => this.pick(),
-      duration: free ? 1800 : 1950,
-      stagger: 205,
-      fillerRows: 18,
+      profile: free ? "bonus" : "voyage",
       anticipationReel: earlyTickets >= 2 ? 4 : -1,
       renderSymbol: (symbol, reel) => `<div class="sea-symbol s-${symbol.id}" data-reel="${reel + 1}" style="--reel:${reel}" title="${symbol.label}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}" draggable="false">${symbol.id === "chocolate-milk" ? "" : `<small>${symbol.label}</small>`}</div>`,
     });

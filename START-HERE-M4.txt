@@ -1,0 +1,10 @@
+PROJECT BEARD M4 — UNIFIED REEL ENGINE
+
+1. Keep the repository on feature/project-beard-dev-suite.
+2. Working tree must be clean.
+3. Run APPLY-M4.ps1 from Downloads.
+4. Run:
+   npm run typecheck
+   npm test
+   npm run build
+5. Only commit if all three pass.

@@ -100,7 +100,7 @@ export class BigBadBarber {
     this.root.querySelector(".barber-machine")?.classList.add("barber-spinning");this.update();
     const grid=this.makeGrid();if(this.forceTwoRazors){const razor=SYMBOLS.find(s=>s.id==="razor")!;grid[1]![0]=razor;grid[1]![2]=razor;grid.forEach((row,y)=>row.forEach((symbol,x)=>{if(symbol.id==="razor"&&!((x===0||x===2)&&y===1))row[x]=SYMBOLS.find(s=>s.id==="wax")!;}));this.forceTwoRazors=false;}this.currentGrid=grid;const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;const cols=Array.from({length:COLS},(_,x)=>grid.map(r=>r[x]!));
     const earlyRazors=cols.slice(0,4).flat().filter(s=>s.id==="razor").length;if(earlyRazors>=2)this.message("THE GOLDEN RAZOR IS CIRCLING THE FINAL REEL…");
-    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),duration:2250,stagger:260,fillerRows:28,anticipationReel:earlyRazors>=2?4:-1,anticipationDelay:1250,renderSymbol:s=>this.symbolMarkup(s)});
+    await animateDomReels({host,finalColumns:cols,rows:ROWS,randomSymbol:()=>this.pick(),profile:"barber",anticipationReel:earlyRazors>=2?4:-1,anticipationDelay:1250,renderSymbol:s=>this.symbolMarkup(s)});
     this.render(grid);this.root.querySelector(".barber-machine")?.classList.remove("barber-spinning");await this.wait(160);
 
     const result=this.evaluate(grid);const razors=grid.flat().filter(s=>s.id==="razor").length;

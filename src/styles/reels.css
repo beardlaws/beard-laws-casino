@@ -1,0 +1,97 @@
+/* Project Beard M4 — canonical shared reel presentation. */
+.reel-engine-host {
+  position: relative !important;
+  overflow: hidden !important;
+  contain: layout paint;
+  isolation: isolate;
+}
+
+.reel-engine-motion {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(var(--reel-count), minmax(0, 1fr));
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.reel-engine-window {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.reel-engine-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .28), transparent 12%, transparent 86%, rgba(0, 0, 0, .34)),
+    linear-gradient(90deg, rgba(255,255,255,.025), transparent 18%, transparent 82%, rgba(0,0,0,.08));
+}
+
+.reel-engine-track {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  grid-auto-rows: var(--reel-cell-height);
+  will-change: transform, filter;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.reel-engine-window[data-reel-phase="accelerating"] .reel-engine-track {
+  filter: blur(calc(var(--reel-cruise-blur, .7px) * .45));
+}
+
+.reel-engine-window[data-reel-phase="cruising"] .reel-engine-track {
+  filter: blur(var(--reel-cruise-blur, .7px));
+}
+
+.reel-engine-window[data-reel-phase="decelerating"] .reel-engine-track {
+  filter: blur(var(--reel-decel-blur, .25px));
+}
+
+.reel-engine-window[data-reel-phase="settling"] {
+  animation: project-beard-reel-lock var(--reel-settle-ms, 140ms) cubic-bezier(.2,.82,.25,1) both;
+}
+
+.reel-engine-window.reel-engine-stopped::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(180deg, rgba(255,245,190,.10), transparent 48%);
+  animation: project-beard-reel-flash 165ms ease-out;
+}
+
+@keyframes project-beard-reel-lock {
+  0% { filter: brightness(1.12); transform: translateY(1px); }
+  58% { filter: brightness(1.04); transform: translateY(-.5px); }
+  100% { filter: brightness(1); transform: translateY(0); }
+}
+
+@keyframes project-beard-reel-flash {
+  0% { opacity: .75; }
+  100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reel-engine-window[data-reel-phase="accelerating"] .reel-engine-track,
+  .reel-engine-window[data-reel-phase="cruising"] .reel-engine-track,
+  .reel-engine-window[data-reel-phase="decelerating"] .reel-engine-track {
+    filter: none;
+  }
+  .reel-engine-window[data-reel-phase="settling"],
+  .reel-engine-window.reel-engine-stopped::before {
+    animation: none;
+  }
+}

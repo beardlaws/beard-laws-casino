@@ -415,9 +415,8 @@ export class MeghsCosmicJam {
       finalColumns: columns,
       rows: ROWS,
       randomSymbol: () => this.pick(),
-      duration: free ? 1350 : 1550,
-      stagger: this.lastSurge === "STAGGERED REEL RUSH" ? 210 : 145,
-      fillerRows: 12,
+      profile: free ? "bonus" : "cascade",
+      ...(this.lastSurge === "STAGGERED REEL RUSH" ? { motion: { stagger: 210 } } : {}),
       renderSymbol: (symbol, x, y) => `<div class="jam-symbol s-${symbol.id}" style="--x:${x};--y:${y}"><span>${symbol.label}</span><img src="${symbol.art}" alt="${symbol.label}"><small>${symbol.label}</small></div>`,
     });
     this.render(unmodifiedGrid);
