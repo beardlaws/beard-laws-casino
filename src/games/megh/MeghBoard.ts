@@ -1,4 +1,5 @@
 import type { JamSymbol } from "./MeghConfig";
+import { resolveMeghCascade } from "./MeghCascadeRuntime";
 
 export type MeghGrid = JamSymbol[][];
 
@@ -68,16 +69,4 @@ export const tumbleMeghGrid = (
   rows: number,
   cols: number,
   pick: () => JamSymbol,
-): MeghGrid => {
-  const next = grid.map((row) => [...row]);
-  for (let x = 0; x < cols; x += 1) {
-    const kept: JamSymbol[] = [];
-    for (let y = rows - 1; y >= 0; y -= 1) {
-      if (!removed.has(`${x}:${y}`)) kept.push(grid[y]![x]!);
-    }
-    for (let y = rows - 1; y >= 0; y -= 1) {
-      next[y]![x] = kept[rows - 1 - y] ?? pick();
-    }
-  }
-  return next;
-};
+): MeghGrid => resolveMeghCascade(grid, removed, rows, cols, pick).grid;

@@ -18,7 +18,9 @@ import {
   type EncoreMode,
   type JamSymbol,
 } from "./megh/MeghConfig";
-import { findMeghClusters, makeMeghGrid, pickMeghSymbol, tumbleMeghGrid } from "./megh/MeghBoard";
+import { findMeghClusters, makeMeghGrid, pickMeghSymbol } from "./megh/MeghBoard";
+import { resolveMeghCascade, type MeghCascadeResolution } from "./megh/MeghCascadeRuntime";
+import { createGoatEatIntent, createUfoAbductIntent, type MeghFeatureIntent, type MeghTileTarget } from "./megh/MeghFeatureIntent";
 
 export { MEGH_PRODUCTION_MATH };
 
@@ -164,63 +166,70 @@ export class MeghsCosmicJam {
     return findMeghClusters(grid, ROWS, COLS, MEGH_PRODUCTION_MATH.clusterMinimum);
   }
 
-  private tumble(grid: JamSymbol[][], removed: Set<string>): JamSymbol[][] {
-    return tumbleMeghGrid(grid, removed, ROWS, COLS, () => this.pick());
+  private resolveTumble(
+    grid: JamSymbol[][],
+    removed: ReadonlySet<string>,
+    pick: () => JamSymbol = () => this.pick(),
+  ): MeghCascadeResolution {
+    return resolveMeghCascade(grid, removed, ROWS, COLS, pick);
   }
 
-  private async animateCascadeGravity(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], removed: Set<string>): Promise<void> {
-    const removedNodes = [...removed]
+  private async animateCascadeGravity(
+    host: HTMLElement,
+    resolution: MeghCascadeResolution,
+    options: { animateRemoval?: boolean; holePauseMs?: number } = {},
+  ): Promise<void> {
+    const animateRemoval = options.animateRemoval ?? true;
+    const removedNodes = [...resolution.removed]
       .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
       .filter((node): node is HTMLElement => Boolean(node));
-    await Promise.all(removedNodes.map((node, index) => node.animate(
-      [
-        { transform: "scale(1)", opacity: 1, filter: "brightness(1)" },
-        { transform: "scale(.82) rotate(-3deg)", opacity: .72, filter: "brightness(1.7)" },
-        { transform: "scale(.04) translateY(-24px)", opacity: 0, filter: "brightness(2.2) blur(4px)" },
-      ],
-      { duration: 420, delay: index * 34, easing: "cubic-bezier(.3,.05,.6,1)", fill: "forwards" },
-    ).finished.catch(() => undefined)));
 
-    const origins = new Map<JamSymbol, number[]>();
-    for (let x = 0; x < COLS; x += 1) {
-      for (let y = 0; y < ROWS; y += 1) {
-        if (removed.has(`${x}:${y}`)) continue;
-        const symbol = before[y]![x]!;
-        const key = symbol as JamSymbol;
-        const packed = origins.get(key) ?? [];
-        packed.push(y);
-        origins.set(key, packed);
-      }
+    if (animateRemoval) {
+      await Promise.all(removedNodes.map((node, index) => node.animate(
+        [
+          { transform: "scale(1)", opacity: 1, filter: "brightness(1)" },
+          { transform: "scale(.82) rotate(-3deg)", opacity: .72, filter: "brightness(1.7)" },
+          { transform: "scale(.04) translateY(-24px)", opacity: 0, filter: "brightness(2.2) blur(4px)" },
+        ],
+        { duration: 420, delay: index * 34, easing: "cubic-bezier(.3,.05,.6,1)", fill: "forwards" },
+      ).finished.catch(() => undefined)));
     }
 
-    this.render(after);
+    // Hold the actual empty cells on-screen briefly so the player can read
+    // exactly what was removed before gravity begins.
+    removedNodes.forEach((node) => node.classList.add("megh-runtime-hole"));
+    await this.wait(options.holePauseMs ?? 220);
+
+    this.render(resolution.grid);
+    host.classList.add("megh-gravity-running");
     const animations: Promise<unknown>[] = [];
-    for (let x = 0; x < COLS; x += 1) {
-      const used = new Map<JamSymbol, number>();
-      for (let y = 0; y < ROWS; y += 1) {
-        const symbol = after[y]![x]!;
-        const occurrence = used.get(symbol) ?? 0;
-        used.set(symbol, occurrence + 1);
-        const possibleOrigins = origins.get(symbol) ?? [];
-        const originalY = possibleOrigins[occurrence];
-        const isNew = originalY === undefined || originalY > y;
-        const distance = isNew ? y + 2 : Math.max(1, y - originalY);
-        const node = host.querySelector<HTMLElement>(`[data-cell="${x}:${y}"]`);
-        if (!node) continue;
-        node.classList.add(isNew ? "cascade-new-symbol" : "cascade-falling-symbol");
-        animations.push(node.animate(
-          [
-            { transform: `translate3d(0,${-distance * 112}%,0)`, opacity: isNew ? 0 : .72, filter: "blur(3px) brightness(1.35)" },
-            { transform: "translate3d(0,9%,0)", opacity: 1, filter: "blur(0) brightness(1.08)", offset: .82 },
-            { transform: "translate3d(0,0,0)", opacity: 1, filter: "none" },
-          ],
-          { duration: 680 + y * 48, delay: x * 28, easing: "cubic-bezier(.16,.82,.22,1)", fill: "both" },
-        ).finished.catch(() => undefined));
-      }
+    for (const motion of resolution.motions) {
+      const node = host.querySelector<HTMLElement>(`[data-cell="${motion.x}:${motion.y}"]`);
+      if (!node) continue;
+      const distanceRows = Math.max(0, motion.y - motion.fromY);
+      if (distanceRows === 0 && !motion.isNew) continue;
+      node.classList.add(motion.isNew ? "cascade-new-symbol" : "cascade-falling-symbol");
+      const delay = motion.x * 42 + motion.y * 22;
+      const duration = 500 + Math.min(420, distanceRows * 82);
+      animations.push(node.animate(
+        [
+          {
+            transform: `translate3d(0,${-distanceRows * 103}%,0)`,
+            opacity: motion.isNew ? 0 : .84,
+            filter: motion.isNew ? "blur(3px) brightness(1.25)" : "blur(1.5px) brightness(1.1)",
+          },
+          { transform: "translate3d(0,7%,0)", opacity: 1, filter: "none", offset: .84 },
+          { transform: "translate3d(0,-2%,0)", opacity: 1, filter: "none", offset: .94 },
+          { transform: "translate3d(0,0,0)", opacity: 1, filter: "none" },
+        ],
+        { duration, delay, easing: "cubic-bezier(.18,.78,.2,1)", fill: "both" },
+      ).finished.catch(() => undefined));
     }
     await Promise.all(animations);
-    await this.wait(110);
+    host.classList.remove("megh-gravity-running");
+    await this.wait(180);
   }
+
 
   private async spin(): Promise<boolean> {
     if (this.spinning) return false;
@@ -282,9 +291,9 @@ export class MeghsCosmicJam {
       await this.wait(680);
       host.classList.add("beaming");
       await this.wait(480);
-      const nextGrid = this.tumble(grid, removed);
-      await this.animateCascadeGravity(host, grid, nextGrid, removed);
-      grid = nextGrid;
+      const resolution = this.resolveTumble(grid, removed);
+      await this.animateCascadeGravity(host, resolution);
+      grid = resolution.grid;
       this.multiplier += 1;
       host.classList.remove("beaming");
     }
@@ -387,7 +396,9 @@ export class MeghsCosmicJam {
   private async playReelRush(host: HTMLElement, finalGrid: JamSymbol[][], free: boolean): Promise<JamSymbol[][]> {
     this.lastSurge = free ? "ALIEN ENCORE INVASION" : this.dealCosmicEvent();
     const unmodifiedGrid = finalGrid.map((row) => [...row]);
-    if (!free) finalGrid = this.applyCosmicEvent(finalGrid, this.lastSurge as CosmicEvent);
+    const intent = this.createCosmicIntent(unmodifiedGrid, this.lastSurge, free);
+    if (!free && !intent) finalGrid = this.applyCosmicEvent(finalGrid, this.lastSurge as CosmicEvent);
+
     const surge = this.root.querySelector<HTMLElement>("[data-megh-surge]")!;
     surge.querySelector("b")!.textContent = this.lastSurge;
     surge.classList.add("active");
@@ -407,8 +418,13 @@ export class MeghsCosmicJam {
               ? `<div class="goat-track"></div><b>GOAT STAMPEDE</b>`
               : this.lastSurge === "COSMIC COLLISION"
                 ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
-            : free ? `<div class="ufo-rig invasion-rig"><img class="invasion-ufo" src="${art("ufo")}" alt="Encore UFO"><i class="invasion-beam"></i></div><b>ALIEN ENCORE INVASION</b>` : "";
+                : free
+                  ? `<div class="ufo-rig invasion-rig"><img class="invasion-ufo" src="${art("ufo")}" alt="Encore UFO"><i class="invasion-beam"></i></div><b>ALIEN ENCORE INVASION</b>`
+                  : "";
     if (effect.innerHTML) host.appendChild(effect);
+
+    // Initial paid/free drop still uses Project Beard's shared reel motion engine.
+    // The board is not mutated until those strips are fully settled.
     const columns = Array.from({ length: COLS }, (_, x) => unmodifiedGrid.map((row) => row[x]!));
     await animateDomReels({
       host,
@@ -422,30 +438,29 @@ export class MeghsCosmicJam {
     this.render(unmodifiedGrid);
     host.classList.remove("reel-rushing");
     host.classList.add("dropping", "reel-locking");
+
     if ((!free && this.lastSurge !== "COSMIC WEATHER CLEAR") || free) {
       const label = effect.querySelector("b");
       if (label) label.textContent = `${this.lastSurge} • TARGET ACQUIRED`;
       host.classList.add("event-resolving");
-      if (free) {
-        const invaded = unmodifiedGrid.map((row) => [...row]);
-        const count = 3 + Math.floor(casinoRandom() * 5);
-        const used = new Set<string>();
-        while (used.size < count) used.add(`${Math.floor(casinoRandom() * COLS)}:${Math.floor(casinoRandom() * ROWS)}`);
-        [...used].forEach((key, index) => { const [x = 0, y = 0] = key.split(":").map(Number); invaded[y]![x] = index === 0 ? SYMBOLS.find((item) => item.id === "wild")! : this.pick(); });
-        finalGrid = invaded;
-      }
-      await this.animateCosmicEvent(host, unmodifiedGrid, finalGrid, effect);
+      finalGrid = await this.animateCosmicEvent(host, unmodifiedGrid, finalGrid, effect, intent);
       host.classList.add("event-revealed");
-      await this.wait(320);
+      await this.wait(420);
       host.classList.remove("event-resolving", "event-revealed");
-    } else this.render(finalGrid);
-    await this.wait(380);
+    } else {
+      this.render(finalGrid);
+    }
+
+    // Give the finished board a readable beat before evaluation. This removes
+    // the old "everything snaps, next spin starts" feeling on Auto.
+    await this.wait(520);
     host.classList.remove("dropping", "reel-locking", surgeClass);
     delete host.dataset.locked;
     effect.remove();
     surge.classList.remove("active");
     return finalGrid;
   }
+
   private dealCosmicEvent(): CosmicEvent {
     if (this.forcedSurge) {
       const forced = this.forcedSurge;
@@ -461,6 +476,41 @@ export class MeghsCosmicJam {
     }
     return this.surgeDeck.pop()!;
   }
+
+  private uniqueTargets(count: number): MeghTileTarget[] {
+    const result: MeghTileTarget[] = [];
+    const used = new Set<string>();
+    while (result.length < Math.min(count, COLS * ROWS)) {
+      const x = Math.floor(casinoRandom() * COLS);
+      const y = Math.floor(casinoRandom() * ROWS);
+      const key = `${x}:${y}`;
+      if (used.has(key)) continue;
+      used.add(key);
+      result.push({ x, y });
+    }
+    return result;
+  }
+
+  private createCosmicIntent(grid: JamSymbol[][], event: string, free: boolean): MeghFeatureIntent | null {
+    if (free || event === "UFO SCAN") {
+      const count = free ? 3 + Math.floor(casinoRandom() * 5) : 3 + Math.floor(casinoRandom() * 4);
+      return createUfoAbductIntent(this.uniqueTargets(count), COLS, ROWS);
+    }
+    if (event !== "GOAT STAMPEDE") return null;
+
+    const strawberries: MeghTileTarget[] = [];
+    grid.forEach((row, y) => row.forEach((symbol, x) => {
+      if (symbol.id === "strawberry") strawberries.push({ x, y });
+    }));
+    for (let i = strawberries.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(casinoRandom() * (i + 1));
+      [strawberries[i], strawberries[j]] = [strawberries[j]!, strawberries[i]!];
+    }
+    const requested = 3 + Math.floor(casinoRandom() * 4);
+    const combined = [...strawberries, ...this.uniqueTargets(requested + 4)];
+    return createGoatEatIntent(combined.slice(0, requested), COLS, ROWS, "regular");
+  }
+
   private applyCosmicEvent(grid: JamSymbol[][], event: CosmicEvent): JamSymbol[][] {
     const next = grid.map((row) => [...row]);
     const symbol = (id: string) => SYMBOLS.find((item) => item.id === id)!;
@@ -472,25 +522,22 @@ export class MeghsCosmicJam {
       }
       return cells;
     };
-    if (event === "UFO SCAN") {
-      const cells = uniqueCells(3 + Math.floor(casinoRandom() * 4));
-      cells.forEach(([x, y], index) => { next[y]![x] = index === 0 ? symbol("wild") : this.pick(); });
-    } else if (event === "AMPLIFIER OVERLOAD") {
+    // Selective removal events (Goat/UFO) are resolved by createCosmicIntent +
+    // the authoritative gravity runtime. This function now handles only direct
+    // board mutations that do not create holes.
+    if (event === "AMPLIFIER OVERLOAD") {
       const col = Math.floor(casinoRandom() * COLS);
       [1, 2, 3].forEach((row) => { next[row]![col] = symbol("amp"); });
     } else if (event === "MYSTERY SIGNAL") {
       const chosen = ["strawberry", "amp", "guitar", "vinyl", "goat"][Math.floor(casinoRandom() * 5)]!;
       uniqueCells(3 + Math.floor(casinoRandom() * 3)).forEach(([x, y]) => { next[y]![x] = symbol(chosen); });
-    } else if (event === "GOAT STAMPEDE") {
-      const preferred: Array<[number, number]> = [];
-      grid.forEach((row, y) => row.forEach((item, x) => { if (item.id === "strawberry") preferred.push([x, y]); }));
-      const targets = [...preferred.sort(() => casinoRandom() - .5), ...uniqueCells(6)].filter((cell, index, all) => all.findIndex(other => other[0] === cell[0] && other[1] === cell[1]) === index).slice(0, 3 + Math.floor(casinoRandom() * 4));
-      targets.forEach(([x, y]) => { next[y]![x] = this.pick(); });
     } else if (event === "COSMIC COLLISION") {
       const row = Math.floor(casinoRandom() * (ROWS - 1));
       const col = Math.floor(casinoRandom() * (COLS - 1));
       const chosen = next[row]![col]!;
-      next[row]![col + 1] = chosen; next[row + 1]![col] = chosen; next[row + 1]![col + 1] = chosen;
+      next[row]![col + 1] = chosen;
+      next[row + 1]![col] = chosen;
+      next[row + 1]![col + 1] = chosen;
     }
     return next;
   }
@@ -503,14 +550,25 @@ export class MeghsCosmicJam {
     return changed;
   }
 
-  private async animateCosmicEvent(host: HTMLElement, before: JamSymbol[][], after: JamSymbol[][], effect: HTMLElement): Promise<void> {
-    const changed = this.changedCells(before, after);
-    if (!changed.length) return;
+  private async animateCosmicEvent(
+    host: HTMLElement,
+    before: JamSymbol[][],
+    after: JamSymbol[][],
+    effect: HTMLElement,
+    intent: MeghFeatureIntent | null,
+  ): Promise<JamSymbol[][]> {
+    const targetKeys = intent
+      ? intent.targets.map((target) => `${target.x}:${target.y}`)
+      : this.changedCells(before, after);
+    if (!targetKeys.length) {
+      effect.remove();
+      return after;
+    }
 
     const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
     const director = new FeatureDirector(machine);
     const machineRect = machine.getBoundingClientRect();
-    const nodes = changed
+    const nodes = targetKeys
       .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
       .filter((node): node is HTMLElement => Boolean(node));
 
@@ -526,57 +584,58 @@ export class MeghsCosmicJam {
       node.style.setProperty("--event-delay", `${index * 130}ms`);
       node.classList.add("event-target");
     });
-
     effect.querySelector("b")?.remove();
 
-    if (this.lastSurge === "UFO SCAN" || this.lastSurge === "ALIEN ENCORE INVASION") {
+    if (intent?.kind === "ufo-abduct") {
       window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "ufo" } }));
       effect.remove();
       const actor = director.characters.create(
-        "megh-ufo-actor",
+        "megh-ufo-actor megh-ufo-runtime",
         `<img src="${art("ufo")}" alt="Encore UFO"><i class="megh-ufo-beam"></i>`,
       );
       const reelRect = host.getBoundingClientRect();
       const boardTop = reelRect.top - machineRect.top;
-      const startPoint = new DOMPoint(-120, Math.max(24, boardTop - 86));
+      const actorWidth = 124;
+      const hoverY = Math.max(8, boardTop - 86);
+      const startPoint = new DOMPoint(-actorWidth - 24, hoverY);
       director.characters.position(actor, startPoint.x, startPoint.y);
-      const boardEntry = new DOMPoint(reelRect.left - machineRect.left + reelRect.width * 0.5 - 46, Math.max(24, boardTop - 86));
-      await director.characters.move(actor, startPoint, boardEntry, { duration: 720 });
-      actor.dataset.x = String(boardEntry.x); actor.dataset.y = String(boardEntry.y);
 
+      let current = startPoint;
       for (const node of nodes) {
         const target = centerInMachine(node);
-        const hover = new DOMPoint(target.x - 46, Math.max(24, target.y - 142));
-        const current = new DOMPoint(
-          Number(actor.dataset.x ?? machineRect.width * 0.5),
-          Number(actor.dataset.y ?? 26),
-        );
-        await director.characters.move(actor, current, hover, { duration: 520 });
+        const hover = new DOMPoint(target.x - actorWidth / 2, hoverY);
+        await director.characters.move(actor, current, hover, { duration: 540 });
+        current = hover;
         actor.dataset.x = String(hover.x);
         actor.dataset.y = String(hover.y);
+
+        const nodeRect = node.getBoundingClientRect();
+        const beamHeight = Math.max(92, target.y - hoverY - 46);
+        actor.style.setProperty("--megh-beam-height", `${beamHeight}px`);
+        actor.style.setProperty("--megh-beam-width", `${Math.max(52, nodeRect.width * .58)}px`);
         actor.classList.add("is-locking");
-        await this.wait(300);
+        await this.wait(340);
         actor.classList.add("is-firing");
         window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "beam" } }));
         node.classList.add("abducting-readable");
+        const lift = Math.max(105, target.y - hoverY - 26);
         await node.animate(
           [
             { transform: "translate3d(0,0,0) scale(1)", opacity: 1, filter: "brightness(1)" },
-            { transform: "translate3d(0,-45px,0) scale(.82) rotate(4deg)", opacity: .88, filter: "brightness(1.5)" },
-            { transform: "translate3d(0,-125px,0) scale(.18) rotate(18deg)", opacity: 0, filter: "brightness(2)" },
+            { transform: `translate3d(0,-${Math.round(lift * .45)}px,0) scale(.78) rotate(5deg)`, opacity: .9, filter: "brightness(1.5)" },
+            { transform: `translate3d(0,-${Math.round(lift)}px,0) scale(.12) rotate(22deg)`, opacity: 0, filter: "brightness(2.2)" },
           ],
-          { duration: 980, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" },
+          { duration: 920, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" },
         ).finished.catch(() => undefined);
-        await director.shake("soft", 180);
+        await director.shake("soft", 160);
         actor.classList.remove("is-firing", "is-locking");
         await this.wait(180);
       }
 
-      director.burst(host, "✦", 18, "cosmic-particle");
-      const exitFrom = new DOMPoint(Number(actor.dataset.x ?? machineRect.width * .5), Number(actor.dataset.y ?? 26));
-      await director.characters.move(actor, exitFrom, new DOMPoint(machineRect.width + 160, -90), { duration: 760 });
+      const exit = new DOMPoint(machineRect.width + actorWidth + 30, hoverY - 42);
+      await director.characters.move(actor, current, exit, { duration: 720 });
       actor.remove();
-    } else if (this.lastSurge === "GOAT STAMPEDE") {
+    } else if (intent?.kind === "goat-eat") {
       window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "goat" } }));
       effect.remove();
       for (let index = 0; index < nodes.length; index += 1) {
@@ -590,48 +649,61 @@ export class MeghsCosmicJam {
         const approach = new DOMPoint(Math.max(12, target.x - 105), target.y - 56);
         director.characters.position(actor, entry.x, entry.y);
         actor.classList.add("is-running");
-        await director.characters.move(actor, entry, approach, { duration: 900, easing: "cubic-bezier(.18,.72,.24,1)" });
+        await director.characters.move(actor, entry, approach, { duration: 820, easing: "cubic-bezier(.18,.72,.24,1)" });
         actor.classList.remove("is-running");
         actor.classList.add("is-sniffing");
         node.classList.add("goat-marked-readable");
-        await this.wait(620);
+        await this.wait(520);
         actor.classList.remove("is-sniffing");
         actor.classList.add("is-chomping");
         window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "chomp" } }));
         node.classList.add("goat-eaten-readable");
         director.burst(node, "•", 10, "crumb-particle");
-        await director.shake("soft", 180);
-        await this.wait(820);
+        await director.shake("soft", 150);
+        await this.wait(700);
         actor.classList.remove("is-chomping");
         actor.classList.add("is-running");
-        await director.characters.move(actor, approach, new DOMPoint(machineRect.width + 140, target.y - 56), { duration: 850, easing: "cubic-bezier(.3,.05,.75,.25)" });
+        await director.characters.move(actor, approach, new DOMPoint(machineRect.width + 140, target.y - 56), { duration: 760, easing: "cubic-bezier(.3,.05,.75,.25)" });
         actor.remove();
-        await this.wait(160);
+        await this.wait(120);
       }
     } else {
       nodes.forEach((node) => node.classList.add("cosmic-mutating"));
       director.burst(host, "✦", 12, "cosmic-particle");
       await director.shake("soft", 220);
-      await this.wait(900);
+      await this.wait(720);
       effect.remove();
+      this.render(after);
+      const fresh = targetKeys
+        .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
+        .filter((node): node is HTMLElement => Boolean(node));
+      await Promise.all(fresh.map((node, index) => node.animate(
+        [
+          { transform: "scale(.72)", opacity: 0, filter: "brightness(1.8)" },
+          { transform: "scale(1.04)", opacity: 1, filter: "brightness(1.15)", offset: .82 },
+          { transform: "scale(1)", opacity: 1, filter: "none" },
+        ],
+        { duration: 520, delay: index * 50, easing: "cubic-bezier(.18,.8,.2,1)", fill: "both" },
+      ).finished.catch(() => undefined)));
+      this.gameState.transition("EVALUATING", true);
+      return after;
     }
 
-    host.classList.add("event-gravity-lock");
-    nodes.forEach((node) => node.classList.add("event-hole"));
-    await this.wait(240);
-    this.render(after);
-    const fresh = changed
-      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
-      .filter((node): node is HTMLElement => Boolean(node));
-    fresh.forEach((node, index) => {
-      node.style.setProperty("--event-delay", `${index * 110}ms`);
-      node.style.animationDelay = `${index * 110}ms`;
-      node.classList.add("event-replacement-v74");
-    });
-    await this.wait(1050 + fresh.length * 60);
-    host.classList.remove("event-gravity-lock");
+    // Goat/UFO events are true removals. Hold the holes, compact each column,
+    // then spawn replacements above the board. No full-grid teleport/render.
+    const removed = new Set(targetKeys);
+    let replacementIndex = 0;
+    const wild = SYMBOLS.find((symbol) => symbol.id === "wild")!;
+    const picker = intent.kind === "ufo-abduct"
+      ? () => replacementIndex++ === 0 ? wild : this.pick()
+      : () => this.pick();
+    const resolution = this.resolveTumble(before, removed, picker);
+    await this.animateCascadeGravity(host, resolution, { animateRemoval: false, holePauseMs: 300 });
+    director.burst(host, "✦", intent.kind === "ufo-abduct" ? 16 : 8, "cosmic-particle");
     this.gameState.transition("EVALUATING", true);
+    return resolution.grid;
   }
+
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));
     const label = this.root.querySelector<HTMLElement>("[data-chain-prize]");
@@ -680,7 +752,7 @@ export class MeghsCosmicJam {
         return;
       }
       this.update();
-      await this.wait(350);
+      await this.wait(620);
     }
     this.stopAuto();
   }
