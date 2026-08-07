@@ -3,7 +3,6 @@ import type { CasinoActivity } from "../state/CasinoProgression";
 import { casinoRandom } from "../engine/CasinoRandom";
 import { SlotBetModel, denominationMarkup } from "./SlotBetModel";
 import { animateDomReels } from "./DomReelAnimator";
-import { FeatureDirector } from "../engine/FeatureDirector";
 import { GameStateMachine } from "../engine/GameStateMachine";
 import {
   MEGH_COLS as COLS,
@@ -20,6 +19,7 @@ import {
 } from "./megh/MeghConfig";
 import { findMeghClusters, makeMeghGrid, pickMeghSymbol } from "./megh/MeghBoard";
 import { resolveMeghCascade, type MeghCascadeResolution } from "./megh/MeghCascadeRuntime";
+import { MeghAnimationRuntime } from "./megh/MeghAnimationRuntime";
 import { createGoatEatIntent, createUfoAbductIntent, type MeghFeatureIntent, type MeghTileTarget } from "./megh/MeghFeatureIntent";
 
 export { MEGH_PRODUCTION_MATH };
@@ -179,55 +179,12 @@ export class MeghsCosmicJam {
     resolution: MeghCascadeResolution,
     options: { animateRemoval?: boolean; holePauseMs?: number } = {},
   ): Promise<void> {
-    const animateRemoval = options.animateRemoval ?? true;
-    const removedNodes = [...resolution.removed]
-      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
-      .filter((node): node is HTMLElement => Boolean(node));
-
-    if (animateRemoval) {
-      await Promise.all(removedNodes.map((node, index) => node.animate(
-        [
-          { transform: "scale(1)", opacity: 1, filter: "brightness(1)" },
-          { transform: "scale(.82) rotate(-3deg)", opacity: .72, filter: "brightness(1.7)" },
-          { transform: "scale(.04) translateY(-24px)", opacity: 0, filter: "brightness(2.2) blur(4px)" },
-        ],
-        { duration: 420, delay: index * 34, easing: "cubic-bezier(.3,.05,.6,1)", fill: "forwards" },
-      ).finished.catch(() => undefined)));
-    }
-
-    // Hold the actual empty cells on-screen briefly so the player can read
-    // exactly what was removed before gravity begins.
-    removedNodes.forEach((node) => node.classList.add("megh-runtime-hole"));
-    await this.wait(options.holePauseMs ?? 220);
-
-    this.render(resolution.grid);
-    host.classList.add("megh-gravity-running");
-    const animations: Promise<unknown>[] = [];
-    for (const motion of resolution.motions) {
-      const node = host.querySelector<HTMLElement>(`[data-cell="${motion.x}:${motion.y}"]`);
-      if (!node) continue;
-      const distanceRows = Math.max(0, motion.y - motion.fromY);
-      if (distanceRows === 0 && !motion.isNew) continue;
-      node.classList.add(motion.isNew ? "cascade-new-symbol" : "cascade-falling-symbol");
-      const delay = motion.x * 42 + motion.y * 22;
-      const duration = 500 + Math.min(420, distanceRows * 82);
-      animations.push(node.animate(
-        [
-          {
-            transform: `translate3d(0,${-distanceRows * 103}%,0)`,
-            opacity: motion.isNew ? 0 : .84,
-            filter: motion.isNew ? "blur(3px) brightness(1.25)" : "blur(1.5px) brightness(1.1)",
-          },
-          { transform: "translate3d(0,7%,0)", opacity: 1, filter: "none", offset: .84 },
-          { transform: "translate3d(0,-2%,0)", opacity: 1, filter: "none", offset: .94 },
-          { transform: "translate3d(0,0,0)", opacity: 1, filter: "none" },
-        ],
-        { duration, delay, easing: "cubic-bezier(.18,.78,.2,1)", fill: "both" },
-      ).finished.catch(() => undefined));
-    }
-    await Promise.all(animations);
-    host.classList.remove("megh-gravity-running");
-    await this.wait(180);
+    const runtime = new MeghAnimationRuntime(host, {
+      rows: ROWS,
+      render: (grid) => this.render(grid.map((row) => [...row])),
+      wait: (ms) => this.wait(ms),
+    });
+    await runtime.animateCascade(resolution, options);
   }
 
 
@@ -388,7 +345,7 @@ export class MeghsCosmicJam {
       this.message(`NEXT FREE DROP IN 1… • ${this.freeDrops} REMAIN`);
       await this.wait(900);
       await this.spin();
-      await this.wait(450);
+      await this.wait(720);
     }
     this.bonusAutoRunning = false;
     this.update();
@@ -406,21 +363,15 @@ export class MeghsCosmicJam {
     host.classList.add("reel-rushing", surgeClass);
     const effect = document.createElement("div");
     effect.className = `cosmic-event ${surgeClass}`;
-    effect.innerHTML = this.lastSurge === "UFO SCAN"
-      ? `<div class="ufo-rig"><img class="ufo-craft" src="${art("ufo")}" alt="Encore UFO"><i class="scan-beam"></i></div><b>SCANNING REELS</b>`
-      : this.lastSurge === "AMPLIFIER OVERLOAD"
-        ? `<i class="amp-burst">⚡</i><b>WILD REEL CHARGED</b>`
-        : this.lastSurge === "MYSTERY SIGNAL"
-          ? `<i class="mystery-pulse">?</i><b>MATCHING SIGNAL LOCKED</b>`
-          : this.lastSurge === "STAGGERED REEL RUSH"
-            ? `<i class="rush-arrows">↓ ↓ ↓ ↓ ↓ ↓</i><b>UNSTABLE REEL ORDER</b>`
-            : this.lastSurge === "GOAT STAMPEDE"
-              ? `<div class="goat-track"></div><b>GOAT STAMPEDE</b>`
-              : this.lastSurge === "COSMIC COLLISION"
-                ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
-                : free
-                  ? `<div class="ufo-rig invasion-rig"><img class="invasion-ufo" src="${art("ufo")}" alt="Encore UFO"><i class="invasion-beam"></i></div><b>ALIEN ENCORE INVASION</b>`
-                  : "";
+    effect.innerHTML = this.lastSurge === "AMPLIFIER OVERLOAD"
+      ? `<i class="amp-burst">⚡</i><b>WILD REEL CHARGED</b>`
+      : this.lastSurge === "MYSTERY SIGNAL"
+        ? `<i class="mystery-pulse">?</i><b>MATCHING SIGNAL LOCKED</b>`
+        : this.lastSurge === "STAGGERED REEL RUSH"
+          ? `<i class="rush-arrows">↓ ↓ ↓ ↓ ↓ ↓</i><b>UNSTABLE REEL ORDER</b>`
+          : this.lastSurge === "COSMIC COLLISION"
+            ? `<i class="cosmic-collision">✦</i><b>SYMBOLS COLLIDE</b>`
+            : "";
     if (effect.innerHTML) host.appendChild(effect);
 
     // Initial paid/free drop still uses Project Beard's shared reel motion engine.
@@ -565,145 +516,63 @@ export class MeghsCosmicJam {
       return after;
     }
 
-    const machine = this.root.querySelector<HTMLElement>(".megh-machine") ?? host;
-    const director = new FeatureDirector(machine);
-    const machineRect = machine.getBoundingClientRect();
     const nodes = targetKeys
       .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
       .filter((node): node is HTMLElement => Boolean(node));
-
-    const centerInMachine = (node: HTMLElement): DOMPoint => {
-      const rect = node.getBoundingClientRect();
-      return new DOMPoint(
-        rect.left - machineRect.left + rect.width / 2,
-        rect.top - machineRect.top + rect.height / 2,
-      );
-    };
-
     nodes.forEach((node, index) => {
-      node.style.setProperty("--event-delay", `${index * 130}ms`);
+      node.style.setProperty("--event-delay", `${index * 90}ms`);
       node.classList.add("event-target");
     });
     effect.querySelector("b")?.remove();
 
-    if (intent?.kind === "ufo-abduct") {
-      window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "ufo" } }));
+    if (intent?.kind === "ufo-abduct" || intent?.kind === "goat-eat") {
+      // Project Beard M7: character actors now live inside the reel board itself.
+      // That puts actor, beam, particles, and target tiles in one coordinate space.
       effect.remove();
-      const actor = director.characters.create(
-        "megh-ufo-actor megh-ufo-runtime",
-        `<img src="${art("ufo")}" alt="Encore UFO"><i class="megh-ufo-beam"></i>`,
-      );
-      const reelRect = host.getBoundingClientRect();
-      const boardTop = reelRect.top - machineRect.top;
-      const actorWidth = 124;
-      const hoverY = Math.max(8, boardTop - 86);
-      const startPoint = new DOMPoint(-actorWidth - 24, hoverY);
-      director.characters.position(actor, startPoint.x, startPoint.y);
+      const runtime = new MeghAnimationRuntime(host, {
+        rows: ROWS,
+        render: (grid) => this.render(grid.map((row) => [...row])),
+        wait: (ms) => this.wait(ms),
+      });
+      await runtime.presentFeature(intent.kind, targetKeys, {
+        ufoArt: art("ufo"),
+        goatArt: art("goat"),
+        sound: (cue) => window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue } })),
+      });
 
-      let current = startPoint;
-      for (const node of nodes) {
-        const target = centerInMachine(node);
-        const hover = new DOMPoint(target.x - actorWidth / 2, hoverY);
-        await director.characters.move(actor, current, hover, { duration: 540 });
-        current = hover;
-        actor.dataset.x = String(hover.x);
-        actor.dataset.y = String(hover.y);
-
-        const nodeRect = node.getBoundingClientRect();
-        const beamHeight = Math.max(92, target.y - hoverY - 46);
-        actor.style.setProperty("--megh-beam-height", `${beamHeight}px`);
-        actor.style.setProperty("--megh-beam-width", `${Math.max(52, nodeRect.width * .58)}px`);
-        actor.classList.add("is-locking");
-        await this.wait(340);
-        actor.classList.add("is-firing");
-        window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "beam" } }));
-        node.classList.add("abducting-readable");
-        const lift = Math.max(105, target.y - hoverY - 26);
-        await node.animate(
-          [
-            { transform: "translate3d(0,0,0) scale(1)", opacity: 1, filter: "brightness(1)" },
-            { transform: `translate3d(0,-${Math.round(lift * .45)}px,0) scale(.78) rotate(5deg)`, opacity: .9, filter: "brightness(1.5)" },
-            { transform: `translate3d(0,-${Math.round(lift)}px,0) scale(.12) rotate(22deg)`, opacity: 0, filter: "brightness(2.2)" },
-          ],
-          { duration: 920, easing: "cubic-bezier(.2,.7,.25,1)", fill: "forwards" },
-        ).finished.catch(() => undefined);
-        await director.shake("soft", 160);
-        actor.classList.remove("is-firing", "is-locking");
-        await this.wait(180);
-      }
-
-      const exit = new DOMPoint(machineRect.width + actorWidth + 30, hoverY - 42);
-      await director.characters.move(actor, current, exit, { duration: 720 });
-      actor.remove();
-    } else if (intent?.kind === "goat-eat") {
-      window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "goat" } }));
-      effect.remove();
-      for (let index = 0; index < nodes.length; index += 1) {
-        const node = nodes[index]!;
-        const target = centerInMachine(node);
-        const actor = director.characters.create(
-          `megh-goat-actor goat-variant-${index % 4}`,
-          `<img src="${art("goat")}" alt="Space goat">`,
-        );
-        const entry = new DOMPoint(-125, target.y - 56);
-        const approach = new DOMPoint(Math.max(12, target.x - 105), target.y - 56);
-        director.characters.position(actor, entry.x, entry.y);
-        actor.classList.add("is-running");
-        await director.characters.move(actor, entry, approach, { duration: 820, easing: "cubic-bezier(.18,.72,.24,1)" });
-        actor.classList.remove("is-running");
-        actor.classList.add("is-sniffing");
-        node.classList.add("goat-marked-readable");
-        await this.wait(520);
-        actor.classList.remove("is-sniffing");
-        actor.classList.add("is-chomping");
-        window.dispatchEvent(new CustomEvent("casino:sound", { detail: { cue: "chomp" } }));
-        node.classList.add("goat-eaten-readable");
-        director.burst(node, "•", 10, "crumb-particle");
-        await director.shake("soft", 150);
-        await this.wait(700);
-        actor.classList.remove("is-chomping");
-        actor.classList.add("is-running");
-        await director.characters.move(actor, approach, new DOMPoint(machineRect.width + 140, target.y - 56), { duration: 760, easing: "cubic-bezier(.3,.05,.75,.25)" });
-        actor.remove();
-        await this.wait(120);
-      }
-    } else {
-      nodes.forEach((node) => node.classList.add("cosmic-mutating"));
-      director.burst(host, "✦", 12, "cosmic-particle");
-      await director.shake("soft", 220);
-      await this.wait(720);
-      effect.remove();
-      this.render(after);
-      const fresh = targetKeys
-        .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
-        .filter((node): node is HTMLElement => Boolean(node));
-      await Promise.all(fresh.map((node, index) => node.animate(
-        [
-          { transform: "scale(.72)", opacity: 0, filter: "brightness(1.8)" },
-          { transform: "scale(1.04)", opacity: 1, filter: "brightness(1.15)", offset: .82 },
-          { transform: "scale(1)", opacity: 1, filter: "none" },
-        ],
-        { duration: 520, delay: index * 50, easing: "cubic-bezier(.18,.8,.2,1)", fill: "both" },
-      ).finished.catch(() => undefined)));
+      const removed = new Set(targetKeys);
+      let replacementIndex = 0;
+      const wild = SYMBOLS.find((symbol) => symbol.id === "wild")!;
+      const picker = intent.kind === "ufo-abduct"
+        ? () => replacementIndex++ === 0 ? wild : this.pick()
+        : () => this.pick();
+      const resolution = this.resolveTumble(before, removed, picker);
+      await runtime.animateCascade(resolution, { animateRemoval: false, holePauseMs: 340 });
       this.gameState.transition("EVALUATING", true);
-      return after;
+      return resolution.grid.map((row) => [...row]);
     }
 
-    // Goat/UFO events are true removals. Hold the holes, compact each column,
-    // then spawn replacements above the board. No full-grid teleport/render.
-    const removed = new Set(targetKeys);
-    let replacementIndex = 0;
-    const wild = SYMBOLS.find((symbol) => symbol.id === "wild")!;
-    const picker = intent.kind === "ufo-abduct"
-      ? () => replacementIndex++ === 0 ? wild : this.pick()
-      : () => this.pick();
-    const resolution = this.resolveTumble(before, removed, picker);
-    await this.animateCascadeGravity(host, resolution, { animateRemoval: false, holePauseMs: 300 });
-    director.burst(host, "✦", intent.kind === "ufo-abduct" ? 16 : 8, "cosmic-particle");
+    // Non-removal weather mutates exact cells but does not invoke gravity.
+    host.classList.add("megh-feature-focus");
+    nodes.forEach((node) => node.classList.add("cosmic-mutating", "megh-feature-target"));
+    await this.wait(180);
+    effect.remove();
+    this.render(after);
+    const fresh = targetKeys
+      .map((key) => host.querySelector<HTMLElement>(`[data-cell="${key}"]`))
+      .filter((node): node is HTMLElement => Boolean(node));
+    await Promise.all(fresh.map((node, index) => node.animate(
+      [
+        { transform: "scale(.72)", opacity: 0, filter: "brightness(1.8)" },
+        { transform: "scale(1.06)", opacity: 1, filter: "brightness(1.25)", offset: .76 },
+        { transform: "scale(1)", opacity: 1, filter: "none" },
+      ],
+      { duration: 560, delay: index * 52, easing: "cubic-bezier(.18,.8,.2,1)", fill: "both" },
+    ).finished.catch(() => undefined)));
+    host.classList.remove("megh-feature-focus");
     this.gameState.transition("EVALUATING", true);
-    return resolution.grid;
+    return after;
   }
-
   private updateInvasionLadder(): void {
     this.root.querySelectorAll<HTMLElement>("[data-chain]").forEach((node) => node.classList.toggle("lit", Number(node.dataset.chain) <= this.cascadeStreak));
     const label = this.root.querySelector<HTMLElement>("[data-chain-prize]");

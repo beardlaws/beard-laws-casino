@@ -1,0 +1,146 @@
+/* Project Beard M7 — premium board-local animation runtime. Loaded last. */
+.megh-reels {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: visible !important;
+  perspective: 900px;
+}
+.megh-reels > .casino-character-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 180 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+.megh-reels > .cosmic-event.surge-ufo-scan,
+.megh-reels > .cosmic-event.surge-goat-stampede,
+.megh-reels > .cosmic-event.surge-alien-encore-invasion {
+  display: none !important;
+}
+
+.megh-reels.megh-feature-focus .jam-symbol:not(.megh-feature-target) {
+  opacity: .58 !important;
+  filter: brightness(.62) saturate(.82) !important;
+  transition: opacity 180ms linear, filter 180ms linear !important;
+}
+.megh-reels .jam-symbol.megh-feature-target {
+  opacity: 1 !important;
+  filter: brightness(1.18) saturate(1.12) !important;
+  box-shadow: 0 0 0 2px rgba(209,255,113,.9), 0 0 30px rgba(174,255,89,.7) !important;
+  z-index: 32 !important;
+}
+.megh-reels.megh-anticipating .jam-symbol:not(.megh-feature-target) {
+  opacity: .45 !important;
+}
+
+.megh-board-ufo {
+  width: var(--megh-ufo-size, 118px) !important;
+  height: calc(var(--megh-ufo-size, 118px) * .82) !important;
+  z-index: 220 !important;
+  transform-origin: 50% 45% !important;
+}
+.megh-board-ufo > img {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 64% !important;
+  object-fit: contain !important;
+  z-index: 3 !important;
+  filter: drop-shadow(0 10px 7px rgba(0,0,0,.72)) drop-shadow(0 0 18px rgba(203,255,118,.75)) !important;
+  animation: meghM7UfoHover 900ms ease-in-out infinite alternate !important;
+}
+.megh-board-ufo .megh-ufo-beam {
+  position: absolute !important;
+  left: 50% !important;
+  top: 49% !important;
+  display: block !important;
+  width: var(--megh-beam-width, 54px) !important;
+  height: var(--megh-beam-height, 150px) !important;
+  transform: translateX(-50%) scaleY(.02) !important;
+  transform-origin: 50% 0 !important;
+  opacity: 0 !important;
+  clip-path: polygon(44% 0,56% 0,100% 100%,0 100%) !important;
+  background: linear-gradient(180deg, rgba(245,255,205,.96), rgba(184,255,109,.5) 52%, rgba(123,255,220,.08)) !important;
+  filter: drop-shadow(0 0 12px rgba(207,255,122,.82)) !important;
+  z-index: 1 !important;
+}
+.megh-board-ufo.is-locking > img {
+  filter: drop-shadow(0 10px 7px rgba(0,0,0,.72)) drop-shadow(0 0 28px rgba(226,255,137,.95)) brightness(1.18) !important;
+}
+.megh-board-ufo.is-firing .megh-ufo-beam {
+  opacity: .88 !important;
+  transform: translateX(-50%) scaleY(1) !important;
+  transition: transform 170ms cubic-bezier(.15,.7,.2,1), opacity 100ms linear !important;
+  animation: meghM7BeamPulse 220ms ease-in-out infinite alternate !important;
+}
+.megh-board-ufo.is-travelling { filter: drop-shadow(0 0 12px rgba(190,255,117,.32)); }
+
+.megh-board-goat {
+  width: var(--megh-goat-size, 116px) !important;
+  height: var(--megh-goat-size, 116px) !important;
+  z-index: 215 !important;
+}
+.megh-board-goat img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 12px 7px rgba(0,0,0,.72)) !important;
+}
+.megh-board-goat.is-running img { animation: meghM7GoatRun 230ms ease-in-out infinite alternate !important; }
+.megh-board-goat.is-looking img { animation: meghM7GoatLook 180ms ease-out 1 !important; }
+.megh-board-goat.is-sniffing img { animation: meghM7GoatSniff 430ms ease-in-out 1 !important; }
+.megh-board-goat.is-chomping img { animation: meghM7GoatChomp 170ms ease-in-out 4 !important; }
+
+.megh-reels.megh-stage-active { box-shadow: inset 0 0 30px rgba(132,41,170,.2); }
+.megh-reels.megh-gravity-running .jam-symbol {
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  transform-origin: 50% 100%;
+}
+.megh-reels .megh-runtime-hole {
+  opacity: 0 !important;
+  visibility: visible !important;
+  background: radial-gradient(circle at 50% 45%, rgba(55,14,68,.9), rgba(4,1,8,.98) 74%) !important;
+  box-shadow: inset 0 0 28px rgba(0,0,0,.92) !important;
+}
+.megh-reels.megh-board-settled {
+  animation: meghM7BoardSettle 210ms cubic-bezier(.2,.7,.25,1) 1;
+}
+.megh-reels .cascade-new-symbol,
+.megh-reels .cascade-falling-symbol {
+  z-index: 20 !important;
+}
+
+@keyframes meghM7UfoHover {
+  from { translate: 0 -2px; rotate: -1.5deg; }
+  to { translate: 0 3px; rotate: 1.5deg; }
+}
+@keyframes meghM7BeamPulse {
+  to { filter: drop-shadow(0 0 20px rgba(231,255,157,1)) brightness(1.2); opacity: 1; }
+}
+@keyframes meghM7GoatRun {
+  from { transform: translateY(1px) rotate(-1.5deg); }
+  to { transform: translateY(-4px) rotate(1.5deg); }
+}
+@keyframes meghM7GoatLook {
+  50% { transform: rotate(-5deg) translateY(-2px); }
+}
+@keyframes meghM7GoatSniff {
+  35% { transform: translate(6px,4px) rotate(4deg); }
+  70% { transform: translate(10px,6px) rotate(-2deg); }
+}
+@keyframes meghM7GoatChomp {
+  50% { transform: translateX(11px) scale(1.045,.965); }
+}
+@keyframes meghM7BoardSettle {
+  0% { transform: translateY(0); }
+  45% { transform: translateY(1.6px); }
+  100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .megh-board-ufo > img,
+  .megh-board-goat img,
+  .megh-reels.megh-board-settled { animation: none !important; }
+}
