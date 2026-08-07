@@ -401,8 +401,8 @@ export class Application {
     const completed = this.profile.casino.missions.filter((mission) => mission.progress >= mission.target).length;
     this.appRoot.innerHTML = `
       <section class="casino-shell">
-        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "PLAYER CARD INSERTED" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>${this.profile.casino.xp} REPUTATION</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><button class="wallet-pill" data-cashier><small>CASINO WALLET</small><strong>${this.money()}</strong><span>CASHIER →</span></button></div></header>
-        <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><div class="hero-actions"><button class="atm-button" data-atm>VISIT ATM <span>+</span></button><button class="cashier-button" data-bank>BEARD LAWS BANK</button></div></div>
+        <header class="casino-header"><div><span class="eyebrow">WELCOME TO</span><h1>BEARD LAWS CASINO</h1></div><div class="player-cluster"><button class="profile-button" data-profile><small>${this.accounts.state().session ? "PLAYER CARD INSERTED" : "GUEST MODE"}</small><strong>${this.profile.displayName}</strong></button><button class="rank-pill" data-stats><small>${this.profile.casino.xp} REPUTATION</small><strong>${rank.name}</strong><i><span style="width:${rankPercent}%"></span></i></button><button class="wallet-pill" data-cashier><small>CASINO WALLET</small><strong>${this.money()}</strong><span>OPEN CASHIER</span></button></div></header>
+        <div class="hero"><div><p class="kicker">THE HOUSE THAT BEARDS BUILT</p><h2>Your night. Your bankroll. Your game.</h2><p>Start with a fictional entertainment bankroll, chase the Beard Bank vault, or take a seat at Papa's table.</p></div><div class="hero-actions casino-money-actions"><button class="economy-hero-action atm" data-atm><small>FUND THE NIGHT</small><b>VISIT ATM</b></button><button class="economy-hero-action bank" data-bank><small>BETWEEN VISITS</small><b>BEARD LAWS BANK</b></button><button class="economy-hero-action cashier" data-cashier><small>LEAVING?</small><b>CASHIER</b></button></div></div>
         <section class="casino-dashboard v73-dashboard"><button data-bank><small>BEARD LAWS BANK</small><strong>${this.money(this.profile.economy.checkingUnits)} CHECKING</strong><span>${this.profile.economy.activeSession ? "CASINO VISIT ACTIVE" : `${this.profile.economy.sessions.length} VISITS RECORDED`}</span></button><button data-missions><small>DAILY MISSIONS</small><strong>${completed} / 3 COMPLETE</strong><span>${this.profile.casino.missions.map((m) => `<i class="${m.progress >= m.target ? "done" : ""}">${Math.min(m.progress, m.target)}/${m.target}</i>`).join("")}</span></button><button data-stats><small>CASINO PASSPORT</small><strong>${this.profile.casino.achievements.length} STAMPS EARNED</strong><span>Best ${this.profile.casino.biggestMultiplier.toFixed(1)}×</span></button><button data-leaderboard><small>CASINO LEADERBOARD</small><strong>THE BEARD BOARD</strong><span>Players • records • recent legends</span></button><button data-daily><small>DAILY BEARD PASS</small><strong>DAY ${this.profile.casino.dailyStreak} OF 7</strong><span>Return tomorrow to advance</span></button><button class="vault-button" data-vault><small>THE BEARD VAULT</small><strong>${this.profile.casino.beardChips} BEARD CHIPS</strong><span>Skins • characters • trophies</span></button></section>
         <div class="floor-label"><span>CASINO FLOOR</span><span>Fictional credits • No real money</span></div>
         <div class="game-grid">
@@ -683,7 +683,7 @@ export class Application {
     const render = (message = ""): void => {
       const economy = this.profile.economy;
       const openTickets = economy.tickets.filter((ticket) => !ticket.redeemedAtIso);
-      const recent = [...economy.sessions].reverse().slice(0, 8);
+      const recent = [...economy.sessions].reverse().slice(0, 3);
       const sessions = economy.sessions;
       const lifetimeResult = sessions.reduce((sum, session) => sum + session.resultUnits, 0);
       const totalWagered = sessions.reduce((sum, session) => sum + session.totalWageredUnits, 0);
@@ -705,23 +705,34 @@ export class Application {
               : game === "none"
                 ? "CASINO VISIT"
                 : game.replaceAll("-", " ").toUpperCase();
+      const openTicketValue = openTickets.reduce((sum, ticket) => sum + ticket.valueUnits, 0);
 
-      modal.innerHTML = `<section class="atm-modal bank-modal casino-destination-modal">
+      modal.innerHTML = `<section class="atm-modal bank-modal casino-destination-modal economy-destination-v2">
         <button class="close" data-close aria-label="Close">×</button>
-        <header class="economy-modal-header"><small>BEARD LAWS BANK • FICTIONAL ACCOUNTS</small><h2>Your Money Between Casino Visits</h2><p>Bank the night, keep a ticket, or fund the next run. No real money. Plenty of terrible financial decisions.</p></header>
-        <div class="bank-account-cards">
-          <article class="bank-account-card checking"><small>CHECKING</small><strong>${this.money(economy.checkingUnits)}</strong><span>Available for ATM withdrawals</span></article>
-          <article class="bank-account-card savings"><small>SAVINGS</small><strong>${this.money(economy.savingsUnits)}</strong><span>Park fictional winnings here</span></article>
-          <article class="bank-account-card wallet"><small>CASINO WALLET</small><strong>${this.money()}</strong><span>${active ? "Casino visit active" : "Not currently playing"}</span></article>
-          <article class="bank-account-card tickets"><small>OPEN TICKETS</small><strong>${this.money(openTickets.reduce((sum,t)=>sum+t.valueUnits,0))}</strong><span>${openTickets.length} ticket${openTickets.length===1?"":"s"} waiting</span></article>
+        <header class="economy-modal-header compact"><small>BEARD LAWS BANK • FICTIONAL ACCOUNTS</small><h2>Beard Laws Bank</h2><p>Your money between casino visits. Clean, simple, and still a terrible place to ask for investment advice.</p></header>
+
+        <div class="economy-account-strip">
+          <article><small>CHECKING</small><strong>${this.money(economy.checkingUnits)}</strong><span>ATM funding source</span></article>
+          <article><small>SAVINGS</small><strong>${this.money(economy.savingsUnits)}</strong><span>Park fictional winnings</span></article>
+          <article class="wallet"><small>CASINO WALLET</small><strong>${this.money()}</strong><span>${active ? "Visit active" : "No active visit"}</span></article>
+          <article class="tickets"><small>OPEN TICKETS</small><strong>${this.money(openTicketValue)}</strong><span>${openTickets.length} waiting</span></article>
         </div>
-        ${active ? `<section class="active-visit-card"><div><small>TONIGHT'S CASINO VISIT</small><h3>${active.spins} spins • ${active.features} features</h3></div><strong class="${activeResult >= 0 ? "positive" : "negative"}">${activeResult >= 0 ? "+" : ""}${this.money(activeResult)}</strong><p><span>Started ${this.money(active.startingWalletUnits)}</span><span>ATM ${this.money(active.atmWithdrawalsUnits)}</span><span>Wagered ${this.money(active.totalWageredUnits)}</span><span>Wins ${this.money(active.totalWonUnits)}</span></p></section>` : `<section class="active-visit-card idle"><div><small>NO ACTIVE VISIT</small><h3>Ready for the next casino night.</h3></div><p>Visit the ATM to move fictional credits from checking into the casino wallet.</p></section>`}
-        <div class="bank-actions"><button class="primary economy-action" data-atm><b>VISIT ATM</b><small>Move checking → casino wallet</small></button><button class="economy-action" data-cashier ${this.walletUnits<=0?"disabled":""}><b>CASHIER</b><small>Cash out this casino visit</small></button></div>
+
+        ${active ? `<section class="economy-tonight-card"><div><small>TONIGHT'S VISIT</small><h3>${active.spins} spins • ${active.features} features</h3><p>Started ${this.money(active.startingWalletUnits)} • Wagered ${this.money(active.totalWageredUnits)} • Wins ${this.money(active.totalWonUnits)}</p></div><strong class="${activeResult >= 0 ? "positive" : "negative"}">${activeResult >= 0 ? "+" : ""}${this.money(activeResult)}</strong></section>` : `<section class="economy-tonight-card idle"><div><small>NO ACTIVE VISIT</small><h3>Ready for the next casino night.</h3><p>Use the ATM when you are ready to put fictional credits into play.</p></div></section>`}
+
+        <div class="economy-primary-actions">
+          <button class="economy-action primary" data-atm><b>VISIT ATM</b><small>Move checking → casino wallet</small></button>
+          <button class="economy-action" data-cashier ${this.walletUnits<=0?"disabled":""}><b>GO TO CASHIER</b><small>Settle this casino visit</small></button>
+        </div>
         ${message ? `<p class="account-message economy-message">${message}</p>` : ""}
-        <section class="bank-section"><div class="bank-section-heading"><h3>Outstanding Tickets</h3><span>${openTickets.length}</span></div><div class="ticket-list">${openTickets.length ? openTickets.map((ticket) => `<article><div><small>TICKET OUT</small><b>${ticket.id}</b><time>${new Date(ticket.issuedAtIso).toLocaleString()}</time></div><strong>${this.money(ticket.valueUnits)}</strong><div class="ticket-actions"><button data-redeem="${ticket.id}" data-destination="checking">TO CHECKING</button><button data-redeem="${ticket.id}" data-destination="savings">TO SAVINGS</button></div></article>`).join("") : `<div class="bank-empty-state"><b>No outstanding tickets.</b><span>Print one at the cashier if you want to leave the casino without depositing it immediately.</span></div>`}</div></section>
-        <section class="bank-section"><div class="bank-section-heading"><h3>Casino Passport Stats</h3><span>${sessions.length} visits</span></div><div class="bank-stat-grid"><p><small>LIFETIME RESULT</small><b class="${lifetimeResult >= 0 ? "positive" : "negative"}">${lifetimeResult >= 0 ? "+" : ""}${this.money(lifetimeResult)}</b></p><p><small>WINNING VISITS</small><b>${winningVisits}/${sessions.length}</b></p><p><small>TOTAL WAGERED</small><b>${this.money(totalWagered)}</b></p><p><small>RECORDED WINS</small><b>${this.money(totalWon)}</b></p><p><small>BIGGEST WIN</small><b>${this.money(biggestWin)}</b></p><p><small>ATM FEES</small><b>${this.money(economy.lifetimeAtmFeesUnits)}</b></p></div></section>
-        <section class="bank-section"><div class="bank-section-heading"><h3>Recent Casino Visits</h3><span>Last ${Math.min(8,recent.length)}</span></div><div class="session-history">${recent.length ? recent.map((session) => `<article class="${session.resultUnits >= 0 ? "win" : "loss"}"><div class="session-date"><b>${new Date(session.endedAtIso).toLocaleDateString()}</b><small>${new Date(session.endedAtIso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</small></div><div><strong>${gameLabel(session.favoriteGame)}</strong><span>${session.spins} spins • ${session.features} features • biggest ${this.money(session.biggestWinUnits)}</span></div><em>START ${this.money(session.startingWalletUnits)}</em><em>END ${this.money(session.endingWalletUnits)}</em><b class="session-result">${session.resultUnits >= 0 ? "+" : ""}${this.money(session.resultUnits)}</b></article>`).join("") : `<div class="bank-empty-state"><b>No completed casino visits yet.</b><span>Your first cashout will create the first entry.</span></div>`}</div></section>
-        <p class="economy-note">All balances, tickets, winnings and losses are fictional entertainment credits with no cash value.</p>
+
+        <section class="bank-section compact-section"><div class="bank-section-heading"><h3>Outstanding Tickets</h3><span>${openTickets.length}</span></div><div class="ticket-list compact-ticket-list">${openTickets.length ? openTickets.map((ticket) => `<article><div><small>TICKET OUT</small><b>${ticket.id}</b><time>${new Date(ticket.issuedAtIso).toLocaleString()}</time></div><strong>${this.money(ticket.valueUnits)}</strong><div class="ticket-actions"><button data-redeem="${ticket.id}" data-destination="checking">CHECKING</button><button data-redeem="${ticket.id}" data-destination="savings">SAVINGS</button></div></article>`).join("") : `<div class="bank-empty-state"><b>No outstanding tickets.</b><span>Print one at the cashier if you want to leave with a ticket instead of depositing immediately.</span></div>`}</div></section>
+
+        <section class="bank-section compact-section"><div class="bank-section-heading"><h3>Recent Casino Visits</h3><span>Last ${recent.length}</span></div><div class="session-history economy-visit-cards">${recent.length ? recent.map((session) => `<article class="${session.resultUnits >= 0 ? "win" : "loss"}"><div class="visit-main"><small>${new Date(session.endedAtIso).toLocaleDateString()} • ${new Date(session.endedAtIso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</small><strong>${gameLabel(session.favoriteGame)}</strong><span>${session.spins} spins • ${session.features} features • biggest ${this.money(session.biggestWinUnits)}</span></div><div class="visit-money"><small>${this.money(session.startingWalletUnits)} → ${this.money(session.endingWalletUnits)}</small><b class="session-result ${session.resultUnits >= 0 ? "positive" : "negative"}">${session.resultUnits >= 0 ? "+" : ""}${this.money(session.resultUnits)}</b></div></article>`).join("") : `<div class="bank-empty-state"><b>No completed casino visits yet.</b><span>Your first cashout will create the first entry.</span></div>`}</div></section>
+
+        <details class="casino-stats-drawer"><summary>VIEW LIFETIME CASINO STATS <span>${sessions.length} visits</span></summary><div class="bank-stat-grid"><p><small>LIFETIME RESULT</small><b class="${lifetimeResult >= 0 ? "positive" : "negative"}">${lifetimeResult >= 0 ? "+" : ""}${this.money(lifetimeResult)}</b></p><p><small>WINNING VISITS</small><b>${winningVisits}/${sessions.length}</b></p><p><small>TOTAL WAGERED</small><b>${this.money(totalWagered)}</b></p><p><small>RECORDED WINS</small><b>${this.money(totalWon)}</b></p><p><small>BIGGEST WIN</small><b>${this.money(biggestWin)}</b></p><p><small>ATM FEES</small><b>${this.money(economy.lifetimeAtmFeesUnits)}</b></p></div></details>
+
+        <p class="economy-note economy-disclaimer">All balances, tickets, winnings and losses are fictional entertainment credits with no cash value.</p>
       </section>`;
       modal.querySelector("[data-close]")?.addEventListener("click",()=>modal.remove());
       modal.querySelector("[data-atm]")?.addEventListener("click",()=>{modal.remove();this.showAtm();});
@@ -750,29 +761,25 @@ export class Application {
     const session=this.profile.economy.activeSession;
     const tripResult=session ? this.walletUnits-session.startingWalletUnits-session.atmWithdrawalsUnits-session.atmFeesUnits : 0;
     const canCashOut=this.walletUnits>0;
-    modal.innerHTML=`<section class="atm-modal cashier-modal casino-destination-modal">
+    modal.innerHTML=`<section class="atm-modal cashier-modal casino-destination-modal economy-destination-v2 cashier-v2">
       <button class="close" data-close aria-label="Close">×</button>
-      <header class="economy-modal-header"><small>BEARD LAWS CASINO • CASHIER CAGE</small><h2>${session?"Cash Out This Casino Visit":"Cashier"}</h2><p>${session?"Count it, ticket it, or bank it. The Barber does not accept IOUs.":"There is no active casino visit to close."}</p></header>
-      <div class="cashier-total"><span>CASINO WALLET</span><strong>${this.money()}</strong><small>${session?`${session.spins} spins recorded this visit`:"Visit the ATM to start a casino session."}</small></div>
-      ${session?`<div class="cashier-ledger">
-        <p><span>STARTED WITH</span><b>${this.money(session.startingWalletUnits)}</b></p>
-        <p><span>ATM WITHDRAWALS</span><b>${this.money(session.atmWithdrawalsUnits)}</b></p>
-        <p><span>ATM FEES</span><b>-${this.money(session.atmFeesUnits)}</b></p>
-        <p><span>TOTAL WAGERED</span><b>${this.money(session.totalWageredUnits)}</b></p>
-        <p><span>RECORDED WINS</span><b>${this.money(session.totalWonUnits)}</b></p>
-        <p><span>FEATURES</span><b>${session.features}</b></p>
-        <p><span>BIGGEST WIN</span><b>${this.money(session.biggestWinUnits)}</b></p>
-        <p class="result ${tripResult>=0?"positive":"negative"}"><span>NET TRIP RESULT</span><b>${tripResult>=0?"+":""}${this.money(tripResult)}</b></p>
-      </div>`:`<div class="bank-empty-state cashier-empty"><b>No chips on the rail.</b><span>Your casino wallet is empty and there is no active visit to settle.</span></div>`}
-      <div class="cashier-actions">
-        <button class="primary cashout-destination checking" data-cashout="checking" ${canCashOut?"":"disabled"}><b>CASH OUT TO CHECKING</b><small>Deposit the full casino wallet</small></button>
-        <button class="cashout-destination savings" data-cashout="savings" ${canCashOut?"":"disabled"}><b>CASH OUT TO SAVINGS</b><small>Bank the win and pretend you're responsible</small></button>
-        <button class="cashout-destination ticket" data-cashout="ticket" ${canCashOut?"":"disabled"}><b>PRINT TICKET</b><small>Keep a fictional TITO ticket for later</small></button>
-        <button class="cashout-destination keep" data-close><b>KEEP PLAYING</b><small>Return to the casino floor</small></button>
+      <header class="economy-modal-header compact"><small>BEARD LAWS CASINO • CASHIER CAGE</small><h2>${session?"Cash Out This Visit":"Cashier"}</h2><p>${session?"One decision: bank it, save it, ticket it, or keep playing.":"Your casino wallet is empty. Visit the ATM when you are ready for another run."}</p></header>
+
+      <section class="cashier-hero-balance"><small>CASINO WALLET</small><strong>${this.money()}</strong><span>${session?`${session.spins} spins • ${session.features} features this visit`:"No active casino visit"}</span>${session?`<b class="${tripResult>=0?"positive":"negative"}">${tripResult>=0?"+":""}${this.money(tripResult)} THIS VISIT</b>`:""}</section>
+
+      ${session?`<details class="cashier-trip-details"><summary>VIEW VISIT DETAILS</summary><div class="cashier-ledger compact-ledger"><p><span>STARTED</span><b>${this.money(session.startingWalletUnits)}</b></p><p><span>ATM ADDED</span><b>${this.money(session.atmWithdrawalsUnits)}</b></p><p><span>ATM FEES</span><b>-${this.money(session.atmFeesUnits)}</b></p><p><span>WAGERED</span><b>${this.money(session.totalWageredUnits)}</b></p><p><span>RECORDED WINS</span><b>${this.money(session.totalWonUnits)}</b></p><p><span>BIGGEST WIN</span><b>${this.money(session.biggestWinUnits)}</b></p></div></details>`:`<div class="bank-empty-state cashier-empty"><b>No chips on the rail.</b><span>There is nothing to cash out yet.</span></div>`}
+
+      <div class="cashier-destination-grid">
+        <button class="cashout-destination primary checking" data-cashout="checking" ${canCashOut?"":"disabled"}><span>1</span><div><b>CHECKING</b><small>Deposit the full wallet</small></div></button>
+        <button class="cashout-destination savings" data-cashout="savings" ${canCashOut?"":"disabled"}><span>2</span><div><b>SAVINGS</b><small>Put the night away</small></div></button>
+        <button class="cashout-destination ticket" data-cashout="ticket" ${canCashOut?"":"disabled"}><span>3</span><div><b>PRINT TICKET</b><small>Keep a fictional TITO ticket</small></div></button>
+        <button class="cashout-destination keep" data-close><span>↩</span><div><b>KEEP PLAYING</b><small>Return to the casino floor</small></div></button>
       </div>
-      <p class="economy-note">Tickets and bank balances are fictional entertainment credits with no real-world cash value.</p>
+      <button class="cashier-bank-link" data-bank>OPEN BEARD LAWS BANK</button>
+      <p class="economy-note economy-disclaimer">Fictional entertainment credits only • No real-world cash value.</p>
     </section>`;
     modal.querySelectorAll("[data-close]").forEach((node)=>node.addEventListener("click",()=>modal.remove()));
+    modal.querySelector("[data-bank]")?.addEventListener("click",()=>{modal.remove();this.showBank();});
     modal.querySelectorAll<HTMLElement>("[data-cashout]").forEach((button)=>button.addEventListener("click",()=>{
       if(!canCashOut)return;
       const destination=(button.dataset.cashout??"checking") as CashoutDestination;

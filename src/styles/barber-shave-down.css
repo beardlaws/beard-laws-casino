@@ -42,3 +42,18 @@
   .shave-down-trigger,.shave-down-finale,.shave-down-total{inset:5% 3%}
   .razor-lock-row i{width:64px}
 }
+
+/* Project Beard M13.1 — unmistakable paid-spin Razor verification */
+.barber-symbol.s-razor.razor-locked{
+  z-index:12;
+  animation:barberRazorLock .82s cubic-bezier(.16,.8,.2,1) var(--razor-lock-delay,0ms) both;
+  box-shadow:0 0 0 2px #fff3a0,0 0 30px #ffd84f,0 0 62px rgba(255,86,42,.62)!important;
+}
+.razor-feature-locked .barber-symbol:not(.s-razor){filter:brightness(.38) saturate(.6)}
+.razor-feature-locked .barber-message{box-shadow:0 0 34px rgba(255,206,67,.35);border-color:#ffe473}
+@keyframes barberRazorLock{
+  0%{transform:scale(.9);filter:brightness(1)}
+  38%{transform:scale(1.12) rotate(-1deg);filter:brightness(1.8)}
+  64%{transform:scale(1.04) rotate(1deg)}
+  100%{transform:scale(1.07);filter:brightness(1.35)}
+}

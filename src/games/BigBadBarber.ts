@@ -181,12 +181,12 @@ export class BigBadBarber {
       targetRoll:casinoRandom(),
       fortressAwardScale:BARBER_PRODUCTION_MATH.fortressAwardScale,
     });
-    if(qaForcedThreeRazors){
+    if(decision.triggerShaveDown){
+      await this.celebrateRazorTrigger(razors,qaForcedThreeRazors);
+    } else if(qaForcedThreeRazors){
       window.dispatchEvent(new CustomEvent("casino:qa-result",{detail:{
-        ok:decision.triggerShaveDown,
-        message:decision.triggerShaveDown
-          ? "VERIFIED: three Golden Razors were counted by the paid-spin evaluator and launched Shave Down."
-          : `FAILED: three-Razor verification produced razorCount=${razors}.`,
+        ok:false,
+        message:`FAILED: three-Razor verification produced razorCount=${razors}.`,
       }}));
     }
     const outcome=createBarberSpinOutcome({
@@ -343,6 +343,24 @@ export class BigBadBarber {
     try{await this.featureExecution.enqueue(plan);}finally{this.spinning=false;if(this.stateMachine.state==="FEATURE_ACTIVE")this.stateMachine.transition("FEATURE_OUTRO");this.stateMachine.reset();this.update();}
   }
 
+
+  private async celebrateRazorTrigger(count:number,qaForced:boolean):Promise<void>{
+    const machine=this.root.querySelector<HTMLElement>(".barber-machine");
+    const razors=[...this.root.querySelectorAll<HTMLElement>(".barber-symbol.s-razor")];
+    machine?.classList.add("razor-feature-locked");
+    razors.forEach((node,index)=>{node.classList.add("razor-locked");node.style.setProperty("--razor-lock-delay",`${index*120}ms`);});
+    this.message(`${count} GOLDEN RAZORS LOCKED • SHAVE DOWN VERIFIED`);
+    window.dispatchEvent(new CustomEvent("casino:sound",{detail:{cue:"feature"}}));
+    window.dispatchEvent(new CustomEvent("casino:qa-result",{detail:{
+      ok:true,
+      message:qaForced
+        ? "VERIFIED: Force 3 Razors landed through the paid-spin evaluator and Shave Down is launching."
+        : `VERIFIED: natural ${count}-Razor paid spin triggered Shave Down.`,
+    }}));
+    await this.wait(900);
+    razors.forEach((node)=>{node.classList.remove("razor-locked");node.style.removeProperty("--razor-lock-delay");});
+    machine?.classList.remove("razor-feature-locked");
+  }
 
   private async payBaseWin(grid:BarberSymbol[][],result:{award:number;winners:Set<string>}):Promise<void>{const before=this.lastWin;this.render(grid,result.winners);this.lastWin+=result.award;this.setWallet(this.getWallet()+result.award);this.onActivity({type:"win",game:"barber",amount:result.award,value:result.award/this.betUnits,wager:this.betUnits});this.message(`BEARD POWER PAYS $${(result.award/100).toFixed(2)}`);await this.presentation.celebrateWin(before,this.lastWin,this.betUnits);await this.wait(420);}
 
