@@ -69,3 +69,5 @@
 .dev-build { opacity: 0.72; font-size: 0.72rem; overflow-wrap: anywhere; }
 
 @import "./reels.css";
+
+@import "./barber.css";

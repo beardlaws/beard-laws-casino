@@ -1,0 +1,83 @@
+/* Project Beard M5.5 — canonical Big Bad Barber presentation layer. */
+.barber-machine{
+  isolation:isolate;
+  overflow:visible;
+  background:
+    radial-gradient(circle at 50% -8%,rgba(255,188,80,.14),transparent 30%),
+    linear-gradient(180deg,#24111f 0%,#120a12 62%,#09070b 100%)!important;
+}
+.barber-machine:before{
+  content:"";position:absolute;inset:9px;z-index:-1;pointer-events:none;border-radius:25px;
+  background:linear-gradient(115deg,transparent 0 34%,rgba(255,240,176,.07) 43%,transparent 51% 100%);
+  background-size:220% 100%;animation:barberCabinetSheen 11s linear infinite;
+}
+.barber-machine header{position:relative;z-index:3}
+.barber-cinematic-layer{position:absolute;inset:0;z-index:90;pointer-events:none;overflow:visible;border-radius:28px}
+
+/* Living fortress village */
+.fortress-track>i{background:linear-gradient(180deg,#21151e,#100b10)!important;box-shadow:inset 0 1px rgba(255,255,255,.04),0 6px 15px #0009;transition:transform .28s ease,filter .28s ease,box-shadow .28s ease!important}
+.fortress-track>i:after{content:"";position:absolute;left:7px;right:7px;bottom:3px;height:10px;border-radius:50%;background:radial-gradient(ellipse,#060506 15%,transparent 68%);opacity:.7}
+.fort-art{height:66px!important}
+.fort-window{left:31px;bottom:18px;width:10px;height:12px!important;border-radius:2px;background:#2c171c;box-shadow:0 0 0 2px #4e2b27;z-index:2}
+.fort-chimney{display:none!important;right:13px;bottom:46px;width:9px;height:20px!important;background:#4c2b2a;border:2px solid #8a573c;z-index:0}
+.fort-smoke{display:none!important;right:8px;bottom:61px;width:18px;height:18px!important;border-radius:50%;background:rgba(240,226,207,.48);filter:blur(1px);animation:fortSmoke 2.8s ease-out infinite;z-index:0}
+.fort-level-1 .fort-window{background:#7b421e}
+.fort-level-2 .fort-window,.fort-level-3 .fort-window,.fort-level-4 .fort-window{background:#ffd36b;box-shadow:0 0 9px #ffad34,0 0 0 2px #8d532c}
+.fort-level-2 .fort-chimney,.fort-level-3 .fort-chimney,.fort-level-4 .fort-chimney,.fort-level-2 .fort-smoke,.fort-level-3 .fort-smoke,.fort-level-4 .fort-smoke{display:block!important}
+.fort-level-3 .fort-body:after,.fort-level-4 .fort-body:after{content:"";position:absolute;left:5px;right:5px;top:5px;height:5px;background:repeating-linear-gradient(90deg,#e6a849 0 7px,transparent 7px 12px);opacity:.75}
+.fort-level-4{background:radial-gradient(circle at 50% 55%,rgba(255,211,83,.13),#17100f 70%)!important}
+.fort-level-4 .fort-flag{animation:fortFlagWave 1.1s ease-in-out infinite alternate;transform-origin:left center}
+.fort-level-4 .fort-window{animation:fortWindowGlow 1.7s ease-in-out infinite alternate}
+.fortress-track>i.fort-built-flash{animation:fortBuiltFlash .62s cubic-bezier(.2,.9,.25,1)}
+.fortress-track>i.fort-construction{filter:brightness(1.35);box-shadow:0 0 28px rgba(255,190,69,.75),inset 0 0 18px rgba(255,211,103,.22)!important}
+
+/* Builder character crosses the whole cabinet instead of being a text-only upgrade. */
+.barber-builder-foreman{position:absolute;width:72px;height:94px;z-index:2;filter:drop-shadow(0 13px 8px #000b);transform:translate(-50%,-50%)}
+.builder-hardhat{position:absolute;left:15px;top:4px;width:42px;height:25px;border-radius:50% 50% 15% 15%;background:linear-gradient(#ffe56e,#c98220);border:3px solid #fff2a1;box-shadow:inset 0 -6px #9f5d1d}
+.builder-hardhat:after{content:"";position:absolute;left:-7px;right:-7px;bottom:-5px;height:7px;border-radius:6px;background:#e2a236;border:2px solid #ffe987}
+.builder-beard{position:absolute;left:17px;top:31px;width:40px;height:48px;background:linear-gradient(#9c572a,#45241e);clip-path:polygon(5% 0,95% 0,89% 42%,72% 100%,50% 70%,28% 100%,11% 42%);border-radius:9px}
+.builder-beard:before{content:"";position:absolute;left:7px;right:7px;top:8px;height:7px;border-radius:50%;background:#efb083;box-shadow:0 12px 0 -1px #4b1c1c}
+.builder-hammer{position:absolute;right:-13px;top:34px;width:11px;height:54px;border-radius:7px;background:#82461d;transform-origin:50% 82%;transform:rotate(-34deg)}
+.builder-hammer:after{content:"";position:absolute;left:-13px;top:-5px;width:35px;height:16px;border-radius:4px;background:linear-gradient(#f4f7f7,#777f84);border:2px solid #3b2427;box-shadow:0 0 7px #fff8}
+
+/* Anticipation tells the player which reel matters without obscuring the board. */
+.barber-machine.barber-anticipating{box-shadow:0 30px 90px #000,0 0 58px rgba(255,176,48,.52),inset 0 0 80px rgba(107,22,38,.62)!important}
+.barber-machine.barber-anticipating .barber-message{animation:barberMessagePulse .62s ease-in-out infinite alternate}
+.barber-machine.barber-anticipating .barber-reels:after{content:"";position:absolute;top:11px;bottom:11px;right:11px;width:calc((100% - 22px)/5 - 6px);border:3px solid rgba(255,221,96,.82);border-radius:15px;box-shadow:0 0 24px #ffb630,inset 0 0 20px rgba(255,197,63,.18);pointer-events:none;animation:anticipationReel 520ms ease-in-out infinite alternate}
+.barber-reels{position:relative}
+
+/* Targeting keeps the board readable while making the villain threatening. */
+.barber-machine.barber-danger{box-shadow:0 30px 90px #000,0 0 58px rgba(255,43,83,.42),inset 0 0 78px rgba(101,8,31,.74)!important}
+.fortress-track>i.barber-target-lock{z-index:5;transform:translateY(-4px) scale(1.06);filter:brightness(1.45);box-shadow:0 0 0 3px #ff4963,0 0 35px #ff274e,inset 0 0 22px rgba(255,42,71,.35)!important;animation:barberTargetLock .44s ease-in-out infinite alternate}
+.fortress-track>i.barber-target-lock:before{content:"TARGET";position:absolute;left:50%;top:-19px;transform:translateX(-50%);padding:3px 7px;border-radius:999px;background:#b81738;color:#fff7c4;font:1000 8px/1 system-ui;letter-spacing:.13em;box-shadow:0 0 13px #ff365b;z-index:8}
+.barber-target-reel:before{content:"";position:absolute;inset:0;z-index:20;pointer-events:none;background:linear-gradient(90deg,transparent 0 80%,rgba(255,42,70,.06));mix-blend-mode:screen}
+.mean-barber.attack{filter:drop-shadow(0 22px 12px #000) drop-shadow(0 0 18px rgba(255,53,84,.45))}
+.barber-speech{animation:barberSpeechPop .35s cubic-bezier(.2,1.4,.3,1)}
+
+/* Wins count up with cabinet response instead of an instant static number. */
+.slot-control-panel[data-slot-controls="barber"] [data-barber-win]{font-variant-numeric:tabular-nums}
+.barber-symbol.winner{animation:barberWinnerLift .5s ease-in-out infinite alternate!important;z-index:3}
+.barber-symbol.winner .barber-art{filter:drop-shadow(0 8px 4px #0009) drop-shadow(0 0 14px #ffe36d)}
+.barber-spin:not(:disabled),.slot-control-panel[data-slot-controls="barber"] .slot-control-spin:not(:disabled){transition:transform .12s ease,filter .12s ease,box-shadow .18s ease}
+.slot-control-panel[data-slot-controls="barber"] .slot-control-spin:not(:disabled):active{transform:translateY(2px) scale(.985);filter:brightness(.92)}
+
+@keyframes barberCabinetSheen{to{background-position:-220% 0}}
+@keyframes fortSmoke{0%{transform:translate(0,0) scale(.65);opacity:0}25%{opacity:.55}100%{transform:translate(10px,-31px) scale(1.25);opacity:0}}
+@keyframes fortFlagWave{to{transform:skewY(10deg) scaleX(.9)}}
+@keyframes fortWindowGlow{to{filter:brightness(1.45);box-shadow:0 0 15px #ffc54c,0 0 0 2px #a36534}}
+@keyframes fortBuiltFlash{0%{transform:scale(.9);filter:brightness(.7)}45%{transform:translateY(-7px) scale(1.12);filter:brightness(2)}100%{transform:none;filter:none}}
+@keyframes barberMessagePulse{to{filter:brightness(1.35);box-shadow:0 0 22px rgba(255,197,64,.42)}}
+@keyframes anticipationReel{to{filter:brightness(1.5);box-shadow:0 0 35px #ffd650,inset 0 0 30px rgba(255,197,63,.28)}}
+@keyframes barberTargetLock{to{transform:translateY(-6px) scale(1.08)}}
+@keyframes barberSpeechPop{0%{opacity:0;transform:scale(.55) rotate(-7deg)}100%{opacity:1;transform:none}}
+@keyframes barberWinnerLift{to{transform:translateY(-4px) scale(1.025);box-shadow:inset 0 0 34px #ffcf45,0 0 25px #ffcf45}}
+
+@media(max-width:800px){
+  .barber-cinematic-layer{overflow:hidden;border-radius:24px}
+  .barber-builder-foreman{width:58px;height:76px}
+  .builder-hardhat{left:11px;width:36px}.builder-beard{left:13px;width:34px;height:40px}.builder-hammer{right:-11px;height:46px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .barber-machine:before,.fort-smoke,.fort-flag,.fort-window,.barber-symbol.winner,.barber-message{animation:none!important}
+}
