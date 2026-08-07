@@ -47,17 +47,31 @@ export class SpinReplayStore {
     this.append("note", { message, ...details });
   }
 
+  /** Adds diagnostic information after a spin has already completed. */
+  public noteCompleted(message: string, details: Record<string, unknown> = {}): void {
+    if (this.active) {
+      this.append("note", { message, ...details });
+      return;
+    }
+    if (!this.last) return;
+    const startedAt = Date.parse(this.last.startedAtIso);
+    const atMs = Number.isFinite(startedAt) ? Math.max(0, Date.now() - startedAt) : 0;
+    this.last = {
+      ...this.last,
+      events: [
+        ...this.last.events,
+        { atMs, type: "note", payload: { message, ...details } },
+      ],
+    };
+    this.persistLast();
+  }
+
   public finishActive(): void {
     if (!this.active) return;
     this.last = structuredClone(this.active);
     this.active = null;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.last));
-    } catch {
-      // Replays are diagnostic only. Gameplay must never fail on storage limits.
-    }
+    this.persistLast();
   }
-
 
   public attachOutcome(outcome: SpinOutcome): void {
     if (this.active && this.active.game === outcome.game) {
@@ -66,11 +80,7 @@ export class SpinReplayStore {
     }
     if (this.last && this.last.game === outcome.game) {
       this.last = { ...this.last, outcome: structuredClone(outcome) };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.last));
-      } catch {
-        // Diagnostic enrichment must never interrupt gameplay.
-      }
+      this.persistLast();
     }
   }
 
@@ -81,6 +91,15 @@ export class SpinReplayStore {
   public exportLast(): string | null {
     const replay = this.getLast();
     return replay ? JSON.stringify(replay, null, 2) : null;
+  }
+
+
+  private persistLast(): void {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.last));
+    } catch {
+      // Diagnostics must never interrupt gameplay.
+    }
   }
 
   private append(type: ReplayEvent["type"], payload: Record<string, unknown>): void {

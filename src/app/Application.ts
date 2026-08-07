@@ -19,6 +19,8 @@ import { BUILD_INFO, buildFingerprint } from "../build/BuildInfo";
 import { SpinReplayStore } from "../engine/replay/SpinReplayStore";
 import { SpinOutcomeStore } from "../engine/outcome/SpinOutcomeStore";
 import type { SpinOutcome } from "../engine/contracts/SpinOutcome";
+import { FeatureExecutionPipeline } from "../engine/feature/FeatureExecutionPipeline";
+import { planFeatureExecution } from "../engine/feature/SpinOutcomeFeaturePlanner";
 
 type GameId =
   | "beard-bank"
@@ -40,6 +42,30 @@ export class Application {
   private readonly telemetry = new CasinoTelemetryStore();
   private readonly replay = new SpinReplayStore();
   private readonly outcomes = new SpinOutcomeStore();
+  private readonly featureExecution = new FeatureExecutionPipeline({
+    observer: {
+      onPlanStart: (plan) => {
+        this.replay.noteCompleted("feature-pipeline-start", { planId: plan.id, outcomeId: plan.spinOutcomeId });
+        window.dispatchEvent(new CustomEvent("casino:pipeline", { detail: { phase: "start", plan } }));
+      },
+      onStepStart: ({ plan, step }) => {
+        this.replay.noteCompleted("feature-pipeline-step", {
+          planId: plan.id,
+          stepId: step.id,
+          kind: step.kind,
+          label: step.label,
+        });
+        window.dispatchEvent(new CustomEvent("casino:pipeline", { detail: { phase: "step", planId: plan.id, step } }));
+      },
+      onPlanComplete: (plan) => {
+        this.replay.noteCompleted("feature-pipeline-complete", { planId: plan.id });
+        window.dispatchEvent(new CustomEvent("casino:pipeline", { detail: { phase: "complete", plan } }));
+      },
+      onError: (plan, step, error) => {
+        console.error("Feature execution observer failed.", { plan, step, error });
+      },
+    },
+  });
   private currentGameId: GameId | "lobby" = "lobby";
 
   public async initialize(): Promise<void> {
@@ -291,6 +317,10 @@ export class Application {
   private acceptOutcome(outcome: SpinOutcome): void {
     this.replay.attachOutcome(outcome);
     window.dispatchEvent(new CustomEvent("casino:outcome", { detail: outcome }));
+    const plan = planFeatureExecution(outcome);
+    void this.featureExecution.enqueue(plan).catch((error: unknown) => {
+      console.error("Feature execution plan failed.", error);
+    });
   }
 
   private applyUnlockedRewards(): void {
