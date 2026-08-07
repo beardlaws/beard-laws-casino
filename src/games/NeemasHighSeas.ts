@@ -71,13 +71,13 @@ const SYMBOLS: readonly SeaSymbol[] = [
     id: "ticket",
     art: art("ticket"),
     label: "CRUISE TICKET",
-    weight: 2.5,
+    weight: 2.0,
     pay: [0, 0, 0],
   },
 ];
 const REELS = 5;
 const ROWS = 3;
-const DEPARTURE_TARGET = 50;
+const DEPARTURE_TARGET = 110;
 const HAPPY_HOUR_TRIGGER = 3;
 const MAX_VOYAGE_SPINS = 60;
 const MAX_VOYAGE_RETRIGGERS = 6;
@@ -96,7 +96,8 @@ export const NEEMA_PRODUCTION_MATH = {
   happyHourTrigger: HAPPY_HOUR_TRIGGER,
   maxVoyageSpins: MAX_VOYAGE_SPINS,
   maxVoyageRetriggers: MAX_VOYAGE_RETRIGGERS,
-  linePayScale: 0.59,
+  linePayScale: 0.62,
+  featurePayScale: 0.25,
   lines: LINES,
   symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
 } as const;
@@ -276,7 +277,7 @@ export class NeemasHighSeas {
     // Five displayed lines share one $1 wager. The early-access base game is
     // intentionally conservative so the upgrade/free-spin economy has room.
     return {
-      award: Math.round(totalX * this.betUnits * 0.59),
+      award: Math.round(totalX * this.betUnits * NEEMA_PRODUCTION_MATH.linePayScale),
       winners,
       summary: hits.join("  +  "),
     };
@@ -331,7 +332,7 @@ export class NeemasHighSeas {
     const captains = grid.flat().filter((s) => s.id === "captain").length;
     if (free) {
       const routeBoost = this.route === "casino" ? 1.35 : this.route === "mystery" && casinoRandom() < .3 ? 2 : 1;
-      award = Math.round(award * this.bonusMultiplier * routeBoost);
+      award = Math.round(award * this.bonusMultiplier * routeBoost * NEEMA_PRODUCTION_MATH.featurePayScale);
       if (captains > 0) {
         this.voyageStops = Math.min(4, this.voyageStops + captains);
         this.onActivity({ type: "voyage", game: "neema", value: this.voyageStops });
@@ -370,7 +371,7 @@ export class NeemasHighSeas {
       if (!retrigger) {
         let happyHourAward = 0;
         try {
-          happyHourAward = await this.playFrozenHappyHour(Math.max(6, tickets + 3));
+          happyHourAward = Math.round((await this.playFrozenHappyHour(Math.max(6, tickets + 3))) * NEEMA_PRODUCTION_MATH.featurePayScale);
         } catch (error) {
           console.error("Frozen Happy Hour recovered from an unexpected error.", error);
           localStorage.removeItem("beard-laws-neema-frozen-happy-hour");

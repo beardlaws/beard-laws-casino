@@ -113,7 +113,7 @@ const simulateBarber = (spins: number, seed: number): ProductionSimulationReport
         length += 1;
         ways *= matches;
       }
-      if (length >= 3) total += Number(target.pay) * ways * (length - 2) / 10;
+      if (length >= config.minimumMatch) total += Number(target.pay) * config.basePayScale * ways * (length - config.minimumMatch + 1) / 10;
     }
     return total;
   };
@@ -135,7 +135,7 @@ const simulateBarber = (spins: number, seed: number): ProductionSimulationReport
     if (!built.length) return 0;
     const target = built[Math.floor(rng() * built.length)]!;
     forts[target.index] = 0;
-    return config.fortressMultipliers[target.level]!;
+    return config.fortressMultipliers[target.level]! * config.fortressAwardScale;
   };
 
   for (let paid = 0; paid < spins; paid += 1) {
@@ -178,7 +178,7 @@ const simulateBarber = (spins: number, seed: number): ProductionSimulationReport
   }
   longestDrought = Math.max(longestDrought, drought);
   return summarize('barber', spins, seed, baseWon, featureWon, returns, featureWins, nearMisses, longestLosing, longestDrought, [
-    'Uses Big Bad Barber production symbol weights, 243-ways evaluator, Builder upgrades, 48% paid-spin attack rule, fortress multipliers, and eight Shave Down free spins.',
+    'Uses Big Bad Barber production symbol weights, 243-ways evaluator, four-reel minimum match, Builder upgrades, 14% paid-spin attack rule, scaled fortress awards, and eight Shave Down free spins.',
     'Presentation-only Barber variants are intentionally excluded because they do not change payouts.',
   ]);
 };
@@ -251,7 +251,7 @@ const simulateMegh = (spins: number, seed: number): ProductionSimulationReport =
       cascadeCount += 1;
       const removed = new Set(matches.flatMap((match) => [...match.cells]));
       const raw = matches.reduce((sum, match) => sum + match.symbol.pay * match.cells.size, 0);
-      total += raw * multiplier * config.cascadePayScale / 100;
+      total += raw * multiplier * config.cascadePayScale * (free ? config.featurePayScale : 1) / 100;
       removedEnergy += removed.size;
       for (const match of matches) {
         const channel = channelMap[match.symbol.id];
@@ -274,7 +274,7 @@ const simulateMegh = (spins: number, seed: number): ProductionSimulationReport =
     let paidReturn = result.total;
     soundcheck = Math.min(config.soundcheckTarget, soundcheck + 1 + result.ufos);
     result.channels.forEach((channel) => soundboard.add(channel));
-    const feature = result.ufos >= 3 || result.cascadeCount >= 4 || soundboard.size >= 3 || soundcheck >= config.soundcheckTarget;
+    const feature = result.ufos >= 3 || result.cascadeCount >= 4 || soundcheck >= config.soundcheckTarget;
     if (result.ufos === 2) nearMisses += 1;
     if (feature) {
       soundcheck = 0;
@@ -313,7 +313,7 @@ const simulateMegh = (spins: number, seed: number): ProductionSimulationReport =
   }
   longestDrought = Math.max(longestDrought, drought);
   return summarize('megh', spins, seed, baseWon, featureWon, returns, featureWins, nearMisses, longestLosing, longestDrought, [
-    'Uses Cosmic Jam production symbol weights, 6+ orthogonal cluster rules, wild substitution, gravity tumbles, multiplier growth, Soundcheck meter, Soundboard channels, Encore drop counts, retriggers, and Guitar Smash factors.',
+    'Uses Cosmic Jam production symbol weights, 6+ orthogonal cluster rules, wild substitution, gravity tumbles, 100-point Soundcheck guarantee, feature-only payout scaling, Encore drop counts, retriggers, and Guitar Smash factors.',
     'Player choice among Encore modes and Guitar Smash picks is simulated uniformly.',
   ]);
 };
@@ -417,7 +417,7 @@ const simulateNeema = (spins: number, seed: number): ProductionSimulationReport 
     if (feature) {
       departure = 0;
       const route = rng() < 1 / 3 ? 'party' : rng() < 0.5 ? 'casino' : 'mystery';
-      let bonus = frozenHappyHour(Math.max(6, tickets + 3));
+      let bonus = frozenHappyHour(Math.max(6, tickets + 3)) * config.featurePayScale;
       let freeSpins = route === 'party' ? 14 : 10;
       let cabin = 1;
       let multiplier = 2;
@@ -430,7 +430,7 @@ const simulateNeema = (spins: number, seed: number): ProductionSimulationReport 
         let win = evaluate(freeBoard) * multiplier;
         if (route === 'casino') win *= 1.35;
         else if (route === 'mystery' && rng() < 0.3) win *= 2;
-        bonus += win;
+        bonus += win * config.featurePayScale;
         const captains = freeBoard.flat().filter((item) => item.id === 'captain').length;
         if (captains > 0) {
           voyageStops = Math.min(4, voyageStops + captains);
@@ -454,7 +454,7 @@ const simulateNeema = (spins: number, seed: number): ProductionSimulationReport 
   }
   longestDrought = Math.max(longestDrought, drought);
   return summarize('neema', spins, seed, baseWon, featureWon, returns, featureWins, nearMisses, longestLosing, longestDrought, [
-    'Uses High Seas production symbol weights, five displayed paylines, wild substitution, 0.59 line scale, rotating Happy Hour event deck, Ticket/Departure triggers, Frozen Happy Hour rules, voyage routes, cabin multipliers, Captain stops, and retriggers.',
+    'Uses High Seas production symbol weights, five displayed paylines, wild substitution, 0.62 line scale, 110-point Departure guarantee, feature-only payout scaling, rotating Happy Hour event deck, Ticket triggers, Frozen Happy Hour rules, voyage routes, cabin multipliers, Captain stops, and retriggers.',
     'Interactive route choice is simulated uniformly; Frozen Happy Hour player input is automatic in the live game as well.',
   ]);
 };

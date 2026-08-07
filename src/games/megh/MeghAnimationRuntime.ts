@@ -191,7 +191,7 @@ export class MeghAnimationRuntime {
     // a board-local hover point; no negative-Y actor coordinates can leak onto
     // the purple cabinet background.
     const firstTarget = centerInHost(this.host, nodes[0]!);
-    let current = new DOMPoint(8, Math.max(6, Math.min(hostRect.height - actorHeight - 6, firstTarget.y - actorHeight * .92)));
+    let current = new DOMPoint(8, Math.max(6, Math.min(hostRect.height - actorHeight - 6, firstTarget.y - actorHeight * .58)));
     director.characters.position(actor, -actorWidth + 8, current.y);
     actor.classList.add("is-travelling");
     premium.cue("ufo-enter");
@@ -202,7 +202,7 @@ export class MeghAnimationRuntime {
 
     for (const node of nodes) {
       const target = centerInHost(this.host, node);
-      const hoverY = Math.max(6, Math.min(hostRect.height - actorHeight - 6, target.y - actorHeight * .92));
+      const hoverY = Math.max(6, Math.min(hostRect.height - actorHeight - 6, target.y - actorHeight * .58));
       const hoverX = Math.max(4, Math.min(hostRect.width - actorWidth - 4, target.x - actorWidth / 2));
       const hover = new DOMPoint(hoverX, hoverY);
       await director.characters.move(actor, current, hover, {
@@ -215,11 +215,11 @@ export class MeghAnimationRuntime {
       this.host.classList.add("megh-anticipating");
       premium.cue("ufo-lock", { cell: node.dataset.cell ?? "" });
       premium.pulse("cosmic", 380);
-      await this.options.wait(420);
+      await this.options.wait(650);
 
       const nodeRect = node.getBoundingClientRect();
       const actorBeamOriginY = hoverY + actorHeight * .47;
-      const beamHeight = Math.max(38, target.y - actorBeamOriginY);
+      const beamHeight = Math.max(34, Math.min(112, target.y - actorBeamOriginY));
       actor.style.setProperty("--megh-beam-height", `${beamHeight}px`);
       actor.style.setProperty("--megh-beam-width", `${Math.max(48, nodeRect.width * .68)}px`);
       actor.classList.add("is-firing");
@@ -237,7 +237,7 @@ export class MeghAnimationRuntime {
           { transform: `translate3d(0,-${Math.round(lift * .62)}px,0) scale(.63) rotate(8deg)`, opacity: .82, filter: "brightness(1.8)", offset: .68 },
           { transform: `translate3d(0,-${Math.round(lift)}px,0) scale(.06) rotate(20deg)`, opacity: 0, filter: "brightness(2.5) blur(2px)" },
         ],
-        { duration: 1050, easing: "cubic-bezier(.16,.58,.18,1)", fill: "forwards" },
+        { duration: 1250, easing: "cubic-bezier(.16,.58,.18,1)", fill: "forwards" },
       ).finished.catch(() => undefined);
       await premium.impact("soft");
       director.burst(node, "✦", 10, "cosmic-particle");

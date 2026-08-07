@@ -36,6 +36,8 @@ export interface ResolveBarberRuntimeInput {
   readonly attackRoll: number;
   /** 0 <= value < 1. Used only when an attack target is required. */
   readonly targetRoll: number;
+  /** Multiplies the displayed fortress multiplier into a production payout. */
+  readonly fortressAwardScale?: number;
 }
 
 export function resolveBarberRuntime(input: ResolveBarberRuntimeInput): BarberRuntimeDecision {
@@ -75,7 +77,7 @@ export function resolveBarberRuntime(input: ResolveBarberRuntimeInput): BarberRu
       targetReel: target.reel,
       fortressLevel: target.level,
       multiplier,
-      awardUnits: Math.max(0, Math.round(input.wagerUnits * multiplier)),
+      awardUnits: Math.max(0, Math.round(input.wagerUnits * multiplier * (input.fortressAwardScale ?? 1))),
     };
     levels[target.reel] = 0;
   }

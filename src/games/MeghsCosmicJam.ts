@@ -78,7 +78,7 @@ export class MeghsCosmicJam {
       <section class="megh-machine"><div class="laser-grid"></div><div class="megh-marquee"><span>LIVE TUMBLES</span><strong>INTERGALACTIC ENCORE</strong><span>PERSISTENT MULTIPLIERS</span></div><div class="soundcheck-meter"><span><b data-soundcheck-label>SOUNDCHECK 0 / ${SOUNDCHECK_TARGET}</b><small>3 UFOS OR A FULL METER LAUNCHES THE ENCORE</small></span><i><em data-soundcheck-fill></em></i></div><div class="megh-top">
         <div><small>TRACTOR MULTIPLIER</small><b data-megh-multi>1×</b></div><strong data-megh-message>AMPLIFIERS READY</strong><div><small>ENCORE METER</small><b data-megh-encore>0 / 4</b></div></div>
         <div class="cosmic-surge" data-megh-surge><small>COSMIC WEATHER</small><b>SYSTEMS NOMINAL</b></div><div class="invasion-ladder"><small>INVASION CHAIN</small>${Array.from({length:8},(_,i)=>`<i data-chain="${i+1}">${i+1}</i>`).join("")}<b data-chain-prize>4 CASCADES = ENCORE • 8 = 50 DROPS</b></div><div class="megh-ledger" aria-label="Game totals"><span><small>ACCOUNT</small><b data-megh-ledger-credit>$0.00</b></span><span><small>LAST WIN</small><b data-megh-ledger-win>$0.00</b></span><span><small>BONUS WIN</small><b data-megh-ledger-bonus>$0.00</b></span></div><div class="slot-win-callout megh-win-callout" data-megh-callout hidden></div><div class="feature-readout cosmic-readout" data-megh-feature hidden><b data-megh-freedrops></b><span data-megh-feature-multi></span><span data-megh-stage></span></div><div class="megh-reels" data-megh-reels></div>
-        <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>FILL 3 CHANNELS: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
+        <div class="cosmic-soundboard" data-soundboard>${["BASS", "LEAD", "DRUMS", "VOCALS", "UFO"].map((x) => `<i data-channel="${x}">${x}</i>`).join("")}</div><div class="megh-feature"><span>SOUNDCHECK 100: ENCORE</span><span>FILL ALL 5: HEADLINER</span><span>MULTIPLIER TILES PERSIST</span></div>
         <div class="megh-controls"><div><small>CREDIT</small><b data-megh-credit></b></div>${denominationMarkup("megh")}<div class="bet-selector"><button data-megh-bet-down aria-label="Decrease bet">−</button><span><small>BET • <i data-megh-credits></i> CR</small><b data-megh-bet>$1.00</b></span><button data-megh-bet-up aria-label="Increase bet">+</button></div><div><small>WIN</small><b data-megh-win>$0.00</b></div>
           <button data-megh-max>MAX BET</button><button data-megh-auto>AUTO</button><button class="megh-spin" data-megh-spin>DROP</button></div>
         <div class="megh-auto-menu" data-megh-menu hidden>${[5, 10, 25, 50].map((n) => `<button data-auto="${n}">${n}</button>`).join("")}<button data-auto="infinite">∞</button></div>
@@ -229,7 +229,7 @@ export class MeghsCosmicJam {
         0,
       );
       const award = Math.round(
-        (raw * this.multiplier * 3.15 * this.betUnits) / 100,
+        (raw * this.multiplier * MEGH_PRODUCTION_MATH.cascadePayScale * this.betUnits * (free ? MEGH_PRODUCTION_MATH.featurePayScale : 1)) / 100,
       );
       total += award;
       this.encore += 1;
@@ -263,7 +263,7 @@ export class MeghsCosmicJam {
     const guaranteedEncore = !free && (this.soundcheck >= SOUNDCHECK_TARGET || this.forceEncore);
     if (this.forceEncore) this.forceEncore = false;
     const headliner = !free && this.soundboard.size >= 5;
-    if (ufos >= 3 || (!free && this.encore >= 4) || (!free && this.soundboard.size >= 3) || guaranteedEncore) {
+    if (ufos >= 3 || (!free && this.encore >= 4) || guaranteedEncore) {
       feature = true;
       if (!free) {
         this.soundcheck = 0;

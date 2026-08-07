@@ -23,9 +23,9 @@ const SYMBOLS: readonly BarberSymbol[] = [
   {id:"comb",label:"GOLD COMB",weight:18,pay:10,art:svg('<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#9e5f12"/><stop offset=".5" stop-color="#fff19b"/><stop offset="1" stop-color="#b66c18"/></linearGradient></defs><path d="M17 23h66v22H17z" rx="8" fill="url(#g)" stroke="#fff0a0" stroke-width="4"/><path d="M23 44v36M33 44v29M43 44v36M53 44v29M63 44v36M73 44v29" stroke="url(#g)" stroke-width="7" stroke-linecap="round"/>')},
   {id:"pole",label:"BARBER POLE",weight:15,pay:13,art:svg('<rect x="33" y="15" width="34" height="70" rx="17" fill="#f8f3e5" stroke="#ffc95d" stroke-width="5"/><path d="M35 25l30 18M35 43l30 18M35 61l30 18" stroke="#d83946" stroke-width="10"/><path d="M65 25L35 43M65 61L35 79" stroke="#3276d1" stroke-width="8"/><ellipse cx="50" cy="14" rx="22" ry="7" fill="#e7b447"/><ellipse cx="50" cy="86" rx="22" ry="7" fill="#e7b447"/>')},
   {id:"clipper",label:"POWER CLIPPERS",weight:11,pay:18,art:svg('<path d="M29 16h42l-5 18H34z" fill="#dde6ec" stroke="#fff" stroke-width="4"/><path d="M35 34h30l10 45Q51 94 25 79z" fill="#4f2738" stroke="#f2b950" stroke-width="5"/><path d="M41 18v-8M50 18V8M59 18v-8" stroke="#fff" stroke-width="5"/><circle cx="50" cy="61" r="9" fill="#ffd35a"/><path d="M50 57v8" stroke="#6d341c" stroke-width="4"/>')},
-  {id:"builder",label:"BEARD BUILDER",weight:9,pay:0,art:svg('<path d="M20 37h60v46H20z" fill="#9d5a25" stroke="#ffd072" stroke-width="5"/><path d="M16 32h68v15H16z" fill="#d88932" stroke="#ffe08a" stroke-width="4"/><path d="M31 24q19-19 38 0v9H31z" fill="#f0bb3d" stroke="#fff09a" stroke-width="4"/><path d="M42 16v16M58 16v16" stroke="#fff09a" stroke-width="4"/><path d="M35 57h30M35 68h22" stroke="#ffdf8a" stroke-width="5"/>')},
-  {id:"wild",label:"NO SHAVE WILD",weight:4,pay:22,art:svg('<defs><radialGradient id="w"><stop stop-color="#fff8a6"/><stop offset="1" stop-color="#d47a1e"/></radialGradient></defs><circle cx="50" cy="50" r="42" fill="url(#w)" stroke="#fff5a4" stroke-width="5"/><path d="M22 51Q37 29 50 49Q63 29 78 51Q63 74 50 56Q37 74 22 51" fill="#42202b"/><text x="50" y="88" text-anchor="middle" font-size="15" font-weight="900" fill="#421b25">WILD</text>')},
-  {id:"razor",label:"GOLDEN RAZOR",weight:2,pay:0,art:svg('<path d="M18 30h64v22H18z" rx="8" fill="#f8d260" stroke="#fff2a3" stroke-width="5"/><path d="M28 52h44l-7 14H35z" fill="#d9e8ee" stroke="#fff" stroke-width="4"/><path d="M50 66v22" stroke="#d8922d" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="89" r="7" fill="#ffe070"/>')},
+  {id:"builder",label:"BEARD BUILDER",weight:6,pay:0,art:svg('<path d="M20 37h60v46H20z" fill="#9d5a25" stroke="#ffd072" stroke-width="5"/><path d="M16 32h68v15H16z" fill="#d88932" stroke="#ffe08a" stroke-width="4"/><path d="M31 24q19-19 38 0v9H31z" fill="#f0bb3d" stroke="#fff09a" stroke-width="4"/><path d="M42 16v16M58 16v16" stroke="#fff09a" stroke-width="4"/><path d="M35 57h30M35 68h22" stroke="#ffdf8a" stroke-width="5"/>')},
+  {id:"wild",label:"NO SHAVE WILD",weight:2,pay:22,art:svg('<defs><radialGradient id="w"><stop stop-color="#fff8a6"/><stop offset="1" stop-color="#d47a1e"/></radialGradient></defs><circle cx="50" cy="50" r="42" fill="url(#w)" stroke="#fff5a4" stroke-width="5"/><path d="M22 51Q37 29 50 49Q63 29 78 51Q63 74 50 56Q37 74 22 51" fill="#42202b"/><text x="50" y="88" text-anchor="middle" font-size="15" font-weight="900" fill="#421b25">WILD</text>')},
+  {id:"razor",label:"GOLDEN RAZOR",weight:2.5,pay:0,art:svg('<path d="M18 30h64v22H18z" rx="8" fill="#f8d260" stroke="#fff2a3" stroke-width="5"/><path d="M28 52h44l-7 14H35z" fill="#d9e8ee" stroke="#fff" stroke-width="4"/><path d="M50 66v22" stroke="#d8922d" stroke-width="9" stroke-linecap="round"/><circle cx="50" cy="89" r="7" fill="#ffe070"/>')},
 ];
 const COLS=5, ROWS=3, MAX_LEVEL=4;
 const FORT_NAMES=["EMPTY LOT","STUBBLE SHACK","LUMBER BEARD CABIN","VIKING BEARD HALL","GOLDEN BEARD CASTLE"];
@@ -37,7 +37,10 @@ export const BARBER_PRODUCTION_MATH = {
   maxFortressLevel: MAX_LEVEL,
   fortressMultipliers: FORT_MULT,
   bonusSpins: 8,
-  attackChance: 0.48,
+  attackChance: 0.14,
+  basePayScale: 0.47,
+  minimumMatch: 4,
+  fortressAwardScale: 0.06,
   symbols: SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
 } as const;
 
@@ -51,6 +54,7 @@ export class BigBadBarber {
   private fortressLevels=[0,0,0,0,0];
   private currentGrid:BarberSymbol[][]=[];
   private forceTwoRazors=false;
+  private forceThreeRazors=false;
   private spinSequence=0;
   private presentation!:BarberPresentation;
   private readonly stateMachine=new GameStateMachine("barber");
@@ -72,6 +76,7 @@ export class BigBadBarber {
       void this.runQaFeature("barber-attack");
     }
     if(action==="barber-two-razors"&&!this.spinning){this.forceTwoRazors=true;this.message("QA ARMED • TWO-RAZOR ANTICIPATION ON NEXT SPIN");}
+    if(action==="barber-three-razors"&&!this.spinning){this.forceThreeRazors=true;this.message("QA ARMED • THREE GOLDEN RAZORS ON NEXT SPIN");}
     if(action==="barber-max-forts"&&!this.spinning){this.fortressLevels=[4,4,4,4,4];this.updateFortresses();this.message("QA • ALL GOLDEN BEARD CASTLES BUILT");}
   };
   public constructor(private readonly root:HTMLElement,private readonly getWallet:()=>number,private readonly setWallet:(units:number)=>void,private readonly onExit:()=>void,private readonly onActivity:(activity:CasinoActivity)=>void=()=>{}){}
@@ -112,7 +117,7 @@ export class BigBadBarber {
   private symbolMarkup(s:BarberSymbol):string{return `<div class="barber-symbol s-${s.id}"><span>${s.art}</span><small>${s.label}</small></div>`;}
   private render(grid:BarberSymbol[][],winners=new Set<string>()):void{const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;host.innerHTML=grid.flatMap((row,y)=>row.map((s,x)=>`<div class="barber-symbol s-${s.id}${winners.has(`${x}:${y}`)?" winner":""}" style="grid-column:${x+1};grid-row:${y+1}"><span>${s.art}</span><small>${s.label}</small></div>`)).join("");}
 
-  private evaluate(grid:BarberSymbol[][]):{award:number;winners:Set<string>}{let total=0;const winners=new Set<string>();for(const target of SYMBOLS.filter(s=>!["razor","wild","builder"].includes(s.id))){let ways=1,length=0;const local:string[]=[];for(let x=0;x<COLS;x++){const ys=grid.map((r,y)=>({s:r[x]!,y})).filter(v=>v.s.id===target.id||v.s.id==="wild");if(!ys.length)break;length++;ways*=ys.length;ys.forEach(v=>local.push(`${x}:${v.y}`));}if(length>=3){local.forEach(v=>winners.add(v));total+=Math.round(target.pay*ways*(length-2)*this.betUnits/10);}}return{award:total,winners};}
+  private evaluate(grid:BarberSymbol[][]):{award:number;winners:Set<string>}{let total=0;const winners=new Set<string>();const minimum=BARBER_PRODUCTION_MATH.minimumMatch;for(const target of SYMBOLS.filter(s=>!["razor","wild","builder"].includes(s.id))){let ways=1,length=0;const local:string[]=[];for(let x=0;x<COLS;x++){const ys=grid.map((r,y)=>({s:r[x]!,y})).filter(v=>v.s.id===target.id||v.s.id==="wild");if(!ys.length)break;length++;ways*=ys.length;ys.forEach(v=>local.push(`${x}:${v.y}`));}if(length>=minimum){local.forEach(v=>winners.add(v));total+=Math.round(target.pay*BARBER_PRODUCTION_MATH.basePayScale*ways*(length-minimum+1)*this.betUnits/10);}}return{award:total,winners};}
 
   private async spin():Promise<void>{
     if(this.spinning||(!this.bonusSpins&&this.getWallet()<this.betUnits))return;
@@ -130,12 +135,13 @@ export class BigBadBarber {
     this.root.querySelector(".barber-machine")?.classList.add("barber-spinning");this.update();
 
     const grid=this.makeGrid();
-    if(this.forceTwoRazors){
+    if(this.forceTwoRazors || this.forceThreeRazors){
       const razor=SYMBOLS.find(s=>s.id==="razor")!;
       const wax=SYMBOLS.find(s=>s.id==="wax")!;
-      grid[1]![0]=razor;grid[1]![2]=razor;
-      grid.forEach((row,y)=>row.forEach((symbol,x)=>{if(symbol.id==="razor"&&!((x===0||x===2)&&y===1))row[x]=wax;}));
+      const forced = this.forceThreeRazors ? new Set(["0:1","2:1","4:1"]) : new Set(["0:1","2:1"]);
+      grid.forEach((row,y)=>row.forEach((symbol,x)=>{row[x]=forced.has(`${x}:${y}`)?razor:(symbol.id==="razor"?wax:symbol);}));
       this.forceTwoRazors=false;
+      this.forceThreeRazors=false;
     }
     this.currentGrid=grid;
     const host=this.root.querySelector<HTMLElement>("[data-barber-reels]")!;
@@ -166,6 +172,7 @@ export class BigBadBarber {
       attackChance:BARBER_PRODUCTION_MATH.attackChance,
       attackRoll:casinoRandom(),
       targetRoll:casinoRandom(),
+      fortressAwardScale:BARBER_PRODUCTION_MATH.fortressAwardScale,
     });
     const outcome=createBarberSpinOutcome({
       id:spinId,
@@ -314,7 +321,7 @@ export class BigBadBarber {
     }else{
       const built=this.fortressLevels.map((level,reel)=>({level,reel})).filter(entry=>entry.level>0);
       const target=built[0]!;const multiplier=FORT_MULT[target.level]??0;
-      step={id:`qa-attack-${Date.now()}`,kind:"feature",game:"barber",order:0,delayMs:0,label:kind,payload:Object.freeze({targetReel:target.reel,fortressLevel:target.level,multiplier,awardUnits:this.betUnits*multiplier,qa:true})};
+      step={id:`qa-attack-${Date.now()}`,kind:"feature",game:"barber",order:0,delayMs:0,label:kind,payload:Object.freeze({targetReel:target.reel,fortressLevel:target.level,multiplier,awardUnits:this.betUnits*multiplier*BARBER_PRODUCTION_MATH.fortressAwardScale,qa:true})};
     }
     const plan:FeatureExecutionPlan=Object.freeze({schemaVersion:1,id:`qa-plan-${Date.now()}`,spinOutcomeId:`qa-${Date.now()}`,game:"barber",createdAtIso:new Date().toISOString(),steps:Object.freeze([Object.freeze(step),Object.freeze({id:`qa-complete-${Date.now()}`,kind:"complete",game:"barber",order:1,delayMs:0,label:"ready",payload:Object.freeze({qa:true})})])});
     try{await this.featureExecution.enqueue(plan);}finally{this.spinning=false;if(this.stateMachine.state==="FEATURE_ACTIVE")this.stateMachine.transition("FEATURE_OUTRO");this.stateMachine.reset();this.update();}

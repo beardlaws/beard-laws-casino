@@ -32,7 +32,7 @@ export const MEGH_SYMBOLS: readonly JamSymbol[] = [
 
 export const MEGH_COLS = 6;
 export const MEGH_ROWS = 5;
-export const MEGH_SOUNDCHECK_TARGET = 50;
+export const MEGH_SOUNDCHECK_TARGET = 100;
 export const MEGH_MAX_FEATURE_DROPS = 100;
 export const MEGH_MAX_RETRIGGER_DROPS = 40;
 
@@ -44,6 +44,7 @@ export const MEGH_PRODUCTION_MATH = {
   maxRetriggerDrops: MEGH_MAX_RETRIGGER_DROPS,
   clusterMinimum: 6,
   maxCascades: 8,
-  cascadePayScale: 3.15,
+  cascadePayScale: 2.9,
+  featurePayScale: 0.4,
   symbols: MEGH_SYMBOLS.map(({ id, weight, pay }) => ({ id, weight, pay })),
 } as const;
